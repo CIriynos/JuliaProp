@@ -70,3 +70,6 @@ end
 
 plot(xs, [norm.(normalize(vec1)) norm.(normalize(vec2)) normalize(norm.(vec_bs))[1:cnt]], label=["Initial wave" "Classic FD" "FD with B-Spline"], title="1D TDSE Propagation In Free Space")
 # plot(1: length(b_basis), norm.(vec_bs))
+
+
+ldlt(D_bs)

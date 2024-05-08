@@ -6,12 +6,13 @@ using JuliaProp
 using LinearAlgebra
 using Plots
 using BSplineKit
+using BandedMatrices
 
 # Define Physics World
 Rmin = 0.0
 Rmax = 50.0
-# po_func(r) = -1 / r
-po_func(r) = -1.0 / r - exp(-2.0329 * r) / r - 0.3953 * exp(-6.1805 * r)
+po_func(r) = -1 / r
+# po_func(r) = -1.0 / r - exp(-2.0329 * r) / r - 0.3953 * exp(-6.1805 * r)
 
 Δt = 0.1
 Δt_itp = 0.05
@@ -23,25 +24,36 @@ po_func_with_apdix = [r -> po_func(r) + l * (l + 1) / (2 * r^2) for l = 0: l_num
 lmap = create_lmmap(l_num)
 
 # Define B-Spline Basis
-N_basis = 1001
-N_breakpoints = N_basis - 1
+N_basis = 250
+N_breakpoints = N_basis + 1
 Bspline_order = 3
 # bs_breakpoints = range(Rmin, Rmax, N_breakpoints)
 flex(num, b) = ((Rmax - Rmin) / (N_breakpoints ^ b - 1)) * (num ^ b - 1) + Rmin
-bs_breakpoints = flex.(1: N_breakpoints, 2)
-bspline_basis = BSplineBasis(BSplineOrder(Bspline_order), bs_breakpoints)
+bs_breakpoints = flex.(1: N_breakpoints, 3)
+bspline_basis_total = BSplineBasis(BSplineOrder(Bspline_order), copy(bs_breakpoints))
+bspline_basis = RecombinedBSplineBasis(bspline_basis_total, Derivative(0))
+
 
 quad = Galerkin.gausslegendre(Val(100))
 S_bs = galerkin_matrix(bspline_basis, quadrature=quad)
-D_bs = galerkin_matrix(bspline_basis, (Derivative(0), Derivative(2)), quadrature=quad)
+# D2_bs = galerkin_matrix(bspline_basis, (Derivative(0), Derivative(2)), quadrature=quad)
+D2_bs = -galerkin_matrix(bspline_basis, (Derivative(1), Derivative(1)), quadrature=quad)
 Vl_bs = [galerkin_matrix(po_func_with_apdix[l+1], bspline_basis, quadrature=quad) for l = 0: l_num - 1]
-Hl_bs = [-0.5 * D_bs + Vl_bs[l+1] for l = 0: l_num - 1]
-Ul_neg_bs = [S_bs - 0.5im * Hl_bs[l+1] * Δt for l = 0: l_num - 1]
-Ul_pos_bs = [S_bs + 0.5im * Hl_bs[l+1] * Δt for l = 0: l_num - 1]
-Ul_neg_bs_itp = [S_bs - 0.5im * Hl_bs[l+1] * (-im * Δt_itp) for l = 0: l_num - 1]
-Ul_pos_bs_itp = [S_bs + 0.5im * Hl_bs[l+1] * (-im * Δt_itp) for l = 0: l_num - 1]
+Hl_bs = [-0.5 * D2_bs + Vl_bs[l+1] for l = 0: l_num - 1]
+Ul_neg_bs = [S_bs - 0.5im * (Hl_bs[l+1]) * Δt for l = 0: l_num - 1]
+Ul_pos_bs = [S_bs + 0.5im * BandedMatrix(Hl_bs[l+1]) * Δt for l = 0: l_num - 1]
+Ul_neg_bs_itp = [S_bs - 0.5im * BandedMatrix(Hl_bs[l+1]) * (-im * Δt_itp) for l = 0: l_num - 1]
+Ul_pos_bs_itp = [S_bs + 0.5im * BandedMatrix(Hl_bs[l+1]) * (-im * Δt_itp) for l = 0: l_num - 1]
 U_bs = (S_bs + 0.5im * Hl_bs[1] * Δt) \ (S_bs - 0.5im * Hl_bs[1] * Δt)
 
+D1_bs = galerkin_matrix(bspline_basis, (Derivative(0), Derivative(1)))
+D1_bs + adjoint(D1_bs)
+D2_bs - adjoint(D2_bs)
+
+
+# galerkin_matrix(bspline_basis, (Derivative(1), Derivative(1)), quadrature=quad)
+
+norm.(det(U_bs))
 
 # Get Initial Wave
 x0::Float64 = 0.0
@@ -85,7 +97,7 @@ wave_norm = dot(initial_shwave[1], S_bs * initial_shwave[1])
 
 energy = real(dot(initial_shwave[1], (Hl_bs[1] * initial_shwave[1])))
 
-println("He atom 1s energy = $energy")
+println("H atom 1s energy = $energy")
+plot(real.(initial_shwave[1]))
 
-plot(real.(initial_shwave[1])[1: N_breakpoints])
-# plot(diag(Vl_bs[1])[4:100] .* 100)
+factorize(BandedMatrix(D2_bs))
