@@ -76,6 +76,19 @@ sphere_to_xyz(r, theta, phi) = r * sin(theta) * cos(phi), r * sin(theta) * sin(p
 
 CG_coefficient(l1, m1, l2, m2, l, m) = @fastmath (-1) ^ (-l1 + l2 - m) * sqrt(2 * l + 1) * wigner3j(l1, l2, l, m1, m2, -m)
 
+function get_SH_integral(l1, m1, l2, m2, l3, m3)
+    if abs(-m1) > l1 || abs(m2) > l2 || abs(m3) > l3
+        return 0.0
+    end
+    if -m1 + m2 != -m3
+        return 0.0
+    end
+    if l3 > l1 + l2 || l3 < abs(l1 - l2)
+        return 0.0
+    end
+    return (-1)^m1 * sqrt((2l1 + 1) * (2l2 + 1) * (2l3 + 1) / 4pi) * wigner3j(l1, l2, l3, 0, 0, 0) * wigner3j(l1, l2, l3, -m1, m2, m3)
+end
+
 spherical_bessel_func(n, x) = sqrt(pi / (2 * x)) * besselj(n + 0.5, x)
 
 get_length(grid::Grid1D) = grid.delta * grid.count
@@ -260,6 +273,19 @@ function get_integral(X, dx)
             Y[1] = X[1]
         else
             Y[i] = Y[i - 1] + X[i]
+        end
+    end
+    Y .*= dx
+    return Y
+end
+
+function get_integral(X1, X2, X3, dx)
+    Y = similar(X1)
+    for i in eachindex(X1)
+        if i == 1
+            Y[1] = X1[1] + X2[1] + X3[1]
+        else
+            Y[i] = Y[i - 1] + X1[i] + X2[i] + X3[i]
         end
     end
     Y .*= dx

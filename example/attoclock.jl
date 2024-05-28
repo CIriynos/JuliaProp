@@ -47,7 +47,7 @@ k_space = create_k_space(k_linspace, fixed_theta(pi/2), phi_linspace(Nk_phi))
 
 # propagation
 Ri_tsurf = 450.0
-phi_record, dphi_record = tdse_elli_sh_mainloop_record_xy(crt_shwave, pw, rt, At_data_x, At_data_y, steps, Ri_tsurf);
+@time phi_record, dphi_record = tdse_elli_sh_mainloop_record_xy(crt_shwave, pw, rt, At_data_x, At_data_y, steps, Ri_tsurf);
 
 Ri_tsurf = 450.0
 a_tsurff_vec = isurf_sh_vector(pw, rt, phi_record, dphi_record, crt_shwave, At_data_x, At_data_y, At_data_z, Ri_tsurf, t_linspace, k_space, TSURF_MODE_ELLI);
@@ -62,13 +62,13 @@ tsurf_plot_xy_momentum_spectrum_vector(a_tsurff_vec, k_space, kr_flag=true)
 # tsurf_plot_xy_momentum_spectrum(a_tsurff_lm_vec, k_space, pw, kr_flag=true)
 
 # store data
-# example_name = "attoclock"
-# h5open("./data/$example_name.h5", "w") do file
-#     write(file, "crt_shwave", hcat(crt_shwave...))
-#     write(file, "phi_record", hcat(phi_record...))
-#     write(file, "dphi_record", hcat(dphi_record...))
-#     write(file, "a_tsurff_vec", a_tsurff_vec)
-# end
+example_name = "attoclock"
+h5open("./data/$example_name.h5", "w") do file
+    write(file, "crt_shwave", hcat(crt_shwave...))
+    write(file, "phi_record", hcat(phi_record...))
+    write(file, "dphi_record", hcat(dphi_record...))
+    write(file, "a_tsurff_vec", a_tsurff_vec)
+end
 
 
 ########################

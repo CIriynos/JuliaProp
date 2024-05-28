@@ -229,6 +229,7 @@ function tdse_elli_sh_mainloop_record_xy(crt_shwave, pw::physics_world_sh_t, rt:
     phi_record = [zeros(ComplexF64, steps) for i = 1: shgrid.l_num ^ 2]
     dphi_record = [zeros(ComplexF64, steps) for i = 1: shgrid.l_num ^ 2]
     R_id = grid_reduce(shgrid.rgrid, Ri_tsurf)
+
     println("[TDSE] Start TDSE-SH for elliptical polarized laser. It may cost a plenty of time.")
     for i in 1: steps
         if (i - 1) % 200 == 0
@@ -245,3 +246,243 @@ function tdse_elli_sh_mainloop_record_xy(crt_shwave, pw::physics_world_sh_t, rt:
     end
     return phi_record, dphi_record
 end
+
+
+function tdse_elli_sh_mainloop_record_xy_optimized(crt_shwave, pw::physics_world_sh_t, rt::tdse_sh_rt, Ax_data, Ay_data, steps, Ri_tsurf)
+    shgrid = pw.shgrid
+    delta_t = pw.delta_t
+    At_data_abs = norm.(Ax_data .+ im .* Ay_data)
+    At_data_eta = angle.(Ax_data .+ im .* Ay_data)
+    phi_record = [zeros(ComplexF64, steps) for i = 1: shgrid.l_num ^ 2]
+    dphi_record = [zeros(ComplexF64, steps) for i = 1: shgrid.l_num ^ 2]
+    R_id = grid_reduce(shgrid.rgrid, Ri_tsurf)
+
+    # optimization
+    TDSE_ELLI_OPTIMIZE_THRESHOLD = 1e-15
+    visiting_ids = sort([rt.par_strategy[1]; rt.par_strategy[2]; rt.par_strategy[3]])
+    optimized_par_strategy = deepcopy(rt.par_strategy)
+    par_lens = [0, 0, 0]
+    ids_mask = zeros(Int64, shgrid.l_num ^ 2)   # 1 => selected.
+    actual_par_strategy = [[], [], []]
+    
+    println("[TDSE] Start TDSE-SH for elliptical polarized laser. It may cost a plenty of time.")
+    for i in 1: steps
+        if (i - 1) % 200 == 0
+            en = get_energy_sh(crt_shwave, rt, shgrid)
+            println("[TDSE] Running TDSE-SH-elliptical. step $(i-1), energy = $en")
+            println("par_lens = $(par_lens[1]), $(par_lens[2]), $(par_lens[3])")
+            # println(actual_par_strategy)
+        end
+
+        # we only select the valuable ids for calculating.
+        ids_mask .= 0   # clear first
+        par_lens .= 0
+
+        Threads.@threads for id in visiting_ids
+            tmp::Float64 = real(dot(crt_shwave[id], crt_shwave[id]))
+            if tmp > TDSE_ELLI_OPTIMIZE_THRESHOLD
+                ids_mask[id] = 1    # this id should be count in.
+            end
+            if id == rt.par_strategy[1][1] || id == rt.par_strategy[2][1] || id == rt.par_strategy[3][1]
+                ids_mask[id] = 1    # always count in them.
+            end
+        end
+
+        # filtering
+        for (j, line) in enumerate(rt.par_strategy)
+            for id in line
+                if ids_mask[id] == 1
+                    par_lens[j] += 1
+                    optimized_par_strategy[j][par_lens[j]] = id
+                end
+            end
+        end
+
+        actual_par_strategy = [optimized_par_strategy[1][1: par_lens[1]], optimized_par_strategy[2][1: par_lens[2]],
+            optimized_par_strategy[3][1: par_lens[3]]]
+
+        fdsh_elli_one_step_parallelized(crt_shwave, rt, shgrid, delta_t, At_data_abs[i], At_data_eta[i], actual_par_strategy)
+
+        # record
+        for id = 1: shgrid.l_num ^ 2
+            phi_record[id][i] = crt_shwave[id][R_id]
+            dphi_record[id][i] = four_order_difference(crt_shwave[id], R_id, shgrid.rgrid.delta)
+        end
+    end
+    return phi_record, dphi_record
+end
+
+
+function tdse_elli_sh_mainloop_record_xy_hhg_optimized(crt_shwave, pw::physics_world_sh_t, rt::tdse_sh_rt, Ax_data, Ay_data, steps, Ri_tsurf)
+    shgrid = pw.shgrid
+    delta_t = pw.delta_t
+    At_data_abs = norm.(Ax_data .+ im .* Ay_data)
+    At_data_eta = angle.(Ax_data .+ im .* Ay_data)
+    phi_record = [zeros(ComplexF64, steps) for i = 1: shgrid.l_num ^ 2]
+    dphi_record = [zeros(ComplexF64, steps) for i = 1: shgrid.l_num ^ 2]
+    R_id = grid_reduce(shgrid.rgrid, Ri_tsurf)
+
+    # hhg
+    dU_data = get_derivative_two_order(pw.po_data_r, pw.delta_r)
+    hhg_integral_t = zeros(ComplexF64, steps)
+    sh_integral_buffer_1 = zeros(ComplexF64, pw.l_num ^ 2, pw.l_num ^ 2)    # <lm|11|l'm'> * -sqrt(8pi / 3)
+    shwave_integral_buffer = zeros(ComplexF64, pw.l_num ^ 2, pw.l_num ^ 2)  # ∫dr ϕ*lm ϕl'm' dU/dr
+
+    # optimization
+    TDSE_ELLI_OPTIMIZE_THRESHOLD = 1e-14
+    visiting_ids = sort([rt.par_strategy[1]; rt.par_strategy[2]; rt.par_strategy[3]])
+    optimized_par_strategy = deepcopy(rt.par_strategy)
+    par_lens::Vector{Int64} = [0, 0, 0]
+    ids_mask = zeros(Int64, shgrid.l_num ^ 2)   # 1 => selected.
+    actual_par_strategy::Vector{Vector{Int64}} = [[0], [0], [0]]
+    iter_strategy::Vector{Int64} = [0]
+    id_iterating_list::Vector{Tuple{Int64, Int64}} = [(1, 1)]
+
+    # calculating hhg buffer    
+    for id1 = 1: pw.l_num ^ 2
+        l1 = pw.lmap[id1]
+        m1 = pw.mmap[id1]
+        for id2 = 1: pw.l_num ^ 2
+            l2 = pw.lmap[id2]
+            m2 = pw.mmap[id2]
+            sh_integral_buffer_1[id1, id2] = get_SH_integral(l1, m1, 1, 1, l2, m2) * (-sqrt(8pi / 3))
+        end
+    end
+    
+    println("[TDSE] Start TDSE-SH for elliptical polarized laser. It may cost a plenty of time.")
+    for i in 1: steps
+        if (i - 1) % 200 == 0
+            en = get_energy_sh(crt_shwave, rt, shgrid)
+            println("[TDSE] Running TDSE-SH-elliptical. step $(i-1), energy = $en")
+            println("par_lens = $(par_lens[1]), $(par_lens[2]), $(par_lens[3])")
+            # println(actual_par_strategy)
+        end
+
+        # we only select the valuable ids for calculating.
+        ids_mask .= 0   # clear first
+        par_lens .= 0
+
+        Threads.@threads for id in visiting_ids
+            @fastmath @inbounds tmp::Float64 = real(dot(crt_shwave[id], crt_shwave[id]))
+            if tmp > TDSE_ELLI_OPTIMIZE_THRESHOLD
+                ids_mask[id] = 1    # this id should be count in.
+            end
+            if id == rt.par_strategy[1][1] || id == rt.par_strategy[2][1] || id == rt.par_strategy[3][1]
+                ids_mask[id] = 1    # always count in them.
+            end
+        end
+
+        # filtering
+        for (j, line) in enumerate(rt.par_strategy)
+            for id in line
+                if ids_mask[id] == 1
+                    par_lens[j] += 1
+                    optimized_par_strategy[j][par_lens[j]] = id
+                end
+            end
+        end
+
+        actual_par_strategy = [optimized_par_strategy[1][1: par_lens[1]], optimized_par_strategy[2][1: par_lens[2]],
+            optimized_par_strategy[3][1: par_lens[3]]]
+        iter_strategy = [optimized_par_strategy[1][1: par_lens[1]]; optimized_par_strategy[2][1: par_lens[2]];
+            optimized_par_strategy[3][1: par_lens[3]]]
+
+        fdsh_elli_one_step_parallelized(crt_shwave, rt, shgrid, delta_t, At_data_abs[i], At_data_eta[i], actual_par_strategy)
+
+        # record RI
+        for id = 1: shgrid.l_num ^ 2
+            phi_record[id][i] = crt_shwave[id][R_id]
+            dphi_record[id][i] = four_order_difference(crt_shwave[id], R_id, shgrid.rgrid.delta)
+        end
+
+        # hhg
+        id_iterating_list = [(id1, id2) for id1 in iter_strategy for id2 in iter_strategy if id1 <= id2]
+
+        Threads.@threads for (id1, id2) in id_iterating_list
+            tmp_sum = 0.0
+            @inbounds for j in 1: pw.Nr
+                @fastmath tmp_sum += conj(crt_shwave[id1][j]) * crt_shwave[id2][j] * dU_data[j]
+            end
+            @fastmath tmp_sum *= pw.delta_r
+            # tmp_sum = dot(crt_shwave[id1], crt_shwave[id2] .* dU_data) * pw.delta_r
+
+            @fastmath shwave_integral_buffer[id1, id2] = tmp_sum * sh_integral_buffer_1[id1, id2]
+            @fastmath shwave_integral_buffer[id2, id1] = conj(tmp_sum) * sh_integral_buffer_1[id2, id1]
+        end
+        for (id1, id2) in id_iterating_list
+            hhg_integral_t[i] += shwave_integral_buffer[id1, id2]
+        end
+    end
+    return hhg_integral_t, phi_record, dphi_record
+end
+
+
+# function tdse_elli_sh_mainloop_record_xy_hhg(crt_shwave, pw::physics_world_sh_t, rt::tdse_sh_rt, Ax_data, Ay_data, steps, Ri_tsurf)
+#     shgrid = pw.shgrid
+#     delta_t = pw.delta_t
+#     At_data_abs = norm.(Ax_data .+ im .* Ay_data)
+#     At_data_eta = angle.(Ax_data .+ im .* Ay_data)
+#     phi_record = [zeros(ComplexF64, steps) for i = 1: shgrid.l_num ^ 2]
+#     dphi_record = [zeros(ComplexF64, steps) for i = 1: shgrid.l_num ^ 2]
+#     R_id = grid_reduce(shgrid.rgrid, Ri_tsurf)
+
+#     # prepare for HHG
+#     dU_data = get_derivative_two_order(pw.po_data_r, pw.delta_r)
+#     hhg_integral_t = zeros(ComplexF64, steps)
+#     sh_integral_buffer_1 = zeros(ComplexF64, pw.l_num ^ 2, pw.l_num ^ 2)    # <lm|11|l'm'> * -sqrt(8pi / 3)
+#     shwave_integral_buffer = zeros(ComplexF64, pw.l_num ^ 2, pw.l_num ^ 2)  # ∫dr ϕ*lm ϕl'm' dU/dr
+#     visiting_ids = sort([rt.par_strategy[1]; rt.par_strategy[2]; rt.par_strategy[3]])
+#     selected_ids = zeros(Int64, length(visiting_ids))
+#     selected_length::Int64 = 0
+
+#     # calculating buffer    
+#     for id1 = 1: pw.l_num ^ 2
+#         l1 = pw.lmap[id1]
+#         m1 = pw.mmap[id1]
+#         for id2 = 1: pw.l_num ^ 2
+#             l2 = pw.lmap[id2]
+#             m2 = pw.mmap[id2]
+#             sh_integral_buffer_1[id1, id2] = get_SH_integral(l1, m1, 1, 1, l2, m2) * (-sqrt(8pi / 3))
+#         end
+#     end
+
+#     println("[TDSE] Start TDSE-SH(HHG) for elliptical polarized laser. It may cost a plenty of time.")
+#     for i in 1: steps
+#         if (i - 1) % 20 == 0
+#             en = get_energy_sh(crt_shwave, rt, shgrid)
+#             println("[TDSE] Running TDSE-SH-elliptical. step $(i-1), energy = $en")
+#             println("selected_length = $selected_length")
+#         end
+
+#         fdsh_elli_one_step_parallelized(crt_shwave, rt, shgrid, delta_t, At_data_abs[i], At_data_eta[i], rt.par_strategy)
+
+#         # record
+#         for id = 1: shgrid.l_num ^ 2
+#             phi_record[id][i] = crt_shwave[id][R_id]
+#             dphi_record[id][i] = four_order_difference(crt_shwave[id], R_id, shgrid.rgrid.delta)
+#         end
+        
+#         # HHG
+#         selected_length = 0
+#         for id in visiting_ids
+#             tmp::Float64 = real(dot(crt_shwave[id], crt_shwave[id]))
+#             if tmp > 1e-12
+#                 selected_length += 1
+#                 selected_ids[selected_length] = id
+#             end
+#         end
+#         id_iterating_list = [(id1, id2) for id1 in selected_ids[1: selected_length] for id2 in selected_ids[1: selected_length] if id1 <= id2]
+#         Threads.@threads for (id1, id2) in id_iterating_list
+#             tmp_sum = 0.0
+#             for j in 1: pw.Nr
+#                 tmp_sum += conj(crt_shwave[id1][j]) * crt_shwave[id2][j] * dU_data[j]
+#             end
+#             tmp_sum *= pw.delta_r
+#             shwave_integral_buffer[id1, id2] = tmp_sum * sh_integral_buffer_1[id1, id2]
+#             shwave_integral_buffer[id2, id1] = conj(tmp_sum) * sh_integral_buffer_1[id2, id1]
+#         end
+#         # println(shwave_integral_buffer[1, 1])
+#         hhg_integral_t[i] = sum(shwave_integral_buffer)
+#     end
+#     return hhg_integral_t, phi_record, dphi_record
+# end

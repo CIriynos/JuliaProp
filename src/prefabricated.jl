@@ -21,6 +21,18 @@ function coulomb_potiential_zero_fixed_plus(;Rco::Float64 = 25.0, a::Float64 = 3
     end
 end
 
+function coulomb_potiential_zero_fixed_COS(Rco1, Rco2)
+    return r -> begin
+        if r <= Rco1
+            return -1.0 / r
+        elseif r <= Rco2
+            return -1.0 / r * cos(((r - Rco1) / (Rco2 - Rco1)) * (pi/2)) ^ 2
+        else
+            return 0.0
+        end
+    end
+end
+
 function coulomb_potiential_helium_zero_fixed_plus(;Rco::Float64 = 25.0, a::Float64 = 3.0, b::Float64 = 2.5)
     return r -> begin
         if r <= Rco

@@ -9,9 +9,11 @@ using WignerSymbols
 using SpecialFunctions
 using SphericalHarmonics
 using HDF5
+using FFTW
 
 export Grid1D, GridSH
 export xyz_to_sphere, sphere_to_xyz, CG_coefficient, spherical_bessel_func
+export get_SH_integral
 export get_linspace, grid_index, grid_reduce
 export wave_t, shwave_t, create_empty_shwave, copy_shwave
 export trimat_elimination
@@ -47,6 +49,9 @@ export tdseln_sh_mainloop_record
 export tdseln_sh_mainloop_length_gauge
 export tdse_elli_sh_mainloop_record
 export tdse_elli_sh_mainloop_record_xy
+export tdse_elli_sh_mainloop_record_xy_hhg
+export tdse_elli_sh_mainloop_record_xy_optimized
+export tdse_elli_sh_mainloop_record_xy_hhg_optimized
 
 export window_operator_method_sh
 
@@ -73,6 +78,9 @@ export coulomb_potiential_helium_zero_fixed_plus
 export absorb_boundary_r
 export create_linspace
 export store_mat, store_obj, retrieve_mat, retrieve_obj
+
+export coulomb_potiential_zero_fixed_COS
+export get_hhg_spectrum_xy
 
 include("util.jl")
 

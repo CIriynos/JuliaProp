@@ -383,3 +383,23 @@ function create_tdse_rt_sh(pw::physics_world_sh_t)
 
     return rt
 end
+
+
+function get_hhg_spectrum_xy(hhg_integral_t, Et_data_x, Et_data_y)
+    hhg_xy_t = -hhg_integral_t .- (Et_data_x .+ im .* Et_data_y)
+    hhg_len = length(hhg_xy_t)
+
+    # two type of window function
+    hhg_window_f(t) = sin(t / (hhg_len / 2) * pi) ^ 2 * (t < hhg_len/2 && t > 0)
+    hhg_windows_data = hhg_window_f.(eachindex(hhg_xy_t) .- hhg_len/4)
+
+    # hhg_window_f(t) = sin(t / hhg_len * pi) ^ 2
+    # hhg_windows_data = hhg_window_f.(eachindex(hhg_xy_t))
+    # plot(hhg_windows_data)
+
+    hhg_spectrum_x = fft(real.(hhg_xy_t) .* hhg_windows_data)
+    hhg_spectrum_y = fft(imag.(hhg_xy_t) .* hhg_windows_data)
+    hhg_spectrum = norm.(hhg_spectrum_x) .^ 2 + norm.(hhg_spectrum_y) .^ 2
+
+    return hhg_spectrum
+end

@@ -129,7 +129,38 @@ println("Now $tau_int")
 
 end
 
-plot(tau_range, abs.(expected_ky_list))
+
+plot(tau_range[1:23], abs.(expected_ky_list)[1:23],
+        xlabel="Time delay τ (a.u.)",
+        ylabel="Average momentum ky (a.u.)",
+        guidefont=Plots.font(14, "Times"),
+        tickfont=Plots.font(14, "Times"),
+        legendfont=Plots.font(14, "Times"),
+        margin = 5 * Plots.mm,
+        legend = false,
+        linewidth = 2.5
+        )
+
+
+p1 = scatter(tau_range[1:23], abs.(expected_ky_list)[1:23] .- 0.004,
+        label="Ave. ky",
+        markershape = :diamond,
+        markersize = 5)
+t_linspace = create_linspace(Int64((2 * nc2 * pi / ω2) ÷ Δt + 1), 0.05)
+E_THz(t) = (0.00017) * sin(ω2 * (t) / 2 / nc2)^2 * sin(ω2 * (t)) * (t > 0 && t < (2 * nc2 * pi / ω2))
+Et_data_thz = E_THz.(t_linspace)
+At_data_thz = get_integral(Et_data_thz, Δt)
+plot!(p1, range(tau_range[1] + 230, tau_range[23] - 330, length(t_linspace)), At_data_thz ./ 3.4,
+        guidefont=Plots.font(14, "Times"),
+        tickfont=Plots.font(14, "Times"),
+        legendfont=Plots.font(14, "Times"),
+        margin = 5 * Plots.mm,
+        xlabel="Calibrated Time",
+        ylabel = "Calibrated Amplitude",
+        label = "THz",
+        linewidth = 2.5
+        )
+
 
 # example_name = "saoyanchi_new_plot_data"
 # h5open("./data/$example_name.h5", "w") do file

@@ -243,7 +243,7 @@ function tsurf_sh(pw::physics_world_sh_t, phi_record, dphi_record, At_data_x, At
 end
 
 
-function tsurf_sh_vector(pw::physics_world_sh_t, phi_record, dphi_record, At_data_x, At_data_y, At_data_z, Ri_tsurf, t_linspace, k_collection_xyz, tsurf_mode; cut_off_threhold::Float64=1e-7)
+function tsurf_sh_vector(pw::physics_world_sh_t, phi_record, dphi_record, At_data_x, At_data_y, At_data_z, Ri_tsurf, t_linspace, k_collection_xyz, tsurf_mode; cut_off_threhold::Float64=1e-6)
     shgrid = pw.shgrid
     delta_t = pw.delta_t
     # lmap, mmap: mapping the index with l, m
@@ -431,7 +431,17 @@ end
 function tsurf_plot_energy_spectrum(a_tsurff_lm, momentum_range, pw::physics_world_sh_t; ylimit_min_log::Float64 = -15.0)
     P_tsurff = tsurf_get_energy_spectrum(a_tsurff_lm, momentum_range, pw)
     energy_range = momentum_range .^ 2 ./ 2
-    plot(energy_range, P_tsurff, yscale=:log10, ylimits=(10 ^ ylimit_min_log, 0.0))
+    plot(energy_range, P_tsurff,
+        yscale=:log10,
+        ylimits=(10 ^ ylimit_min_log, 0.0),
+        xlabel="Energy of Photoelectron (a.u.)",
+        ylabel="Diff. ioniz. possibility (a.u.)",
+        labels="τ = 0",
+        xlimits=(0,0.25),
+        guidefont=Plots.font(14, "Times"),
+        tickfont=Plots.font(14, "Times"),
+        legendfont=Plots.font(14, "Times"),
+        margin = 5 * Plots.mm)
 end
 
 
@@ -477,9 +487,20 @@ function tsurf_plot_xy_momentum_spectrum(a_tsurff_lm, k_space::tsurf_k_space_t, 
     # colormap = cgrad([:white, :black, :red, :blue, :white])
     colormap = cgrad(:hot, rev = true)
     if log_flag == true
-        Plots.heatmap(k_phi_range, k_r_range, abs.(log10.(result_mat)); color = colormap, projection = :polar, right_margin = 8 * Plots.mm)
+        Plots.heatmap(k_phi_range, k_r_range,
+            abs.(log10.(result_mat)); color = colormap,
+            projection = :polar,
+            right_margin = 8 * Plots.mm)
     else
-        Plots.heatmap(k_phi_range, k_r_range, result_mat; color = colormap, projection = :polar, right_margin = 8 * Plots.mm)
+        Plots.heatmap(k_phi_range, k_r_range, result_mat;
+            color = colormap, projection = :polar,
+            right_margin = 12 * Plots.mm,
+            guidefont=Plots.font(12, "Times"),
+            tickfont=Plots.font(12, "Times"),
+            legendfont=Plots.font(12, "Times"),
+            xlabel="Energy of Photoelectron (a.u.)",
+            ylabel="Energy of Photoelectron (a.u.)",
+            )
     end
     # Plots.heatmap(k_phi_range, k_r_range, result_mat; color = colormap, right_margin = 8 * Plots.mm)
 end
@@ -559,7 +580,7 @@ function tsurf_get_average_momentum_single_kr(a_tsurff_lm, k_space::tsurf_k_spac
 end
 
 
-function tsurf_get_average_momentum_parallel(a_tsurff_lm, k_space::tsurf_k_space_t, pw::physics_world_sh_t; k_min::Float64=0.05)
+function tsurf_get_average_momentum_parallel(a_tsurff_lm, k_space::tsurf_k_space_t, pw::physics_world_sh_t; k_min::Float64=0.01)
     
     Nk_theta = length(k_space.k_theta_range)
     Nk_phi = length(k_space.k_phi_range)
@@ -652,7 +673,7 @@ function tsurf_combine_lm_vec(a_tsurff_lm_vec, k_space::tsurf_k_space_t, pw::phy
 end
 
 
-function tsurf_plot_xy_momentum_spectrum_vector(a_tsurff_vec, k_space::tsurf_k_space_t; kr_flag::Bool=false, log_flag::Bool=false, min_threhold::Float64=0.0)
+function tsurf_plot_xy_momentum_spectrum_vector(a_tsurff_vec, k_space::tsurf_k_space_t; kr_flag::Bool=false, log_flag::Bool=false, kr_min::Float64=0.0)
 
     Nk_r = length(k_space.k_r_range)
     Nk_phi = length(k_space.k_phi_range)
@@ -662,16 +683,16 @@ function tsurf_plot_xy_momentum_spectrum_vector(a_tsurff_vec, k_space::tsurf_k_s
     pes_mat = zeros(Float64, Nk_r, Nk_phi)
     for (p, k_vec) in enumerate(k_space.k_collection)
         i, _, k = k_space.ijk_mapping[p]
-        pes_mat[i, k] = (kr_flag == true ? norm(k_vec) : 1.0) * norm(a_tsurff_vec[p]) ^ 2
+        pes_mat[i, k] = (kr_flag == true ? norm(k_vec) : 1.0) * norm(a_tsurff_vec[p]) ^ 2 * (norm(k_vec) > kr_min)
     end
 
     gr()
     # colormap = cgrad([:white, :black, :red, :blue, :white])
     colormap = cgrad(:hot, rev=true)
     if log_flag == true
-        Plots.heatmap(k_phi_range, k_r_range, abs.(log10.(pes_mat)); color = colormap, projection = :polar, right_margin = 8 * Plots.mm)
+        Plots.heatmap(k_phi_range, k_r_range, abs.(log10.(pes_mat)); color = colormap, projection = :polar, right_margin = 10 * Plots.mm)
     else
-        Plots.heatmap(k_phi_range, k_r_range, pes_mat; color = colormap, projection = :polar, right_margin = 8 * Plots.mm)
+        Plots.heatmap(k_phi_range, k_r_range, pes_mat; color = colormap, projection = :polar, right_margin = 10 * Plots.mm)
     end
 end
 
