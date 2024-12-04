@@ -1,0 +1,308 @@
+  Activating project at `~/JuliaProp_v0.1`
+Number of Threads: 32
+[ITP]: 10000.467658484333
+[ITP]: 0.022336055694753276
+[ITP]: 0.005059779887372162
+[ITP]: 0.0021489463687915933
+[ITP]: 0.0011094453881916877
+[ITP]: 0.0006320330792940476
+[ITP]: 0.0003819196385753121
+[ITP]: 0.00023991278853047193
+[ITP]: 0.0001548547356572949
+[ITP]: 0.00010195491015219105
+[ITP]: 6.81379029559559e-5
+[ITP]: 4.606744158064391e-5
+[ITP]: 3.143139936084838e-5
+[ITP]: 2.1602918395535742e-5
+[ITP]: 1.4936383017971622e-5
+[ITP]: 1.0377759407820264e-5
+[ITP]: 7.239801431913051e-6
+[ITP]: 5.067900115340862e-6
+[ITP]: 3.5577633425987187e-6
+[ITP]: 2.5037211661693703e-6
+[ITP]: 1.7656336310789555e-6
+[ITP]: 1.2473642301280563e-6
+[ITP]: 8.825870176920603e-7
+[ITP]: 6.253222639696077e-7
+[ITP]: 4.435644971323427e-7
+[ITP]: 3.149575211747191e-7
+[ITP]: 2.238384469999133e-7
+[ITP]: 1.5920542206782073e-7
+[ITP]: 1.1331332461228527e-7
+[ITP]: 8.069916523911758e-8
+[ITP]: 5.750315212882384e-8
+[ITP]: 4.0994190264598274e-8
+[ITP]: 2.9237345322563613e-8
+[ITP]: 2.0860190019789115e-8
+[ITP]: 1.4888315580385836e-8
+[ITP]: 1.0629286228969193e-8
+[ITP]: 7.590669759416357e-9
+Energy of ground state: -0.5000403480038643
+[ITP]: 10000.467658484333
+[ITP]: 0.022336055694753276
+[ITP]: 0.005059779887372162
+[ITP]: 0.0021489463687915933
+[ITP]: 0.0011094453881916877
+[ITP]: 0.0006320330792940476
+[ITP]: 0.0003819196385753121
+[ITP]: 0.00023991278853047193
+[ITP]: 0.0001548547356572949
+[ITP]: 0.00010195491015219105
+[ITP]: 6.81379029559559e-5
+[ITP]: 4.606744158064391e-5
+[ITP]: 3.143139936084838e-5
+[ITP]: 2.1602918395535742e-5
+[ITP]: 1.4936383017971622e-5
+[ITP]: 1.0377759407820264e-5
+[ITP]: 7.239801431913051e-6
+[ITP]: 5.067900115340862e-6
+[ITP]: 3.5577633425987187e-6
+[ITP]: 2.5037211661693703e-6
+[ITP]: 1.7656336310789555e-6
+[ITP]: 1.2473642301280563e-6
+[ITP]: 8.825870176920603e-7
+[ITP]: 6.253222639696077e-7
+[ITP]: 4.435644971323427e-7
+[ITP]: 3.149575211747191e-7
+[ITP]: 2.238384469999133e-7
+[ITP]: 1.5920542206782073e-7
+[ITP]: 1.1331332461228527e-7
+[ITP]: 8.069916523911758e-8
+[ITP]: 5.750315212882384e-8
+[ITP]: 4.0994190264598274e-8
+[ITP]: 2.9237345322563613e-8
+[ITP]: 2.0860190019789115e-8
+[ITP]: 1.4888315580385836e-8
+[ITP]: 1.0629286228969193e-8
+[ITP]: 7.590669759416357e-9
+[ITP]: 5.4220242740044e-9
+[ITP]: 3.873799947484713e-9
+[ITP]: 2.7682022230024472e-9
+[ITP]: 1.9784937022038207e-9
+[ITP]: 1.4142960136354077e-9
+[ITP]: 1.0111314008298677e-9
+[ITP]: 7.229878917769383e-10
+Energy of ground state: -0.5000403651947998
+[TDSE] Start TDSE-SH for elliptical polarized laser. It may cost a plenty of time.
+[TDSE] Running TDSE-SH-elliptical. step 0, energy = -0.5000403651947998
+par_lens = 0, 0, 0
+[TDSE] Running TDSE-SH-elliptical. step 200, energy = -0.5000403536607553
+par_lens = 1, 1, 2
+[TDSE] Running TDSE-SH-elliptical. step 400, energy = -0.5000355044478693
+par_lens = 2, 2, 2
+[TDSE] Running TDSE-SH-elliptical. step 600, energy = -0.499941382872824
+par_lens = 4, 3, 3
+[TDSE] Running TDSE-SH-elliptical. step 800, energy = -0.49948356839267544
+par_lens = 5, 5, 5
+[TDSE] Running TDSE-SH-elliptical. step 1000, energy = -0.49865208309928677
+par_lens = 5, 5, 5
+[TDSE] Running TDSE-SH-elliptical. step 1200, energy = -0.4985784174888457
+par_lens = 5, 7, 7
+[TDSE] Running TDSE-SH-elliptical. step 1400, energy = -0.49972642880719403
+par_lens = 5, 5, 5
+[TDSE] Running TDSE-SH-elliptical. step 1600, energy = -0.49730322265122456
+par_lens = 7, 7, 7
+[TDSE] Running TDSE-SH-elliptical. step 1800, energy = -0.48248870425177137
+par_lens = 12, 12, 12
+[TDSE] Running TDSE-SH-elliptical. step 2000, energy = -0.4561644393911104
+par_lens = 19, 18, 18
+[TDSE] Running TDSE-SH-elliptical. step 2200, energy = -0.4398669241254022
+par_lens = 26, 26, 26
+[TDSE] Running TDSE-SH-elliptical. step 2400, energy = -0.4560210912256136
+par_lens = 31, 30, 30
+[TDSE] Running TDSE-SH-elliptical. step 2600, energy = -0.4899040401290996
+par_lens = 33, 34, 34
+[TDSE] Running TDSE-SH-elliptical. step 2800, energy = -0.4867939963314998
+par_lens = 33, 33, 33
+[TDSE] Running TDSE-SH-elliptical. step 3000, energy = -0.4134466443176212
+par_lens = 28, 26, 26
+[TDSE] Running TDSE-SH-elliptical. step 3200, energy = -0.3252383420818796
+par_lens = 51, 51, 51
+[TDSE] Running TDSE-SH-elliptical. step 3400, energy = -0.32293650432024745
+par_lens = 85, 84, 84
+[TDSE] Running TDSE-SH-elliptical. step 3600, energy = -0.4139172847881366
+par_lens = 111, 110, 110
+[TDSE] Running TDSE-SH-elliptical. step 3800, energy = -0.4887931764240387
+par_lens = 123, 122, 122
+[TDSE] Running TDSE-SH-elliptical. step 4000, energy = -0.4062677068938045
+par_lens = 118, 118, 118
+[TDSE] Running TDSE-SH-elliptical. step 4200, energy = -0.19657066403788268
+par_lens = 84, 83, 83
+[TDSE] Running TDSE-SH-elliptical. step 4400, energy = -0.08609625108956138
+par_lens = 149, 147, 147
+[TDSE] Running TDSE-SH-elliptical. step 4600, energy = -0.19168569398082405
+par_lens = 262, 260, 260
+[TDSE] Running TDSE-SH-elliptical. step 4800, energy = -0.3984725422713795
+par_lens = 353, 354, 354
+[TDSE] Running TDSE-SH-elliptical. step 5000, energy = -0.46636260050118417
+par_lens = 373, 371, 371
+[TDSE] Running TDSE-SH-elliptical. step 5200, energy = -0.2869144405951005
+par_lens = 352, 346, 346
+[TDSE] Running TDSE-SH-elliptical. step 5400, energy = -0.05120000113965139
+par_lens = 232, 228, 228
+[TDSE] Running TDSE-SH-elliptical. step 5600, energy = -0.07445284554481202
+par_lens = 298, 296, 298
+[TDSE] Running TDSE-SH-elliptical. step 5800, energy = -0.2398182795925873
+par_lens = 409, 408, 408
+[TDSE] Running TDSE-SH-elliptical. step 6000, energy = -0.4384224575163876
+par_lens = 409, 408, 408
+[TDSE] Running TDSE-SH-elliptical. step 6200, energy = -0.38632998802844143
+par_lens = 409, 408, 408
+[TDSE] Running TDSE-SH-elliptical. step 6400, energy = -0.14991620958832672
+par_lens = 409, 408, 408
+[TDSE] Running TDSE-SH-elliptical. step 6600, energy = -0.014572225197029722
+par_lens = 403, 402, 403
+[TDSE] Running TDSE-SH-elliptical. step 6800, energy = -0.14137758612067058
+par_lens = 405, 405, 403
+[TDSE] Running TDSE-SH-elliptical. step 7000, energy = -0.3459685581136664
+par_lens = 409, 408, 408
+[TDSE] Running TDSE-SH-elliptical. step 7200, energy = -0.4257194667339195
+par_lens = 409, 408, 408
+[TDSE] Running TDSE-SH-elliptical. step 7400, energy = -0.2597109650138079
+par_lens = 409, 408, 408
+[TDSE] Running TDSE-SH-elliptical. step 7600, energy = -0.03551657743208209
+par_lens = 409, 408, 408
+[TDSE] Running TDSE-SH-elliptical. step 7800, energy = -0.0561589350374977
+par_lens = 409, 408, 408
+[TDSE] Running TDSE-SH-elliptical. step 8000, energy = -0.2064085813809291
+par_lens = 409, 408, 408
+[TDSE] Running TDSE-SH-elliptical. step 8200, energy = -0.39257096406645803
+par_lens = 409, 408, 408
+[TDSE] Running TDSE-SH-elliptical. step 8400, energy = -0.3514263782863638
+par_lens = 409, 408, 408
+[TDSE] Running TDSE-SH-elliptical. step 8600, energy = -0.13470334917573618
+par_lens = 409, 408, 408
+[TDSE] Running TDSE-SH-elliptical. step 8800, energy = -0.0015414699312572015
+par_lens = 409, 408, 408
+[TDSE] Running TDSE-SH-elliptical. step 9000, energy = -0.11714129981351878
+par_lens = 409, 408, 408
+[TDSE] Running TDSE-SH-elliptical. step 9200, energy = -0.30381444534024626
+par_lens = 409, 408, 408
+[TDSE] Running TDSE-SH-elliptical. step 9400, energy = -0.3796662703922968
+par_lens = 409, 408, 408
+[TDSE] Running TDSE-SH-elliptical. step 9600, energy = -0.22941532261867292
+par_lens = 409, 408, 408
+[TDSE] Running TDSE-SH-elliptical. step 9800, energy = -0.02431608337018006
+par_lens = 409, 408, 408
+[TDSE] Running TDSE-SH-elliptical. step 10000, energy = -0.03300336495738122
+par_lens = 409, 408, 408
+[TDSE] Running TDSE-SH-elliptical. step 10200, energy = -0.17114359354208508
+par_lens = 409, 408, 408
+[TDSE] Running TDSE-SH-elliptical. step 10400, energy = -0.34530262765755326
+par_lens = 409, 408, 408
+[TDSE] Running TDSE-SH-elliptical. step 10600, energy = -0.31253277534234425
+par_lens = 409, 408, 408
+[TDSE] Running TDSE-SH-elliptical. step 10800, energy = -0.11666802237516737
+par_lens = 409, 408, 408
+[TDSE] Running TDSE-SH-elliptical. step 11000, energy = 0.010564310439563806
+par_lens = 409, 408, 408
+[TDSE] Running TDSE-SH-elliptical. step 11200, energy = -0.0931020295402801
+par_lens = 409, 408, 408
+[TDSE] Running TDSE-SH-elliptical. step 11400, energy = -0.26146474844670053
+par_lens = 409, 408, 408
+[TDSE] Running TDSE-SH-elliptical. step 11600, energy = -0.3338043532488588
+par_lens = 409, 408, 408
+[TDSE] Running TDSE-SH-elliptical. step 11800, energy = -0.19998545589492076
+par_lens = 409, 408, 408
+[TDSE] Running TDSE-SH-elliptical. step 12000, energy = -0.011993545871474881
+par_lens = 409, 408, 408
+[TDSE] Running TDSE-SH-elliptical. step 12200, energy = -0.01089822969474577
+par_lens = 409, 408, 408
+[TDSE] Running TDSE-SH-elliptical. step 12400, energy = -0.13765691270962652
+par_lens = 409, 408, 408
+[TDSE] Running TDSE-SH-elliptical. step 12600, energy = -0.29838868402081264
+par_lens = 409, 408, 408
+[TDSE] Running TDSE-SH-elliptical. step 12800, energy = -0.27340944324096306
+par_lens = 409, 408, 408
+[TDSE] Running TDSE-SH-elliptical. step 13000, energy = -0.09870989322998257
+par_lens = 409, 408, 408
+[TDSE] Running TDSE-SH-elliptical. step 13200, energy = 0.024476359243669702
+par_lens = 409, 408, 408
+[TDSE] Running TDSE-SH-elliptical. step 13400, energy = -0.06987765947903375
+par_lens = 409, 408, 408
+[TDSE] Running TDSE-SH-elliptical. step 13600, energy = -0.22080120356403918
+par_lens = 409, 408, 408
+[TDSE] Running TDSE-SH-elliptical. step 13800, energy = -0.2894746627406893
+par_lens = 409, 408, 408
+[TDSE] Running TDSE-SH-elliptical. step 14000, energy = -0.17192127742134658
+par_lens = 409, 408, 408
+[TDSE] Running TDSE-SH-elliptical. step 14200, energy = 0.0013977388017663134
+par_lens = 409, 408, 408
+[TDSE] Running TDSE-SH-elliptical. step 14400, energy = 0.009949858922720262
+par_lens = 409, 408, 408
+[TDSE] Running TDSE-SH-elliptical. step 14600, energy = -0.10663136526950855
+par_lens = 409, 408, 408
+[TDSE] Running TDSE-SH-elliptical. step 14800, energy = -0.25479613859330835
+par_lens = 409, 408, 408
+[TDSE] Running TDSE-SH-elliptical. step 15000, energy = -0.23674424963961613
+par_lens = 409, 408, 408
+[TDSE] Running TDSE-SH-elliptical. step 15200, energy = -0.07932151071150975
+par_lens = 409, 408, 408
+[TDSE] Running TDSE-SH-elliptical. step 15400, energy = 0.03882761853342474
+par_lens = 409, 408, 408
+[TDSE] Running TDSE-SH-elliptical. step 15600, energy = -0.04644017205328331
+par_lens = 409, 408, 408
+[TDSE] Running TDSE-SH-elliptical. step 15800, energy = -0.18120404619036226
+par_lens = 409, 408, 408
+[TDSE] Running TDSE-SH-elliptical. step 16000, energy = -0.2487485681332026
+par_lens = 409, 408, 408
+[TDSE] Running TDSE-SH-elliptical. step 16200, energy = -0.14652388367393274
+par_lens = 409, 408, 408
+[TDSE] Running TDSE-SH-elliptical. step 16400, energy = 0.01533680650998354
+par_lens = 409, 408, 408
+[TDSE] Running TDSE-SH-elliptical. step 16600, energy = 0.027766972563397798
+par_lens = 409, 408, 408
+[TDSE] Running TDSE-SH-elliptical. step 16800, energy = -0.07809949378800932
+par_lens = 409, 408, 408
+[TDSE] Running TDSE-SH-elliptical. step 17000, energy = -0.21514850867397908
+par_lens = 409, 408, 408
+[TDSE] Running TDSE-SH-elliptical. step 17200, energy = -0.20722285850478214
+par_lens = 409, 408, 408
+[TDSE] Running TDSE-SH-elliptical. step 17400, energy = -0.07744507294485177
+par_lens = 409, 408, 408
+[TDSE] Running TDSE-SH-elliptical. step 17600, energy = 0.016724088268540622
+par_lens = 409, 408, 408
+[TDSE] Running TDSE-SH-elliptical. step 17800, energy = -0.04703536358255045
+par_lens = 409, 408, 408
+[TDSE] Running TDSE-SH-elliptical. step 18000, energy = -0.1498198754373676
+par_lens = 409, 408, 408
+[TDSE] Running TDSE-SH-elliptical. step 18200, energy = -0.21863573630886943
+par_lens = 409, 408, 408
+[TDSE] Running TDSE-SH-elliptical. step 18400, energy = -0.19127139272110352
+par_lens = 409, 408, 408
+[TDSE] Running TDSE-SH-elliptical. step 18600, energy = -0.13378158396171214
+par_lens = 409, 408, 408
+[TDSE] Running TDSE-SH-elliptical. step 18800, energy = -0.1143818023620505
+par_lens = 409, 408, 408
+[TDSE] Running TDSE-SH-elliptical. step 19000, energy = -0.15778798503650232
+par_lens = 409, 408, 408
+[TDSE] Running TDSE-SH-elliptical. step 19200, energy = -0.2160182599379441
+par_lens = 409, 408, 408
+[TDSE] Running TDSE-SH-elliptical. step 19400, energy = -0.2220781859040589
+par_lens = 409, 408, 408
+[TDSE] Running TDSE-SH-elliptical. step 19600, energy = -0.19826836404747586
+par_lens = 409, 408, 408
+[TDSE] Running TDSE-SH-elliptical. step 19800, energy = -0.19649554317785084
+par_lens = 409, 408, 408
+[TDSE] Running TDSE-SH-elliptical. step 20000, energy = -0.1872473256265821
+par_lens = 409, 408, 408
+[TDSE] Running TDSE-SH-elliptical. step 20200, energy = -0.2146727994353604
+par_lens = 409, 408, 408
+[TDSE] Running TDSE-SH-elliptical. step 20400, energy = -0.22145036180392913
+par_lens = 409, 408, 408
+[TDSE] Running TDSE-SH-elliptical. step 20600, energy = -0.2251655190147687
+par_lens = 409, 408, 408
+[TDSE] Running TDSE-SH-elliptical. step 20800, energy = -0.2248494622546303
+par_lens = 409, 408, 408
+[TDSE] Running TDSE-SH-elliptical. step 21000, energy = -0.22589279210118055
+par_lens = 409, 408, 408
+[TDSE] Running TDSE-SH-elliptical. step 21200, energy = -0.22481996774962754
+par_lens = 409, 408, 408
+[TDSE] Running TDSE-SH-elliptical. step 21400, energy = -0.22574579949794116
+par_lens = 409, 408, 408
+[TDSE] Running TDSE-SH-elliptical. step 21600, energy = -0.22612412316224934
+par_lens = 409, 408, 408
+[TDSE] Running TDSE-SH-elliptical. step 21800, energy = -0.2262594546069588
+par_lens = 409, 408, 408
+[TDSE] Running TDSE-SH-elliptical. step 22000, energy = -0.2264729978708581
+par_lens = 409, 408, 408

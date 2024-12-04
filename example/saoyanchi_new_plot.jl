@@ -20,13 +20,16 @@ absorb_func = absorb_boundary_r(rmax, Ri_tsurf)
 pw = create_physics_world_sh(Nr, l_num, Δr, Δt, po_func_r, Z, absorb_func)
 rt = create_tdse_rt_sh(pw);
 init_wave_list = itp_fdsh(pw, rt, err=1e-9);
+get_energy_sh(init_wave_list[1], rt, pw.shgrid) # He:-0.944  H:-0.5
+
 
 # saoyanchi
 # tau_range = [0, 1500.0]
 # tau_range = [-700: 200: 1500; -600: 200: 1400]
 # tau_range = -700: 200: 1500
 # tau_range = [-700: 100: 700; 900: 200: 1500]
-tau_range = [-700: 100: 1500; 1700: 200: 2100]
+# tau_range = [-700: 100: 1500; 1700: 200: 2100]
+tau_range = [300, 1700]
 
 p = Vector{Any}(undef, length(tau_range))
 expected_kx_list = zeros(Float64, length(tau_range))
@@ -114,11 +117,11 @@ phi_record = retrieve_obj(example_name, "phi_record")
 dphi_record = retrieve_obj(example_name, "dphi_record")
 δa_lm = retrieve_obj(example_name, "delta_a_lm")
 
-p[example_id] = tsurf_plot_xy_momentum_spectrum(δa_lm, k_space, pw, kr_flag=true, k_min=0.05)
-expected_kx, expected_ky, expected_kz = tsurf_get_average_momentum_parallel(δa_lm, k_space, pw, k_min=0.0)
-expected_kx_list[example_id] = expected_kx
-expected_ky_list[example_id] = expected_ky
-expected_kz_list[example_id] = expected_kz
+p[example_id] = tsurf_plot_xy_momentum_spectrum(δa_lm, k_space, pw, kr_flag=false, k_min=0.05)
+# expected_kx, expected_ky, expected_kz = tsurf_get_average_momentum_parallel(δa_lm, k_space, pw, k_min=0.0)
+# expected_kx_list[example_id] = expected_kx
+# expected_ky_list[example_id] = expected_ky
+# expected_kz_list[example_id] = expected_kz
 
 # expected_kx, expected_ky, expected_kz = tsurf_get_average_momentum_parallel(δa_lm, k_space_2, pw, k_min=0.0)
 # expected_kx_list[example_id] = expected_kx
@@ -129,37 +132,68 @@ println("Now $tau_int")
 
 end
 
+using LaTeXStrings;
 
-plot(tau_range[1:23], abs.(expected_ky_list)[1:23],
-        xlabel="Time delay τ (a.u.)",
-        ylabel="Average momentum ky (a.u.)",
+plot(-0.75: 0.01: 0.75, [normalize(p[2][1] ./ p[2][2]) / 10 normalize(p[1][1] ./ p[1][2]) / 10],
         guidefont=Plots.font(14, "Times"),
         tickfont=Plots.font(14, "Times"),
-        legendfont=Plots.font(14, "Times"),
+        legendfont=Plots.font(10),
         margin = 5 * Plots.mm,
-        legend = false,
-        linewidth = 2.5
-        )
+        xlabel="Projection in the x",
+        ylabel = "Weight",
+        label = [L"THz(τ_2)" L"THz(τ_1)"],
+        linewidth = 1.5
+)
+
+tmp = [normalize(p[2][1] ./ p[2][2]) / 10 normalize(p[1][1] ./ p[1][2]) / 10]
+f = open("dtt", "w")
+write(f, tmp)
+close(f)
 
 
-p1 = scatter(tau_range[1:23], abs.(expected_ky_list)[1:23] .- 0.004,
-        label="Ave. ky",
-        markershape = :diamond,
-        markersize = 5)
-t_linspace = create_linspace(Int64((2 * nc2 * pi / ω2) ÷ Δt + 1), 0.05)
-E_THz(t) = (0.00017) * sin(ω2 * (t) / 2 / nc2)^2 * sin(ω2 * (t)) * (t > 0 && t < (2 * nc2 * pi / ω2))
-Et_data_thz = E_THz.(t_linspace)
-At_data_thz = get_integral(Et_data_thz, Δt)
-plot!(p1, range(tau_range[1] + 230, tau_range[23] - 330, length(t_linspace)), At_data_thz ./ 3.4,
-        guidefont=Plots.font(14, "Times"),
-        tickfont=Plots.font(14, "Times"),
-        legendfont=Plots.font(14, "Times"),
-        margin = 5 * Plots.mm,
-        xlabel="Calibrated Time",
-        ylabel = "Calibrated Amplitude",
-        label = "THz",
-        linewidth = 2.5
-        )
+# x_range = -0.75: 0.01: 0.75
+# data1 = normalize(p[2][1] ./ p[2][2]) / 10
+# data2 = normalize(p[1][1] ./ p[1][2]) / 10
+# f = open("xproj_data.txt", "w+")
+# for i = 1: length(p[1][1])
+#         write(f, "$(x_range[i]) $(data1[i]) $(data2[i])\n")
+# end
+# close(f)
+
+
+# mm = -350 + 1900
+# plot(tau_range[1:23] .+ mm, abs.(expected_ky_list)[1:23],
+#         xlabel="Time delay τ (a.u.)",
+#         ylabel="Average momentum ky (a.u.)",
+#         guidefont=Plots.font(14, "Times"),
+#         tickfont=Plots.font(14, "Times"),
+#         legendfont=Plots.font(14, "Times"),
+#         margin = 5 * Plots.mm,
+#         legend = false,
+#         linewidth = 2.5
+#         )
+
+
+# p1 = scatter(tau_range[1:23] .+ mm, (abs.(expected_ky_list)[1:23] .- 0.004) * 3.4,
+#         label="TDSE",
+#         markershape = :diamond,
+#         markersize = 5)
+# ω1 = 0.05693
+# ω2 = ω1 / 10
+# t_linspace = create_linspace(Int64((2 * 1 * pi / ω2) ÷ Δt + 1), 0.05)
+# E_THz(t) = (0.00017) * sin(ω2 * (t) / 2 / 1)^2 * sin(ω2 * (t)) * (t > 0 && t < (2 * 1 * pi / ω2))
+# Et_data_thz = E_THz.(t_linspace)
+# At_data_thz = get_integral(Et_data_thz, Δt)
+# plot!(p1, range(tau_range[1] + 230 + mm, tau_range[23] - 330 + mm, length(t_linspace)), At_data_thz,
+#         guidefont=Plots.font(14, "Times"),
+#         tickfont=Plots.font(14, "Times"),
+#         legendfont=Plots.font(14, "Times"),
+#         margin = 5 * Plots.mm,
+#         xlabel="Time delay τ(a.u.)",
+#         ylabel = "Vector potiential A (a.u.)",
+#         label = "THz",
+#         linewidth = 2.5
+#         )
 
 
 # example_name = "saoyanchi_new_plot_data"

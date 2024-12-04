@@ -10,7 +10,7 @@ using BandedMatrices
 
 # Define Physics World
 Rmin = 0.0
-Rmax = 50.0
+Rmax = 500.0
 po_func(r) = -1 / r
 # po_func(r) = -1.0 / r - exp(-2.0329 * r) / r - 0.3953 * exp(-6.1805 * r)
 
@@ -24,12 +24,12 @@ po_func_with_apdix = [r -> po_func(r) + l * (l + 1) / (2 * r^2) for l = 0: l_num
 lmap = create_lmmap(l_num)
 
 # Define B-Spline Basis
-N_basis = 250
+N_basis = 2500
 N_breakpoints = N_basis + 1
 Bspline_order = 3
 # bs_breakpoints = range(Rmin, Rmax, N_breakpoints)
 flex(num, b) = ((Rmax - Rmin) / (N_breakpoints ^ b - 1)) * (num ^ b - 1) + Rmin
-bs_breakpoints = flex.(1: N_breakpoints, 3)
+bs_breakpoints = flex.(1: N_breakpoints, 4)
 bspline_basis_total = BSplineBasis(BSplineOrder(Bspline_order), copy(bs_breakpoints))
 bspline_basis = RecombinedBSplineBasis(bspline_basis_total, Derivative(0))
 
@@ -98,6 +98,6 @@ wave_norm = dot(initial_shwave[1], S_bs * initial_shwave[1])
 energy = real(dot(initial_shwave[1], (Hl_bs[1] * initial_shwave[1])))
 
 println("H atom 1s energy = $energy")
-plot(real.(initial_shwave[1]))
+# plot(real.(initial_shwave[1]))
 
-factorize(BandedMatrix(D2_bs))
+# factorize(BandedMatrix(D2_bs))

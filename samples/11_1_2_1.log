@@ -1,0 +1,984 @@
+task id = 1
+-7000
+[ITP]: 10000.456880009739
+[ITP]: 0.024709310061816425
+[ITP]: 0.0073774390783138966
+[ITP]: 0.0036831396224421553
+[ITP]: 0.0021871217534298326
+[ITP]: 0.0014236976453675387
+[ITP]: 0.0009813836471159743
+[ITP]: 0.0007034772382468191
+[ITP]: 0.0005187633995176189
+[ITP]: 0.00039082582016103373
+[ITP]: 0.0002993900949075923
+[ITP]: 0.00023241771033605252
+[ITP]: 0.00018239013115672886
+[ITP]: 0.00014441701662459838
+[ITP]: 0.00011520971388589984
+[ITP]: 9.249443351216913e-5
+[ITP]: 7.46618494658624e-5
+[ITP]: 6.055000318894166e-5
+[ITP]: 4.930546685089077e-5
+[ITP]: 4.029207922751077e-5
+[ITP]: 3.302949220307383e-5
+[ITP]: 2.7150903431860662e-5
+[ITP]: 2.237343339273057e-5
+[ITP]: 1.8477013212114812e-5
+[ITP]: 1.5289111038874204e-5
+[ITP]: 1.2673532332363457e-5
+[ITP]: 1.0522107476429454e-5
+[ITP]: 8.748454195295352e-6
+[ITP]: 7.28325058108048e-6
+[ITP]: 6.070620360842938e-6
+[ITP]: 5.065346197041798e-6
+[ITP]: 4.230705299534954e-6
+[ITP]: 3.5367770332417336e-6
+[ITP]: 2.9591114165672394e-6
+[ITP]: 2.477675617673647e-6
+[ITP]: 2.0760161717481296e-6
+[ITP]: 1.7405896345357164e-6
+[ITP]: 1.4602254015949612e-6
+[ITP]: 1.2256930599363614e-6
+[ITP]: 1.0293524912441399e-6
+[ITP]: 8.648701671498671e-7
+[ITP]: 7.269882001947892e-7
+[ITP]: 6.11335995492901e-7
+[ITP]: 5.142761624332692e-7
+[ITP]: 4.327781399915409e-7
+[ITP]: 3.6431439398576515e-7
+[ITP]: 3.0677494089470514e-7
+[ITP]: 2.5839681527806135e-7
+[ITP]: 2.1770581581925796e-7
+[ITP]: 1.8346827934667687e-7
+[ITP]: 1.5465114422408277e-7
+[ITP]: 1.3038871937709473e-7
+[ITP]: 1.0995518018308559e-7
+[ITP]: 9.274161327788022e-8
+[ITP]: 7.823692893538237e-8
+[ITP]: 6.601190927213452e-8
+[ITP]: 5.570598116122483e-8
+[ITP]: 4.701604894297162e-8
+[ITP]: 3.968730111214569e-8
+[ITP]: 3.350536437185525e-8
+[ITP]: 2.8289883435839158e-8
+[ITP]: 2.3889059841408766e-8
+[ITP]: 2.0175066506311623e-8
+[ITP]: 1.704025520687935e-8
+[ITP]: 1.439395658220377e-8
+[ITP]: 1.2159741213935149e-8
+[ITP]: 1.0273225714563239e-8
+[ITP]: 8.680112406622698e-9
+Energy of ground state: -0.5003391396259835
+[TDSE] Runing TDSE-SH-linear. step 0 energy = -0.5003391396259835 
+     | block_size = 3 
+[TDSE] Runing TDSE-SH-linear. step 200 energy = -0.5003391396259139 
+     | block_size = 3 
+[TDSE] Runing TDSE-SH-linear. step 400 energy = -0.5003391396258423 
+     | block_size = 3 
+[TDSE] Runing TDSE-SH-linear. step 600 energy = -0.500339139625773 
+     | block_size = 3 
+[TDSE] Runing TDSE-SH-linear. step 800 energy = -0.5003391396257046 
+     | block_size = 3 
+[TDSE] Runing TDSE-SH-linear. step 1000 energy = -0.5003391396256359 
+     | block_size = 3 
+[TDSE] Runing TDSE-SH-linear. step 1200 energy = -0.5003391396255685 
+     | block_size = 3 
+[TDSE] Runing TDSE-SH-linear. step 1400 energy = -0.5003391396255019 
+     | block_size = 3 
+[TDSE] Runing TDSE-SH-linear. step 1600 energy = -0.5003391396254336 
+     | block_size = 3 
+[TDSE] Runing TDSE-SH-linear. step 1800 energy = -0.5003391396253664 
+     | block_size = 3 
+[TDSE] Runing TDSE-SH-linear. step 2000 energy = -0.5003391396252969 
+     | block_size = 3 
+[TDSE] Runing TDSE-SH-linear. step 2200 energy = -0.5003391396252301 
+     | block_size = 3 
+[TDSE] Runing TDSE-SH-linear. step 2400 energy = -0.5003391396251633 
+     | block_size = 3 
+[TDSE] Runing TDSE-SH-linear. step 2600 energy = -0.5003391396250936 
+     | block_size = 3 
+[TDSE] Runing TDSE-SH-linear. step 2800 energy = -0.5003391396250243 
+     | block_size = 3 
+[TDSE] Runing TDSE-SH-linear. step 3000 energy = -0.5003391396249552 
+     | block_size = 3 
+[TDSE] Runing TDSE-SH-linear. step 3200 energy = -0.5003391396248906 
+     | block_size = 3 
+[TDSE] Runing TDSE-SH-linear. step 3400 energy = -0.5003391396248229 
+     | block_size = 3 
+[TDSE] Runing TDSE-SH-linear. step 3600 energy = -0.5003391396247553 
+     | block_size = 3 
+[TDSE] Runing TDSE-SH-linear. step 3800 energy = -0.5003391396246875 
+     | block_size = 3 
+[TDSE] Runing TDSE-SH-linear. step 4000 energy = -0.5003391396246203 
+     | block_size = 3 
+[TDSE] Runing TDSE-SH-linear. step 4200 energy = -0.5003391396245489 
+     | block_size = 3 
+[TDSE] Runing TDSE-SH-linear. step 4400 energy = -0.500339139624484 
+     | block_size = 3 
+[TDSE] Runing TDSE-SH-linear. step 4600 energy = -0.5003391396244135 
+     | block_size = 3 
+[TDSE] Runing TDSE-SH-linear. step 4800 energy = -0.5003391396243457 
+     | block_size = 3 
+[TDSE] Runing TDSE-SH-linear. step 5000 energy = -0.5003391396242796 
+     | block_size = 3 
+[TDSE] Runing TDSE-SH-linear. step 5200 energy = -0.5003391396242114 
+     | block_size = 3 
+[TDSE] Runing TDSE-SH-linear. step 5400 energy = -0.5003391396241432 
+     | block_size = 3 
+[TDSE] Runing TDSE-SH-linear. step 5600 energy = -0.5003391396240744 
+     | block_size = 3 
+[TDSE] Runing TDSE-SH-linear. step 5800 energy = -0.5003391396240071 
+     | block_size = 3 
+[TDSE] Runing TDSE-SH-linear. step 6000 energy = -0.5003391396239393 
+     | block_size = 3 
+[TDSE] Runing TDSE-SH-linear. step 6200 energy = -0.5003391396238734 
+     | block_size = 3 
+[TDSE] Runing TDSE-SH-linear. step 6400 energy = -0.5003391396238024 
+     | block_size = 3 
+[TDSE] Runing TDSE-SH-linear. step 6600 energy = -0.5003391396237367 
+     | block_size = 3 
+[TDSE] Runing TDSE-SH-linear. step 6800 energy = -0.5003391396236699 
+     | block_size = 3 
+[TDSE] Runing TDSE-SH-linear. step 7000 energy = -0.5003391396236037 
+     | block_size = 3 
+[TDSE] Runing TDSE-SH-linear. step 7200 energy = -0.5003391396235335 
+     | block_size = 3 
+[TDSE] Runing TDSE-SH-linear. step 7400 energy = -0.5003391396234651 
+     | block_size = 3 
+[TDSE] Runing TDSE-SH-linear. step 7600 energy = -0.5003391396233979 
+     | block_size = 3 
+[TDSE] Runing TDSE-SH-linear. step 7800 energy = -0.500339139623329 
+     | block_size = 3 
+[TDSE] Runing TDSE-SH-linear. step 8000 energy = -0.5003391396232598 
+     | block_size = 3 
+[TDSE] Runing TDSE-SH-linear. step 8200 energy = -0.5003391396231931 
+     | block_size = 3 
+[TDSE] Runing TDSE-SH-linear. step 8400 energy = -0.5003391396231255 
+     | block_size = 3 
+[TDSE] Runing TDSE-SH-linear. step 8600 energy = -0.5003391396230586 
+     | block_size = 3 
+[TDSE] Runing TDSE-SH-linear. step 8800 energy = -0.5003391396229907 
+     | block_size = 3 
+[TDSE] Runing TDSE-SH-linear. step 9000 energy = -0.5003391396229229 
+     | block_size = 3 
+[TDSE] Runing TDSE-SH-linear. step 9200 energy = -0.5003391396228534 
+     | block_size = 3 
+[TDSE] Runing TDSE-SH-linear. step 9400 energy = -0.5003391396227862 
+     | block_size = 3 
+[TDSE] Runing TDSE-SH-linear. step 9600 energy = -0.5003391396227201 
+     | block_size = 3 
+[TDSE] Runing TDSE-SH-linear. step 9800 energy = -0.5003391396226525 
+     | block_size = 3 
+[TDSE] Runing TDSE-SH-linear. step 10000 energy = -0.5003391396225834 
+     | block_size = 3 
+[TDSE] Runing TDSE-SH-linear. step 10200 energy = -0.5003391396225151 
+     | block_size = 3 
+[TDSE] Runing TDSE-SH-linear. step 10400 energy = -0.5003391396224464 
+     | block_size = 3 
+[TDSE] Runing TDSE-SH-linear. step 10600 energy = -0.5003391396223779 
+     | block_size = 3 
+[TDSE] Runing TDSE-SH-linear. step 10800 energy = -0.5003391396223119 
+     | block_size = 3 
+[TDSE] Runing TDSE-SH-linear. step 11000 energy = -0.5003391396222434 
+     | block_size = 3 
+[TDSE] Runing TDSE-SH-linear. step 11200 energy = -0.5003391396221775 
+     | block_size = 3 
+[TDSE] Runing TDSE-SH-linear. step 11400 energy = -0.5003391396221073 
+     | block_size = 3 
+[TDSE] Runing TDSE-SH-linear. step 11600 energy = -0.5003391396220402 
+     | block_size = 3 
+[TDSE] Runing TDSE-SH-linear. step 11800 energy = -0.500339139621972 
+     | block_size = 3 
+[TDSE] Runing TDSE-SH-linear. step 12000 energy = -0.5003391396219037 
+     | block_size = 3 
+[TDSE] Runing TDSE-SH-linear. step 12200 energy = -0.5003391396218347 
+     | block_size = 3 
+[TDSE] Runing TDSE-SH-linear. step 12400 energy = -0.500339139621766 
+     | block_size = 3 
+[TDSE] Runing TDSE-SH-linear. step 12600 energy = -0.5003391396216996 
+     | block_size = 3 
+[TDSE] Runing TDSE-SH-linear. step 12800 energy = -0.5003391396216338 
+     | block_size = 3 
+[TDSE] Runing TDSE-SH-linear. step 13000 energy = -0.5003391396215644 
+     | block_size = 3 
+[TDSE] Runing TDSE-SH-linear. step 13200 energy = -0.5003391396214953 
+     | block_size = 3 
+[TDSE] Runing TDSE-SH-linear. step 13400 energy = -0.5003391396214265 
+     | block_size = 3 
+[TDSE] Runing TDSE-SH-linear. step 13600 energy = -0.5003391396213588 
+     | block_size = 3 
+[TDSE] Runing TDSE-SH-linear. step 13800 energy = -0.5003391396212917 
+     | block_size = 3 
+[TDSE] Runing TDSE-SH-linear. step 14000 energy = -0.500339139621224 
+     | block_size = 3 
+[TDSE] Runing TDSE-SH-linear. step 14200 energy = -0.5003391396211557 
+     | block_size = 3 
+[TDSE] Runing TDSE-SH-linear. step 14400 energy = -0.5003391396210858 
+     | block_size = 3 
+[TDSE] Runing TDSE-SH-linear. step 14600 energy = -0.5003391396210185 
+     | block_size = 3 
+[TDSE] Runing TDSE-SH-linear. step 14800 energy = -0.5003391396209482 
+     | block_size = 3 
+[TDSE] Runing TDSE-SH-linear. step 15000 energy = -0.5003391396208793 
+     | block_size = 3 
+[TDSE] Runing TDSE-SH-linear. step 15200 energy = -0.5003391396208129 
+     | block_size = 3 
+[TDSE] Runing TDSE-SH-linear. step 15400 energy = -0.5003391396207468 
+     | block_size = 3 
+[TDSE] Runing TDSE-SH-linear. step 15600 energy = -0.5003391396206756 
+     | block_size = 3 
+[TDSE] Runing TDSE-SH-linear. step 15800 energy = -0.500339139620609 
+     | block_size = 3 
+[TDSE] Runing TDSE-SH-linear. step 16000 energy = -0.5003391396205417 
+     | block_size = 3 
+[TDSE] Runing TDSE-SH-linear. step 16200 energy = -0.5003391396204767 
+     | block_size = 3 
+[TDSE] Runing TDSE-SH-linear. step 16400 energy = -0.5003391396204059 
+     | block_size = 3 
+[TDSE] Runing TDSE-SH-linear. step 16600 energy = -0.500339139620338 
+     | block_size = 3 
+[TDSE] Runing TDSE-SH-linear. step 16800 energy = -0.5003391396202713 
+     | block_size = 3 
+[TDSE] Runing TDSE-SH-linear. step 17000 energy = -0.5003391396202047 
+     | block_size = 3 
+[TDSE] Runing TDSE-SH-linear. step 17200 energy = -0.5003391396201352 
+     | block_size = 3 
+[TDSE] Runing TDSE-SH-linear. step 17400 energy = -0.5003391396200675 
+     | block_size = 3 
+[TDSE] Runing TDSE-SH-linear. step 17600 energy = -0.5003391396199979 
+     | block_size = 3 
+[TDSE] Runing TDSE-SH-linear. step 17800 energy = -0.5003391396199313 
+     | block_size = 3 
+[TDSE] Runing TDSE-SH-linear. step 18000 energy = -0.5003391396198651 
+     | block_size = 3 
+[TDSE] Runing TDSE-SH-linear. step 18200 energy = -0.5003391396197958 
+     | block_size = 3 
+[TDSE] Runing TDSE-SH-linear. step 18400 energy = -0.5003391396197283 
+     | block_size = 3 
+[TDSE] Runing TDSE-SH-linear. step 18600 energy = -0.5003391396196599 
+     | block_size = 3 
+[TDSE] Runing TDSE-SH-linear. step 18800 energy = -0.5003391396195924 
+     | block_size = 3 
+[TDSE] Runing TDSE-SH-linear. step 19000 energy = -0.5003391396195263 
+     | block_size = 3 
+[TDSE] Runing TDSE-SH-linear. step 19200 energy = -0.5003391396194574 
+     | block_size = 3 
+[TDSE] Runing TDSE-SH-linear. step 19400 energy = -0.5003391396193877 
+     | block_size = 3 
+[TDSE] Runing TDSE-SH-linear. step 19600 energy = -0.5003391396193216 
+     | block_size = 3 
+[TDSE] Runing TDSE-SH-linear. step 19800 energy = -0.5003391396192526 
+     | block_size = 3 
+[TDSE] Runing TDSE-SH-linear. step 20000 energy = -0.5003391396191847 
+     | block_size = 3 
+[TDSE] Runing TDSE-SH-linear. step 20200 energy = -0.5003391396178595 
+     | block_size = 3 
+[TDSE] Runing TDSE-SH-linear. step 20400 energy = -0.5003391391416131 
+     | block_size = 3 
+[TDSE] Runing TDSE-SH-linear. step 20600 energy = -0.5003391307610026 
+     | block_size = 3 
+[TDSE] Runing TDSE-SH-linear. step 20800 energy = -0.5003390911171061 
+     | block_size = 4 
+[TDSE] Runing TDSE-SH-linear. step 21000 energy = -0.5003390154590538 
+     | block_size = 4 
+[TDSE] Runing TDSE-SH-linear. step 21200 energy = -0.5003389730526923 
+     | block_size = 4 
+[TDSE] Runing TDSE-SH-linear. step 21400 energy = -0.5003390350842836 
+     | block_size = 4 
+[TDSE] Runing TDSE-SH-linear. step 21600 energy = -0.5003390008535783 
+     | block_size = 4 
+[TDSE] Runing TDSE-SH-linear. step 21800 energy = -0.5003379131419496 
+     | block_size = 4 
+[TDSE] Runing TDSE-SH-linear. step 22000 energy = -0.5003334251238511 
+     | block_size = 4 
+[TDSE] Runing TDSE-SH-linear. step 22200 energy = -0.5003217157726734 
+     | block_size = 5 
+[TDSE] Runing TDSE-SH-linear. step 22400 energy = -0.5002986315338284 
+     | block_size = 5 
+[TDSE] Runing TDSE-SH-linear. step 22600 energy = -0.5002616542653062 
+     | block_size = 5 
+[TDSE] Runing TDSE-SH-linear. step 22800 energy = -0.500212539780615 
+     | block_size = 5 
+[TDSE] Runing TDSE-SH-linear. step 23000 energy = -0.5001597459849849 
+     | block_size = 6 
+[TDSE] Runing TDSE-SH-linear. step 23200 energy = -0.500118080608749 
+     | block_size = 6 
+[TDSE] Runing TDSE-SH-linear. step 23400 energy = -0.5001052342490516 
+     | block_size = 6 
+[TDSE] Runing TDSE-SH-linear. step 23600 energy = -0.5001336416397456 
+     | block_size = 6 
+[TDSE] Runing TDSE-SH-linear. step 23800 energy = -0.5001991971683585 
+     | block_size = 6 
+[TDSE] Runing TDSE-SH-linear. step 24000 energy = -0.5002766024397693 
+     | block_size = 5 
+[TDSE] Runing TDSE-SH-linear. step 24200 energy = -0.5003200684833036 
+     | block_size = 5 
+[TDSE] Runing TDSE-SH-linear. step 24400 energy = -0.5002717868766845 
+     | block_size = 5 
+[TDSE] Runing TDSE-SH-linear. step 24600 energy = -0.5000841798690007 
+     | block_size = 6 
+[TDSE] Runing TDSE-SH-linear. step 24800 energy = -0.49974282622349975 
+     | block_size = 6 
+[TDSE] Runing TDSE-SH-linear. step 25000 energy = -0.4992885414841279 
+     | block_size = 7 
+[TDSE] Runing TDSE-SH-linear. step 25200 energy = -0.49882173556253573 
+     | block_size = 7 
+[TDSE] Runing TDSE-SH-linear. step 25400 energy = -0.4984720253732971 
+     | block_size = 7 
+[TDSE] Runing TDSE-SH-linear. step 25600 energy = -0.4983655304923305 
+     | block_size = 7 
+[TDSE] Runing TDSE-SH-linear. step 25800 energy = -0.49858030597154146 
+     | block_size = 7 
+[TDSE] Runing TDSE-SH-linear. step 26000 energy = -0.4990769782748271 
+     | block_size = 7 
+[TDSE] Runing TDSE-SH-linear. step 26200 energy = -0.4996840550564677 
+     | block_size = 7 
+[TDSE] Runing TDSE-SH-linear. step 26400 energy = -0.5001431585088162 
+     | block_size = 7 
+[TDSE] Runing TDSE-SH-linear. step 26600 energy = -0.5001667354642347 
+     | block_size = 7 
+[TDSE] Runing TDSE-SH-linear. step 26800 energy = -0.4995435600403697 
+     | block_size = 7 
+[TDSE] Runing TDSE-SH-linear. step 27000 energy = -0.49823707684253593 
+     | block_size = 7 
+[TDSE] Runing TDSE-SH-linear. step 27200 energy = -0.4964513920726294 
+     | block_size = 8 
+[TDSE] Runing TDSE-SH-linear. step 27400 energy = -0.4946280104777274 
+     | block_size = 8 
+[TDSE] Runing TDSE-SH-linear. step 27600 energy = -0.49327814460221064 
+     | block_size = 9 
+[TDSE] Runing TDSE-SH-linear. step 27800 energy = -0.4928514389945908 
+     | block_size = 9 
+[TDSE] Runing TDSE-SH-linear. step 28000 energy = -0.4936104324134564 
+     | block_size = 9 
+[TDSE] Runing TDSE-SH-linear. step 28200 energy = -0.4953999355675777 
+     | block_size = 10 
+[TDSE] Runing TDSE-SH-linear. step 28400 energy = -0.4976216697368259 
+     | block_size = 10 
+[TDSE] Runing TDSE-SH-linear. step 28600 energy = -0.4994278710181161 
+     | block_size = 10 
+[TDSE] Runing TDSE-SH-linear. step 28800 energy = -0.49994049243432115 
+     | block_size = 10 
+[TDSE] Runing TDSE-SH-linear. step 29000 energy = -0.49854693123214516 
+     | block_size = 10 
+[TDSE] Runing TDSE-SH-linear. step 29200 energy = -0.49517898413278727 
+     | block_size = 10 
+[TDSE] Runing TDSE-SH-linear. step 29400 energy = -0.4904453776997708 
+     | block_size = 9 
+[TDSE] Runing TDSE-SH-linear. step 29600 energy = -0.4855780309894969 
+     | block_size = 10 
+[TDSE] Runing TDSE-SH-linear. step 29800 energy = -0.4819835883279321 
+     | block_size = 11 
+[TDSE] Runing TDSE-SH-linear. step 30000 energy = -0.4808175598757595 
+     | block_size = 11 
+[TDSE] Runing TDSE-SH-linear. step 30200 energy = -0.48266930613820747 
+     | block_size = 12 
+[TDSE] Runing TDSE-SH-linear. step 30400 energy = -0.4871512581613761 
+     | block_size = 12 
+[TDSE] Runing TDSE-SH-linear. step 30600 energy = -0.4928259352795841 
+     | block_size = 13 
+[TDSE] Runing TDSE-SH-linear. step 30800 energy = -0.4976156942126078 
+     | block_size = 13 
+[TDSE] Runing TDSE-SH-linear. step 31000 energy = -0.4994740947631062 
+     | block_size = 13 
+[TDSE] Runing TDSE-SH-linear. step 31200 energy = -0.4970210510954193 
+     | block_size = 13 
+[TDSE] Runing TDSE-SH-linear. step 31400 energy = -0.49013886819453056 
+     | block_size = 13 
+[TDSE] Runing TDSE-SH-linear. step 31600 energy = -0.48020832191982055 
+     | block_size = 12 
+[TDSE] Runing TDSE-SH-linear. step 31800 energy = -0.46987208038944045 
+     | block_size = 12 
+[TDSE] Runing TDSE-SH-linear. step 32000 energy = -0.4622050003328159 
+     | block_size = 13 
+[TDSE] Runing TDSE-SH-linear. step 32200 energy = -0.45966861065969605 
+     | block_size = 14 
+[TDSE] Runing TDSE-SH-linear. step 32400 energy = -0.46330358511368713 
+     | block_size = 15 
+[TDSE] Runing TDSE-SH-linear. step 32600 energy = -0.4723084194065475 
+     | block_size = 16 
+[TDSE] Runing TDSE-SH-linear. step 32800 energy = -0.48393633706023104 
+     | block_size = 16 
+[TDSE] Runing TDSE-SH-linear. step 33000 energy = -0.494036647314204 
+     | block_size = 17 
+[TDSE] Runing TDSE-SH-linear. step 33200 energy = -0.49858815297884135 
+     | block_size = 17 
+[TDSE] Runing TDSE-SH-linear. step 33400 energy = -0.4949575921233746 
+     | block_size = 17 
+[TDSE] Runing TDSE-SH-linear. step 33600 energy = -0.4829240690054521 
+     | block_size = 16 
+[TDSE] Runing TDSE-SH-linear. step 33800 energy = -0.4651154292643291 
+     | block_size = 16 
+[TDSE] Runing TDSE-SH-linear. step 34000 energy = -0.4464041851565734 
+     | block_size = 15 
+[TDSE] Runing TDSE-SH-linear. step 34200 energy = -0.4324218778210966 
+     | block_size = 16 
+[TDSE] Runing TDSE-SH-linear. step 34400 energy = -0.4276078201160105 
+     | block_size = 17 
+[TDSE] Runing TDSE-SH-linear. step 34600 energy = -0.433709264599784 
+     | block_size = 18 
+[TDSE] Runing TDSE-SH-linear. step 34800 energy = -0.4493010754477424 
+     | block_size = 19 
+[TDSE] Runing TDSE-SH-linear. step 35000 energy = -0.46981292818232356 
+     | block_size = 20 
+[TDSE] Runing TDSE-SH-linear. step 35200 energy = -0.488046029469917 
+     | block_size = 21 
+[TDSE] Runing TDSE-SH-linear. step 35400 energy = -0.4970530995126124 
+     | block_size = 21 
+[TDSE] Runing TDSE-SH-linear. step 35600 energy = -0.49240622469987166 
+     | block_size = 21 
+[TDSE] Runing TDSE-SH-linear. step 35800 energy = -0.47363158666642874 
+     | block_size = 20 
+[TDSE] Runing TDSE-SH-linear. step 36000 energy = -0.4450953698647579 
+     | block_size = 19 
+[TDSE] Runing TDSE-SH-linear. step 36200 energy = -0.4149599751663479 
+     | block_size = 19 
+[TDSE] Runing TDSE-SH-linear. step 36400 energy = -0.3923923796644074 
+     | block_size = 19 
+[TDSE] Runing TDSE-SH-linear. step 36600 energy = -0.3844399729268242 
+     | block_size = 20 
+[TDSE] Runing TDSE-SH-linear. step 36800 energy = -0.3934453834694431 
+     | block_size = 21 
+[TDSE] Runing TDSE-SH-linear. step 37000 energy = -0.4172199958145769 
+     | block_size = 22 
+[TDSE] Runing TDSE-SH-linear. step 37200 energy = -0.4496905396742761 
+     | block_size = 23 
+[TDSE] Runing TDSE-SH-linear. step 37400 energy = -0.4792363379496273 
+     | block_size = 24 
+[TDSE] Runing TDSE-SH-linear. step 37600 energy = -0.49460908160087524 
+     | block_size = 25 
+[TDSE] Runing TDSE-SH-linear. step 37800 energy = -0.48943829255807125 
+     | block_size = 25 
+[TDSE] Runing TDSE-SH-linear. step 38000 energy = -0.46267673548737437 
+     | block_size = 25 
+[TDSE] Runing TDSE-SH-linear. step 38200 energy = -0.420802224161044 
+     | block_size = 26 
+[TDSE] Runing TDSE-SH-linear. step 38400 energy = -0.376299328272776 
+     | block_size = 27 
+[TDSE] Runing TDSE-SH-linear. step 38600 energy = -0.34300496190208674 
+     | block_size = 28 
+[TDSE] Runing TDSE-SH-linear. step 38800 energy = -0.3315548010464006 
+     | block_size = 29 
+[TDSE] Runing TDSE-SH-linear. step 39000 energy = -0.3441286937845041 
+     | block_size = 30 
+[TDSE] Runing TDSE-SH-linear. step 39200 energy = -0.3765726169911664 
+     | block_size = 31 
+[TDSE] Runing TDSE-SH-linear. step 39400 energy = -0.42311995622033366 
+     | block_size = 32 
+[TDSE] Runing TDSE-SH-linear. step 39600 energy = -0.46734592586162593 
+     | block_size = 33 
+[TDSE] Runing TDSE-SH-linear. step 39800 energy = -0.49091390970108334 
+     | block_size = 34 
+[TDSE] Runing TDSE-SH-linear. step 40000 energy = -0.4860533095177148 
+     | block_size = 34 
+[TDSE] Runing TDSE-SH-linear. step 40200 energy = -0.4507355054776173 
+     | block_size = 34 
+[TDSE] Runing TDSE-SH-linear. step 40400 energy = -0.39364798976081083 
+     | block_size = 34 
+[TDSE] Runing TDSE-SH-linear. step 40600 energy = -0.3322913998181737 
+     | block_size = 34 
+[TDSE] Runing TDSE-SH-linear. step 40800 energy = -0.28592991755068553 
+     | block_size = 34 
+[TDSE] Runing TDSE-SH-linear. step 41000 energy = -0.2714615857685423 
+     | block_size = 34 
+[TDSE] Runing TDSE-SH-linear. step 41200 energy = -0.28907790603728273 
+     | block_size = 33 
+[TDSE] Runing TDSE-SH-linear. step 41400 energy = -0.32969666602720843 
+     | block_size = 34 
+[TDSE] Runing TDSE-SH-linear. step 41600 energy = -0.3902079015105059 
+     | block_size = 35 
+[TDSE] Runing TDSE-SH-linear. step 41800 energy = -0.4522507604591891 
+     | block_size = 36 
+[TDSE] Runing TDSE-SH-linear. step 42000 energy = -0.4852742422954349 
+     | block_size = 37 
+[TDSE] Runing TDSE-SH-linear. step 42200 energy = -0.48175400672423446 
+     | block_size = 38 
+[TDSE] Runing TDSE-SH-linear. step 42400 energy = -0.4379790334666802 
+     | block_size = 39 
+[TDSE] Runing TDSE-SH-linear. step 42600 energy = -0.3655804876168847 
+     | block_size = 40 
+[TDSE] Runing TDSE-SH-linear. step 42800 energy = -0.2860902945072811 
+     | block_size = 41 
+[TDSE] Runing TDSE-SH-linear. step 43000 energy = -0.2258499908076436 
+     | block_size = 42 
+[TDSE] Runing TDSE-SH-linear. step 43200 energy = -0.20632990676860627 
+     | block_size = 43 
+[TDSE] Runing TDSE-SH-linear. step 43400 energy = -0.23157992709129702 
+     | block_size = 44 
+[TDSE] Runing TDSE-SH-linear. step 43600 energy = -0.28022154722103504 
+     | block_size = 45 
+[TDSE] Runing TDSE-SH-linear. step 43800 energy = -0.35233173668926626 
+     | block_size = 46 
+[TDSE] Runing TDSE-SH-linear. step 44000 energy = -0.43361048652155 
+     | block_size = 47 
+[TDSE] Runing TDSE-SH-linear. step 44200 energy = -0.47729118114730235 
+     | block_size = 48 
+[TDSE] Runing TDSE-SH-linear. step 44400 energy = -0.4763508538421327 
+     | block_size = 48 
+[TDSE] Runing TDSE-SH-linear. step 44600 energy = -0.4254252801415442 
+     | block_size = 49 
+[TDSE] Runing TDSE-SH-linear. step 44800 energy = -0.3377680975611748 
+     | block_size = 49 
+[TDSE] Runing TDSE-SH-linear. step 45000 energy = -0.24082120120490133 
+     | block_size = 50 
+[TDSE] Runing TDSE-SH-linear. step 45200 energy = -0.16474785171854403 
+     | block_size = 50 
+[TDSE] Runing TDSE-SH-linear. step 45400 energy = -0.1434570694098709 
+     | block_size = 50 
+[TDSE] Runing TDSE-SH-linear. step 45600 energy = -0.1758057966942922 
+     | block_size = 50 
+[TDSE] Runing TDSE-SH-linear. step 45800 energy = -0.23209714308753876 
+     | block_size = 50 
+[TDSE] Runing TDSE-SH-linear. step 46000 energy = -0.31018429403145165 
+     | block_size = 50 
+[TDSE] Runing TDSE-SH-linear. step 46200 energy = -0.41046572189651437 
+     | block_size = 50 
+[TDSE] Runing TDSE-SH-linear. step 46400 energy = -0.4640778372143417 
+     | block_size = 50 
+[TDSE] Runing TDSE-SH-linear. step 46600 energy = -0.4666111932180754 
+     | block_size = 50 
+[TDSE] Runing TDSE-SH-linear. step 46800 energy = -0.41170081334944214 
+     | block_size = 50 
+[TDSE] Runing TDSE-SH-linear. step 47000 energy = -0.3126397945365757 
+     | block_size = 50 
+[TDSE] Runing TDSE-SH-linear. step 47200 energy = -0.20288153210419665 
+     | block_size = 50 
+[TDSE] Runing TDSE-SH-linear. step 47400 energy = -0.11395642850962455 
+     | block_size = 50 
+[TDSE] Runing TDSE-SH-linear. step 47600 energy = -0.08588851644164677 
+     | block_size = 50 
+[TDSE] Runing TDSE-SH-linear. step 47800 energy = -0.1229970448134945 
+     | block_size = 50 
+[TDSE] Runing TDSE-SH-linear. step 48000 energy = -0.18999384706152997 
+     | block_size = 50 
+[TDSE] Runing TDSE-SH-linear. step 48200 energy = -0.27014993277805516 
+     | block_size = 50 
+[TDSE] Runing TDSE-SH-linear. step 48400 energy = -0.38289920123492477 
+     | block_size = 50 
+[TDSE] Runing TDSE-SH-linear. step 48600 energy = -0.448435026271485 
+     | block_size = 50 
+[TDSE] Runing TDSE-SH-linear. step 48800 energy = -0.45489949731924145 
+     | block_size = 50 
+[TDSE] Runing TDSE-SH-linear. step 49000 energy = -0.3974682541474174 
+     | block_size = 50 
+[TDSE] Runing TDSE-SH-linear. step 49200 energy = -0.29363453986156846 
+     | block_size = 50 
+[TDSE] Runing TDSE-SH-linear. step 49400 energy = -0.1694436127902913 
+     | block_size = 50 
+[TDSE] Runing TDSE-SH-linear. step 49600 energy = -0.07105225395315401 
+     | block_size = 50 
+[TDSE] Runing TDSE-SH-linear. step 49800 energy = -0.039177093064693094 
+     | block_size = 50 
+[TDSE] Runing TDSE-SH-linear. step 50000 energy = -0.08738046981450831 
+     | block_size = 50 
+[TDSE] Runing TDSE-SH-linear. step 50200 energy = -0.15351580043302226 
+     | block_size = 50 
+[TDSE] Runing TDSE-SH-linear. step 50400 energy = -0.23396060027262539 
+     | block_size = 50 
+[TDSE] Runing TDSE-SH-linear. step 50600 energy = -0.3520026023711827 
+     | block_size = 50 
+[TDSE] Runing TDSE-SH-linear. step 50800 energy = -0.42226947004086085 
+     | block_size = 50 
+[TDSE] Runing TDSE-SH-linear. step 51000 energy = -0.4335588488238714 
+     | block_size = 50 
+[TDSE] Runing TDSE-SH-linear. step 51200 energy = -0.37921715721953436 
+     | block_size = 50 
+[TDSE] Runing TDSE-SH-linear. step 51400 energy = -0.27384208254984976 
+     | block_size = 50 
+[TDSE] Runing TDSE-SH-linear. step 51600 energy = -0.15304420520104559 
+     | block_size = 50 
+[TDSE] Runing TDSE-SH-linear. step 51800 energy = -0.054450036084509316 
+     | block_size = 50 
+[TDSE] Runing TDSE-SH-linear. step 52000 energy = -0.01337683475236217 
+     | block_size = 50 
+[TDSE] Runing TDSE-SH-linear. step 52200 energy = -0.051026689499083365 
+     | block_size = 50 
+[TDSE] Runing TDSE-SH-linear. step 52400 energy = -0.13053676387034716 
+     | block_size = 50 
+[TDSE] Runing TDSE-SH-linear. step 52600 energy = -0.208664359585736 
+     | block_size = 50 
+[TDSE] Runing TDSE-SH-linear. step 52800 energy = -0.32747537866058707 
+     | block_size = 50 
+[TDSE] Runing TDSE-SH-linear. step 53000 energy = -0.40480244277874994 
+     | block_size = 50 
+[TDSE] Runing TDSE-SH-linear. step 53200 energy = -0.4193189884699261 
+     | block_size = 50 
+[TDSE] Runing TDSE-SH-linear. step 53400 energy = -0.3710362591640671 
+     | block_size = 50 
+[TDSE] Runing TDSE-SH-linear. step 53600 energy = -0.2698740615944738 
+     | block_size = 50 
+[TDSE] Runing TDSE-SH-linear. step 53800 energy = -0.1518551770187421 
+     | block_size = 50 
+[TDSE] Runing TDSE-SH-linear. step 54000 energy = -0.03959586200131327 
+     | block_size = 50 
+[TDSE] Runing TDSE-SH-linear. step 54200 energy = -0.005336908163000434 
+     | block_size = 50 
+[TDSE] Runing TDSE-SH-linear. step 54400 energy = -0.04604394073820979 
+     | block_size = 50 
+[TDSE] Runing TDSE-SH-linear. step 54600 energy = -0.1204036267877388 
+     | block_size = 50 
+[TDSE] Runing TDSE-SH-linear. step 54800 energy = -0.19164595001736423 
+     | block_size = 50 
+[TDSE] Runing TDSE-SH-linear. step 55000 energy = -0.30480873222390187 
+     | block_size = 50 
+[TDSE] Runing TDSE-SH-linear. step 55200 energy = -0.38133323287164056 
+     | block_size = 50 
+[TDSE] Runing TDSE-SH-linear. step 55400 energy = -0.3979372469433032 
+     | block_size = 50 
+[TDSE] Runing TDSE-SH-linear. step 55600 energy = -0.35606797438829224 
+     | block_size = 50 
+[TDSE] Runing TDSE-SH-linear. step 55800 energy = -0.2595359793297173 
+     | block_size = 50 
+[TDSE] Runing TDSE-SH-linear. step 56000 energy = -0.15304586965809364 
+     | block_size = 50 
+[TDSE] Runing TDSE-SH-linear. step 56200 energy = -0.05484259897578169 
+     | block_size = 50 
+[TDSE] Runing TDSE-SH-linear. step 56400 energy = -0.020096008182264914 
+     | block_size = 50 
+[TDSE] Runing TDSE-SH-linear. step 56600 energy = -0.0553211271679801 
+     | block_size = 50 
+[TDSE] Runing TDSE-SH-linear. step 56800 energy = -0.11874648291475384 
+     | block_size = 50 
+[TDSE] Runing TDSE-SH-linear. step 57000 energy = -0.18157666272128728 
+     | block_size = 50 
+[TDSE] Runing TDSE-SH-linear. step 57200 energy = -0.28916015539827916 
+     | block_size = 50 
+[TDSE] Runing TDSE-SH-linear. step 57400 energy = -0.36126946532897186 
+     | block_size = 50 
+[TDSE] Runing TDSE-SH-linear. step 57600 energy = -0.37944956355337 
+     | block_size = 50 
+[TDSE] Runing TDSE-SH-linear. step 57800 energy = -0.345735120647833 
+     | block_size = 50 
+[TDSE] Runing TDSE-SH-linear. step 58000 energy = -0.2636724855475858 
+     | block_size = 50 
+[TDSE] Runing TDSE-SH-linear. step 58200 energy = -0.16707183657321098 
+     | block_size = 50 
+[TDSE] Runing TDSE-SH-linear. step 58400 energy = -0.0854180172344451 
+     | block_size = 50 
+[TDSE] Runing TDSE-SH-linear. step 58600 energy = -0.045610736602371055 
+     | block_size = 50 
+[TDSE] Runing TDSE-SH-linear. step 58800 energy = -0.07234613986193807 
+     | block_size = 50 
+[TDSE] Runing TDSE-SH-linear. step 59000 energy = -0.13292288937947574 
+     | block_size = 50 
+[TDSE] Runing TDSE-SH-linear. step 59200 energy = -0.18654715320760593 
+     | block_size = 50 
+[TDSE] Runing TDSE-SH-linear. step 59400 energy = -0.28019753538806424 
+     | block_size = 50 
+[TDSE] Runing TDSE-SH-linear. step 59600 energy = -0.35019689657802816 
+     | block_size = 50 
+[TDSE] Runing TDSE-SH-linear. step 59800 energy = -0.3672830973353096 
+     | block_size = 50 
+[TDSE] Runing TDSE-SH-linear. step 60000 energy = -0.33882152062885196 
+     | block_size = 50 
+[TDSE] Runing TDSE-SH-linear. step 60200 energy = -0.2746776457804118 
+     | block_size = 50 
+[TDSE] Runing TDSE-SH-linear. step 60400 energy = -0.1848353893304318 
+     | block_size = 50 
+[TDSE] Runing TDSE-SH-linear. step 60600 energy = -0.1204723242310738 
+     | block_size = 50 
+[TDSE] Runing TDSE-SH-linear. step 60800 energy = -0.08872475230578336 
+     | block_size = 50 
+[TDSE] Runing TDSE-SH-linear. step 61000 energy = -0.11108325332195897 
+     | block_size = 50 
+[TDSE] Runing TDSE-SH-linear. step 61200 energy = -0.14554964518482427 
+     | block_size = 50 
+[TDSE] Runing TDSE-SH-linear. step 61400 energy = -0.20536845155551928 
+     | block_size = 50 
+[TDSE] Runing TDSE-SH-linear. step 61600 energy = -0.28481125032375026 
+     | block_size = 50 
+[TDSE] Runing TDSE-SH-linear. step 61800 energy = -0.3395656618384572 
+     | block_size = 50 
+[TDSE] Runing TDSE-SH-linear. step 62000 energy = -0.3591968413056517 
+     | block_size = 50 
+[TDSE] Runing TDSE-SH-linear. step 62200 energy = -0.339720162214027 
+     | block_size = 50 
+[TDSE] Runing TDSE-SH-linear. step 62400 energy = -0.2812068785958432 
+     | block_size = 50 
+[TDSE] Runing TDSE-SH-linear. step 62600 energy = -0.2249174068741313 
+     | block_size = 50 
+[TDSE] Runing TDSE-SH-linear. step 62800 energy = -0.16247753190016767 
+     | block_size = 50 
+[TDSE] Runing TDSE-SH-linear. step 63000 energy = -0.13226092341328277 
+     | block_size = 50 
+[TDSE] Runing TDSE-SH-linear. step 63200 energy = -0.14779307237483 
+     | block_size = 50 
+[TDSE] Runing TDSE-SH-linear. step 63400 energy = -0.18155936859593935 
+     | block_size = 50 
+[TDSE] Runing TDSE-SH-linear. step 63600 energy = -0.23025822343638816 
+     | block_size = 50 
+[TDSE] Runing TDSE-SH-linear. step 63800 energy = -0.28988223586373896 
+     | block_size = 50 
+[TDSE] Runing TDSE-SH-linear. step 64000 energy = -0.3401103501113168 
+     | block_size = 50 
+[TDSE] Runing TDSE-SH-linear. step 64200 energy = -0.3584254129538905 
+     | block_size = 50 
+[TDSE] Runing TDSE-SH-linear. step 64400 energy = -0.3450379572320632 
+     | block_size = 50 
+[TDSE] Runing TDSE-SH-linear. step 64600 energy = -0.30689570902875735 
+     | block_size = 50 
+[TDSE] Runing TDSE-SH-linear. step 64800 energy = -0.2509654776661494 
+     | block_size = 50 
+  Activating project at `~/JuliaProp_v0.1`
+[TDSE] Runing TDSE-SH-linear. step 65000 energy = -0.2053141687832113 
+     | block_size = 50 
+[TDSE] Runing TDSE-SH-linear. step 65200 energy = -0.18546283979021388 
+     | block_size = 50 
+[TDSE] Runing TDSE-SH-linear. step 65400 energy = -0.19278378631970242 
+     | block_size = 50 
+[TDSE] Runing TDSE-SH-linear. step 65600 energy = -0.21620613121077353 
+     | block_size = 50 
+[TDSE] Runing TDSE-SH-linear. step 65800 energy = -0.25696390181878975 
+     | block_size = 50 
+[TDSE] Runing TDSE-SH-linear. step 66000 energy = -0.29969248287687456 
+     | block_size = 50 
+[TDSE] Runing TDSE-SH-linear. step 66200 energy = -0.3445694525408075 
+     | block_size = 50 
+[TDSE] Runing TDSE-SH-linear. step 66400 energy = -0.36009849342101086 
+     | block_size = 50 
+[TDSE] Runing TDSE-SH-linear. step 66600 energy = -0.35247512800391606 
+     | block_size = 50 
+[TDSE] Runing TDSE-SH-linear. step 66800 energy = -0.323457052110845 
+     | block_size = 50 
+[TDSE] Runing TDSE-SH-linear. step 67000 energy = -0.2748854013888341 
+     | block_size = 50 
+[TDSE] Runing TDSE-SH-linear. step 67200 energy = -0.24321465630714068 
+     | block_size = 50 
+[TDSE] Runing TDSE-SH-linear. step 67400 energy = -0.23162439312419958 
+     | block_size = 50 
+[TDSE] Runing TDSE-SH-linear. step 67600 energy = -0.24872063546545056 
+     | block_size = 50 
+[TDSE] Runing TDSE-SH-linear. step 67800 energy = -0.24809154545946185 
+     | block_size = 50 
+[TDSE] Runing TDSE-SH-linear. step 68000 energy = -0.27390107146644094 
+     | block_size = 50 
+[TDSE] Runing TDSE-SH-linear. step 68200 energy = -0.32007010252568063 
+     | block_size = 50 
+[TDSE] Runing TDSE-SH-linear. step 68400 energy = -0.3443101433644212 
+     | block_size = 50 
+[TDSE] Runing TDSE-SH-linear. step 68600 energy = -0.35724698115711945 
+     | block_size = 50 
+[TDSE] Runing TDSE-SH-linear. step 68800 energy = -0.35208279551071725 
+     | block_size = 50 
+[TDSE] Runing TDSE-SH-linear. step 69000 energy = -0.3361018005826057 
+     | block_size = 50 
+[TDSE] Runing TDSE-SH-linear. step 69200 energy = -0.3157018036619801 
+     | block_size = 50 
+[TDSE] Runing TDSE-SH-linear. step 69400 energy = -0.2877332028607527 
+     | block_size = 50 
+[TDSE] Runing TDSE-SH-linear. step 69600 energy = -0.26560874942534846 
+     | block_size = 50 
+[TDSE] Runing TDSE-SH-linear. step 69800 energy = -0.26881145778059085 
+     | block_size = 50 
+[TDSE] Runing TDSE-SH-linear. step 70000 energy = -0.29086644240546844 
+     | block_size = 50 
+[TDSE] Runing TDSE-SH-linear. step 70200 energy = -0.31000589606283996 
+     | block_size = 50 
+[TDSE] Runing TDSE-SH-linear. step 70400 energy = -0.32952264868927206 
+     | block_size = 50 
+[TDSE] Runing TDSE-SH-linear. step 70600 energy = -0.34964787127490954 
+     | block_size = 50 
+[TDSE] Runing TDSE-SH-linear. step 70800 energy = -0.3595225610166871 
+     | block_size = 50 
+[TDSE] Runing TDSE-SH-linear. step 71000 energy = -0.3575986164301138 
+     | block_size = 50 
+[TDSE] Runing TDSE-SH-linear. step 71200 energy = -0.34071437610536265 
+     | block_size = 50 
+[TDSE] Runing TDSE-SH-linear. step 71400 energy = -0.32858610013691675 
+     | block_size = 50 
+[TDSE] Runing TDSE-SH-linear. step 71600 energy = -0.31809272145883327 
+     | block_size = 50 
+[TDSE] Runing TDSE-SH-linear. step 71800 energy = -0.31223380820963414 
+     | block_size = 50 
+[TDSE] Runing TDSE-SH-linear. step 72000 energy = -0.30267702709410454 
+     | block_size = 50 
+[TDSE] Runing TDSE-SH-linear. step 72200 energy = -0.3072564199522813 
+     | block_size = 50 
+[TDSE] Runing TDSE-SH-linear. step 72400 energy = -0.32547499003900765 
+     | block_size = 50 
+[TDSE] Runing TDSE-SH-linear. step 72600 energy = -0.3475964161719812 
+     | block_size = 50 
+[TDSE] Runing TDSE-SH-linear. step 72800 energy = -0.3535522148812439 
+     | block_size = 50 
+[TDSE] Runing TDSE-SH-linear. step 73000 energy = -0.35838574485714086 
+     | block_size = 50 
+[TDSE] Runing TDSE-SH-linear. step 73200 energy = -0.35755088658780165 
+     | block_size = 50 
+[TDSE] Runing TDSE-SH-linear. step 73400 energy = -0.35261372450321093 
+     | block_size = 50 
+[TDSE] Runing TDSE-SH-linear. step 73600 energy = -0.3466357088552077 
+     | block_size = 50 
+[TDSE] Runing TDSE-SH-linear. step 73800 energy = -0.3357203152430046 
+     | block_size = 50 
+[TDSE] Runing TDSE-SH-linear. step 74000 energy = -0.32797001574836393 
+     | block_size = 50 
+[TDSE] Runing TDSE-SH-linear. step 74200 energy = -0.3289271074938254 
+     | block_size = 50 
+[TDSE] Runing TDSE-SH-linear. step 74400 energy = -0.33573338089040455 
+     | block_size = 50 
+[TDSE] Runing TDSE-SH-linear. step 74600 energy = -0.3430287581088147 
+     | block_size = 50 
+[TDSE] Runing TDSE-SH-linear. step 74800 energy = -0.3488395233827817 
+     | block_size = 50 
+[TDSE] Runing TDSE-SH-linear. step 75000 energy = -0.355428393360689 
+     | block_size = 50 
+[TDSE] Runing TDSE-SH-linear. step 75200 energy = -0.36028702232653476 
+     | block_size = 50 
+[TDSE] Runing TDSE-SH-linear. step 75400 energy = -0.360581655603855 
+     | block_size = 50 
+[TDSE] Runing TDSE-SH-linear. step 75600 energy = -0.3586384396006954 
+     | block_size = 50 
+[TDSE] Runing TDSE-SH-linear. step 75800 energy = -0.35384086699040596 
+     | block_size = 50 
+[TDSE] Runing TDSE-SH-linear. step 76000 energy = -0.3485881870382756 
+     | block_size = 50 
+[TDSE] Runing TDSE-SH-linear. step 76200 energy = -0.3449299718448589 
+     | block_size = 50 
+[TDSE] Runing TDSE-SH-linear. step 76400 energy = -0.34661381583880807 
+     | block_size = 50 
+[TDSE] Runing TDSE-SH-linear. step 76600 energy = -0.35073589850952364 
+     | block_size = 50 
+[TDSE] Runing TDSE-SH-linear. step 76800 energy = -0.35195989454376364 
+     | block_size = 50 
+[TDSE] Runing TDSE-SH-linear. step 77000 energy = -0.35324328435680696 
+     | block_size = 50 
+[TDSE] Runing TDSE-SH-linear. step 77200 energy = -0.3598473646429215 
+     | block_size = 50 
+[TDSE] Runing TDSE-SH-linear. step 77400 energy = -0.3622158491814335 
+     | block_size = 50 
+[TDSE] Runing TDSE-SH-linear. step 77600 energy = -0.36209468811358947 
+     | block_size = 50 
+[TDSE] Runing TDSE-SH-linear. step 77800 energy = -0.3602309519916987 
+     | block_size = 50 
+[TDSE] Runing TDSE-SH-linear. step 78000 energy = -0.357757105099629 
+     | block_size = 50 
+[TDSE] Runing TDSE-SH-linear. step 78200 energy = -0.35701793082031263 
+     | block_size = 50 
+[TDSE] Runing TDSE-SH-linear. step 78400 energy = -0.3567767976258177 
+     | block_size = 50 
+[TDSE] Runing TDSE-SH-linear. step 78600 energy = -0.35730120758787004 
+     | block_size = 50 
+[TDSE] Runing TDSE-SH-linear. step 78800 energy = -0.35666752719644434 
+     | block_size = 50 
+[TDSE] Runing TDSE-SH-linear. step 79000 energy = -0.35691190414075813 
+     | block_size = 50 
+[TDSE] Runing TDSE-SH-linear. step 79200 energy = -0.35918436998215353 
+     | block_size = 50 
+[TDSE] Runing TDSE-SH-linear. step 79400 energy = -0.36211974652993534 
+     | block_size = 50 
+[TDSE] Runing TDSE-SH-linear. step 79600 energy = -0.36218058698029887 
+     | block_size = 50 
+[TDSE] Runing TDSE-SH-linear. step 79800 energy = -0.36210503629525054 
+     | block_size = 50 
+[TDSE] Runing TDSE-SH-linear. step 80000 energy = -0.36154663544598437 
+     | block_size = 50 
+[TDSE] Runing TDSE-SH-linear. step 80200 energy = -0.36105397093496316 
+     | block_size = 50 
+[TDSE] Runing TDSE-SH-linear. step 80400 energy = -0.360868575385451 
+     | block_size = 50 
+[TDSE] Runing TDSE-SH-linear. step 80600 energy = -0.3615942696659969 
+     | block_size = 50 
+[TDSE] Runing TDSE-SH-linear. step 80800 energy = -0.36206418503929994 
+     | block_size = 50 
+[TDSE] Runing TDSE-SH-linear. step 81000 energy = -0.3602284166247016 
+     | block_size = 50 
+[TDSE] Runing TDSE-SH-linear. step 81200 energy = -0.36056771793569015 
+     | block_size = 49 
+[TDSE] Runing TDSE-SH-linear. step 81400 energy = -0.362678077275895 
+     | block_size = 50 
+[TDSE] Runing TDSE-SH-linear. step 81600 energy = -0.3630105319128248 
+     | block_size = 50 
+[TDSE] Runing TDSE-SH-linear. step 81800 energy = -0.36257998573702954 
+     | block_size = 50 
+[TDSE] Runing TDSE-SH-linear. step 82000 energy = -0.36274373688939066 
+     | block_size = 50 
+[TDSE] Runing TDSE-SH-linear. step 82200 energy = -0.3628305378172859 
+     | block_size = 50 
+[TDSE] Runing TDSE-SH-linear. step 82400 energy = -0.3628736563599634 
+     | block_size = 50 
+[TDSE] Runing TDSE-SH-linear. step 82600 energy = -0.3632084358604462 
+     | block_size = 50 
+[TDSE] Runing TDSE-SH-linear. step 82800 energy = -0.3635108031265319 
+     | block_size = 50 
+[TDSE] Runing TDSE-SH-linear. step 83000 energy = -0.36328868460267344 
+     | block_size = 50 
+[TDSE] Runing TDSE-SH-linear. step 83200 energy = -0.3630406381879146 
+     | block_size = 50 
+[TDSE] Runing TDSE-SH-linear. step 83400 energy = -0.3634580495091599 
+     | block_size = 50 
+[TDSE] Runing TDSE-SH-linear. step 83600 energy = -0.3640706569519629 
+     | block_size = 50 
+[TDSE] Runing TDSE-SH-linear. step 83800 energy = -0.3640820462435836 
+     | block_size = 49 
+[TDSE] Runing TDSE-SH-linear. step 84000 energy = -0.36393397016374507 
+     | block_size = 50 
+[TDSE] Runing TDSE-SH-linear. step 84200 energy = -0.3641948496420061 
+     | block_size = 50 
+[TDSE] Runing TDSE-SH-linear. step 84400 energy = -0.3644559554404434 
+     | block_size = 50 
+[TDSE] Runing TDSE-SH-linear. step 84600 energy = -0.3645918089016465 
+     | block_size = 50 
+[TDSE] Runing TDSE-SH-linear. step 84800 energy = -0.36475695739950525 
+     | block_size = 50 
+[TDSE] Runing TDSE-SH-linear. step 85000 energy = -0.3649397914897548 
+     | block_size = 50 
+[TDSE] Runing TDSE-SH-linear. step 85200 energy = -0.36512431578861815 
+     | block_size = 50 
+[TDSE] Runing TDSE-SH-linear. step 85400 energy = -0.3653046457841733 
+     | block_size = 50 
+[TDSE] Runing TDSE-SH-linear. step 85600 energy = -0.3654912859291509 
+     | block_size = 50 
+[TDSE] Runing TDSE-SH-linear. step 85800 energy = -0.3656742647601408 
+     | block_size = 50 
+[TDSE] Runing TDSE-SH-linear. step 86000 energy = -0.3658567952144978 
+     | block_size = 50 
+[TDSE] Runing TDSE-SH-linear. step 86200 energy = -0.3660476695530084 
+     | block_size = 50 
+[TDSE] Runing TDSE-SH-linear. step 86400 energy = -0.36624692753906096 
+     | block_size = 50 
+[TDSE] Runing TDSE-SH-linear. step 86600 energy = -0.36645335489547515 
+     | block_size = 50 
+[TDSE] Runing TDSE-SH-linear. step 86800 energy = -0.3666636119829563 
+     | block_size = 50 
+[TDSE] Runing TDSE-SH-linear. step 87000 energy = -0.3668747790189941 
+     | block_size = 50 
+[TDSE] Runing TDSE-SH-linear. step 87200 energy = -0.3670868370956164 
+     | block_size = 50 
+[TDSE] Runing TDSE-SH-linear. step 87400 energy = -0.3673026563912825 
+     | block_size = 50 
+[TDSE] Runing TDSE-SH-linear. step 87600 energy = -0.36752694442190204 
+     | block_size = 50 
+[TDSE] Runing TDSE-SH-linear. step 87800 energy = -0.36776702093726304 
+     | block_size = 50 
+[TDSE] Runing TDSE-SH-linear. step 88000 energy = -0.3680313186887528 
+     | block_size = 50 
+[TDSE] Runing TDSE-SH-linear. step 88200 energy = -0.3683233464344379 
+     | block_size = 50 
+pure virtual method called
+terminate called without an active exception
+
+[71903] signal (6.-6): Aborted
+in expression starting at none:0
+gsignal at /lib64/libc.so.6 (unknown line)
+abort at /lib64/libc.so.6 (unknown line)
+__verbose_terminate_handler at /workspace/srcdir/gcc-12.1.0/libstdc++-v3/libsupc++/vterminate.cc:95
+__terminate at /workspace/srcdir/gcc-12.1.0/libstdc++-v3/libsupc++/eh_terminate.cc:48
+terminate at /workspace/srcdir/gcc-12.1.0/libstdc++-v3/libsupc++/eh_terminate.cc:58
+__cxa_pure_virtual at /workspace/srcdir/gcc-12.1.0/libstdc++-v3/libsupc++/pure.cc:50
+_ZN4llvm11raw_ostream5writeEPKcm at /home/tang_wenqi/julia-1.9.4/bin/../lib/julia/libLLVM-14jl.so (unknown line)
+_ZN4llvm11LLVMContext8diagnoseERKNS_14DiagnosticInfoE at /home/tang_wenqi/julia-1.9.4/bin/../lib/julia/libLLVM-14jl.so (unknown line)
+_ZNSt17_Function_handlerIFvRKN4llvm12SMDiagnosticEbRKNS0_9SourceMgrERSt6vectorIPKNS0_6MDNodeESaISA_EEEZNS0_28MachineModuleInfoWrapperPass16doInitializationERNS0_6ModuleEEUlS3_bS6_SD_E_E9_M_invokeERKSt9_Any_dataS3_ObS6_SD_ at /home/tang_wenqi/julia-1.9.4/bin/../lib/julia/libLLVM-14jl.so (unknown line)
+_ZN4llvm9MCContext8diagnoseERKNS_12SMDiagnosticE at /home/tang_wenqi/julia-1.9.4/bin/../lib/julia/libLLVM-14jl.so (unknown line)
+_ZN12_GLOBAL__N_19AsmParser11DiagHandlerERKN4llvm12SMDiagnosticEPv at /home/tang_wenqi/julia-1.9.4/bin/../lib/julia/libLLVM-14jl.so (unknown line)
+_ZNK4llvm9SourceMgr12PrintMessageERNS_11raw_ostreamENS_5SMLocENS0_8DiagKindERKNS_5TwineENS_8ArrayRefINS_7SMRangeEEENS8_INS_7SMFixItEEEb at /home/tang_wenqi/julia-1.9.4/bin/../lib/julia/libLLVM-14jl.so (unknown line)
+_ZNK4llvm9SourceMgr12PrintMessageENS_5SMLocENS0_8DiagKindERKNS_5TwineENS_8ArrayRefINS_7SMRangeEEENS6_INS_7SMFixItEEEb at /home/tang_wenqi/julia-1.9.4/bin/../lib/julia/libLLVM-14jl.so (unknown line)
+_ZN12_GLOBAL__N_19AsmParser3RunEbb at /home/tang_wenqi/julia-1.9.4/bin/../lib/julia/libLLVM-14jl.so (unknown line)
+_ZNK4llvm10AsmPrinter13emitInlineAsmENS_9StringRefERKNS_15MCSubtargetInfoERKNS_15MCTargetOptionsEPKNS_6MDNodeENS_9InlineAsm10AsmDialectE at /home/tang_wenqi/julia-1.9.4/bin/../lib/julia/libLLVM-14jl.so (unknown line)
+_ZNK4llvm10AsmPrinter13emitInlineAsmEPKNS_12MachineInstrE at /home/tang_wenqi/julia-1.9.4/bin/../lib/julia/libLLVM-14jl.so (unknown line)
+_ZN4llvm10AsmPrinter16emitFunctionBodyEv at /home/tang_wenqi/julia-1.9.4/bin/../lib/julia/libLLVM-14jl.so (unknown line)
+_ZN4llvm13X86AsmPrinter20runOnMachineFunctionERNS_15MachineFunctionE at /home/tang_wenqi/julia-1.9.4/bin/../lib/julia/libLLVM-14jl.so (unknown line)
+_ZN4llvm19MachineFunctionPass13runOnFunctionERNS_8FunctionE at /home/tang_wenqi/julia-1.9.4/bin/../lib/julia/libLLVM-14jl.so (unknown line)
+_ZN4llvm13FPPassManager13runOnFunctionERNS_8FunctionE at /home/tang_wenqi/julia-1.9.4/bin/../lib/julia/libLLVM-14jl.so (unknown line)
+_ZN4llvm13FPPassManager11runOnModuleERNS_6ModuleE at /home/tang_wenqi/julia-1.9.4/bin/../lib/julia/libLLVM-14jl.so (unknown line)
+_ZN4llvm6legacy15PassManagerImpl3runERNS_6ModuleE at /home/tang_wenqi/julia-1.9.4/bin/../lib/julia/libLLVM-14jl.so (unknown line)
+_ZN4llvm3orc14SimpleCompilerclERNS_6ModuleE at /home/tang_wenqi/julia-1.9.4/bin/../lib/julia/libLLVM-14jl.so (unknown line)

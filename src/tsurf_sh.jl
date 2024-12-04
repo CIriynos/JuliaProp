@@ -462,7 +462,8 @@ function tsurf_plot_xy_momentum_spectrum(a_tsurff_lm, k_space::tsurf_k_space_t, 
     result_mat = zeros(Float64, Nk_r, Nk_phi)
     for (i, kr) = enumerate(k_r_range)
         for (j, k_phi) in enumerate(k_phi_range)
-            Ylm_vals = computeYlm(k_theta_fixed, k_phi, lmax=pw.l_num - 1)
+            k_phi_next = exert_limit.(0, 2pi, -k_phi .- pi/2, 2pi)
+            Ylm_vals = computeYlm(k_theta_fixed, k_phi_next, lmax=pw.l_num - 1)
             for id = 1: pw.l_num ^ 2
                 l = pw.lmap[id]
                 m = pw.mmap[id]
@@ -483,9 +484,33 @@ function tsurf_plot_xy_momentum_spectrum(a_tsurff_lm, k_space::tsurf_k_space_t, 
         end
     end
 
+    # temporary
+    result_mat .*= 2 * 10 ^ (-4)
+
+    x_min = -0.75
+    x_max = 0.75
+    x_delta = 0.01
+    x_range = x_min: x_delta: x_max
+    x_proj_data = zeros(Float64, length(x_range))
+    x_proj_times = zeros(Float64, length(x_range))
+
+    # projection
+    for (i, kr) = enumerate(k_r_range)
+        for (j, k_phi) in enumerate(k_phi_range)
+            actual_x = kr * cos(k_phi)
+            x_id = Int64((actual_x - x_min) ÷ x_delta) + 1
+            if x_id <= 0 || x_id > length(x_range)
+                continue
+            end
+            # println(x_id)
+            x_proj_data[x_id] += result_mat[i, j]
+            x_proj_times[x_id] += 1
+        end
+    end
+
     gr()
     # colormap = cgrad([:white, :black, :red, :blue, :white])
-    colormap = cgrad(:hot, rev = true)
+    colormap = cgrad(:jet1, rev = false)
     if log_flag == true
         Plots.heatmap(k_phi_range, k_r_range,
             abs.(log10.(result_mat)); color = colormap,
@@ -502,6 +527,7 @@ function tsurf_plot_xy_momentum_spectrum(a_tsurff_lm, k_space::tsurf_k_space_t, 
             ylabel="Energy of Photoelectron (a.u.)",
             )
     end
+    # return x_proj_data, x_proj_times
     # Plots.heatmap(k_phi_range, k_r_range, result_mat; color = colormap, right_margin = 8 * Plots.mm)
 end
 
@@ -692,12 +718,16 @@ function tsurf_plot_xy_momentum_spectrum_vector(a_tsurff_vec, k_space::tsurf_k_s
     if log_flag == true
         Plots.heatmap(k_phi_range, k_r_range, abs.(log10.(pes_mat)); color = colormap, projection = :polar, right_margin = 10 * Plots.mm)
     else
-        Plots.heatmap(k_phi_range, k_r_range, pes_mat; color = colormap, projection = :polar, right_margin = 10 * Plots.mm)
+        Plots.heatmap(k_phi_range, k_r_range, pes_mat; color = colormap, projection = :polar,
+            right_margin = 12 * Plots.mm,
+            guidefont=Plots.font(12, "Times"),
+            tickfont=Plots.font(12, "Times"),
+            legendfont=Plots.font(12, "Times"))
     end
 end
 
 
-function tsurf_plot_xz_momentum_spectrum_vector(a_tsurff_vec, k_space::tsurf_k_space_t; kr_flag::Bool = false, log_flag::Bool = false, min_threhold::Float64=0.0)
+function tsurf_plot_xz_momentum_spectrum_vector(a_tsurff_vec, k_space::tsurf_k_space_t; kr_flag::Bool = false, log_flag::Bool = false, min_threhold::Float64=0.0, kr_min::Float64=0.0)
 
     Nk_r = length(k_space.k_r_range)
     Nk_theta = length(k_space.k_theta_range)
@@ -707,20 +737,30 @@ function tsurf_plot_xz_momentum_spectrum_vector(a_tsurff_vec, k_space::tsurf_k_s
     pes_mat = zeros(Float64, Nk_r, Nk_theta)
     for (p, k_vec) in enumerate(k_space.k_collection)
         i, j, _ = k_space.ijk_mapping[p]
-        pes_mat[i, j] = (kr_flag == true ? norm(k_vec) : 1.0) * norm(a_tsurff_vec[p]) ^ 2
+        pes_mat[i, j] = (kr_flag == true ? norm(k_vec) : 1.0) * norm(a_tsurff_vec[p]) ^ 2 * (norm(k_vec) > kr_min)
         if pes_mat[i, j] < min_threhold
             pes_mat[i, j] = min_threhold
         end
     end
 
     gr()
-    # colormap = cgrad([:white, :black, :red, :blue, :white])
-    colormap = cgrad(:hot, rev = true)
+    colormap = cgrad([:white, :black, :red, :blue, :white])
+    # colormap = cgrad(:hot, rev = true)
     if log_flag == true
         colormap = cgrad([:white, :black, :red, :blue, :white], rev=false)
-        Plots.heatmap(k_theta_range, k_r_range, abs.(log10.(pes_mat)); color = colormap, projection = :polar, right_margin = 8 * Plots.mm)
+        fig = Plots.heatmap(k_theta_range, k_r_range, abs.(log10.(pes_mat)); color = colormap, projection = :polar, right_margin = 8 * Plots.mm)
+        Plots.heatmap!(fig, k_theta_range .- pi, k_r_range, abs.(log10.(pes_mat)); color = colormap, projection = :polar, right_margin = 8 * Plots.mm)
+        return fig
     else
-        Plots.heatmap(k_theta_range, k_r_range, pes_mat; color = colormap, projection = :polar, right_margin = 8 * Plots.mm)
+        pes_mat_rev = copy(pes_mat)       # reverse the columns of pes_mat
+        for i = 1: size(pes_mat)[1]
+            for j = 1: size(pes_mat)[2]
+                pes_mat_rev[i, j] = pes_mat[i, size(pes_mat)[2] - j + 1]
+            end
+        end
+        fig = Plots.heatmap(k_theta_range, k_r_range, pes_mat; color = colormap, projection = :polar, right_margin = 8 * Plots.mm)
+        Plots.heatmap!(fig, k_theta_range .- pi, k_r_range, pes_mat; color = colormap, projection = :polar, right_margin = 8 * Plots.mm)
+        return fig
     end
 end
 

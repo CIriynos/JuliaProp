@@ -13,7 +13,7 @@ ps = []
 # Basic Parameters
 Nr = 5000
 Δr = 0.2
-l_num = 60
+l_num = 40
 Δt = 0.05
 Z = 1.0
 rmax = Nr * Δr
@@ -34,11 +34,11 @@ get_energy_sh(init_wave_list[1], rt, pw.shgrid) # He:-0.944  H:-0.5
 # Define the Laser. 
 THZ_X = 1
 THZ_Y = 2
-thz_direction = 3  # None.
+thz_direction = THZ_X  # None.
 
 tau = 0
 eps1 = 0.3
-E_peak1 = 0.0533
+E_peak1 = 0.0533 * 0.0
 E_peak2 = 0.000177
 E_constant_x = 0.0001
 
@@ -57,8 +57,10 @@ phase_2y = 0.0    # ???
 tau_fs = (tau < 0.0) * abs(tau)
 tau_thz = (tau >= 0.0) * abs(tau)
 
+
 Ex(t) = (E1x) * sin(ω1 * (t - tau_fs) / 2 / nc1) ^2 * sin(ω1 * (t - tau_fs) + phase_1x) * (t - tau_fs > 0 && t - tau_fs < (2 * nc1 * pi / ω1)) + 
-        (E2x) * sin(ω2 * (t - tau_thz) / 2 / nc2)^2 * sin(ω2 * (t - tau_thz) + phase_2x) * (t - tau_thz > 0 && t - tau_thz < (2 * nc2 * pi / ω2))
+        (E2x) * sin(ω2 * (t - tau_thz) / 2 / nc2)^2 * sin(ω2 * (t - tau_thz) + phase_2x) * (t - tau_thz > 0 && t - tau_thz < (2 * nc2 * pi / ω2)) + 
+        (E_constant_x) * flap_top_windows_f(t, tau_thz, tau_thz + (2 * nc2 * pi / ω2), 1/10)
 
 Ey(t) = (E1y) * sin(ω1 * (t - tau_fs) / 2 / nc1) ^2 * sin(ω1 * (t - tau_fs) + phase_1y) * (t - tau_fs > 0 && t - tau_fs < (2 * nc1 * pi / ω1)) + 
         (E2y) * sin(ω2 * (t - tau_thz) / 2 / nc2)^2 * sin(ω2 * (t - tau_thz) + phase_2y) * (t - tau_thz > 0 && t - tau_thz < (2 * nc2 * pi / ω2))
@@ -67,7 +69,8 @@ steps_1 = Int64((2 * nc1 * pi / ω1) ÷ Δt + 1) + Int64(tau_fs ÷ Δt + 1)
 steps_2 = Int64((2 * nc2 * pi / ω2) ÷ Δt + 1) + Int64(tau_thz ÷ Δt + 1)
 # fs: 1655.5  thz: 1103.65
 # -1500 -> 2000
-steps = max(steps_1, steps_2)
+# steps = max(steps_1, steps_2) 
+steps = steps_2
 t_linspace = create_linspace(steps, Δt)
 
 Et_data_x = Ex.(t_linspace)
@@ -77,8 +80,8 @@ Et_data_z = zeros(Float64, steps)
 At_data_x = -get_integral(Et_data_x, Δt)
 At_data_y = -get_integral(Et_data_y, Δt)
 At_data_z = -get_integral(Et_data_z, Δt)
-# plot([At_data_x At_data_y])
-# plot([Et_data_x Et_data_y])
+plot([At_data_x At_data_y])
+plot([Et_data_x Et_data_y])
 
 # Define k Space
 k_delta = 0.01
@@ -88,8 +91,7 @@ k_linspace = kmin: k_delta: kmax
 Nk_phi = 360
 k_space = create_k_space(k_linspace, fixed_theta(pi/2), phi_linspace(Nk_phi))
 
-
-# Propagation
+# # Propagation
 # hhg_integral_t, phi_record, dphi_record = tdse_elli_sh_mainloop_record_xy_hhg_optimized(crt_shwave, pw, rt, At_data_x, At_data_y, steps, Ri_tsurf);
 
 # δa_lm = isurf_rest_part(crt_shwave, k_linspace, last(t_linspace), Ri_tsurf, pw, rt)
@@ -97,7 +99,7 @@ k_space = create_k_space(k_linspace, fixed_theta(pi/2), phi_linspace(Nk_phi))
 # # tsurf_plot_xy_momentum_spectrum(δa_lm, k_space, pw, k_min=0.01)
 
 # # Store Data
-# example_name = "fs_thz_hhg_test"
+# example_name = "fs_thz_hhg_test_only_E0_shaped"
 # h5open("./data/$example_name.h5", "w") do file
 #     write(file, "crt_shwave", hcat(crt_shwave...))
 #     write(file, "phi_record", hcat(phi_record...))
@@ -106,8 +108,9 @@ k_space = create_k_space(k_linspace, fixed_theta(pi/2), phi_linspace(Nk_phi))
 #     write(file, "hhg_integral_t", hhg_integral_t)
 # end
 
+
 # Retrieve Data.
-example_name = "fs_thz_hhg_test"
+example_name = "fs_thz_hhg_test_only_E0_shaped"
 crt_shwave = retrieve_obj(example_name, "crt_shwave")
 phi_record = retrieve_obj(example_name, "phi_record")
 dphi_record = retrieve_obj(example_name, "dphi_record")
@@ -119,6 +122,7 @@ hhg_len = steps
 hhg_delta_k = 2pi / hhg_len / 0.05
 hhg_k_linspace = [hhg_delta_k * i for i = 1: hhg_len]
 
+# hhg_xy_t = -hhg_integral_t .- (Et_data_x .+ im .* Et_data_y)
 hhg_xy_t = -hhg_integral_t .- (Et_data_x .+ im .* Et_data_y)
 
 hhg_window_f(t) = sin(t / hhg_len * pi) ^ 2
@@ -132,4 +136,5 @@ hhg_spectrum = norm.(hhg_spectrum_x) .^ 2 + norm.(hhg_spectrum_y) .^ 2
 plot(hhg_k_linspace[1: 200] ./ ω1, log10.(norm.(hhg_spectrum_x))[1: 200])
 plot(hhg_k_linspace[1: 200] ./ ω1, log10.(norm.(hhg_spectrum))[1: 200], xlabel="N times of ω=0.0569")
 
-plot(norm.(Et_data_y))
+plot([real.(hhg_integral_t) imag.(hhg_integral_t)])
+# plot(norm.(Et_data_x))

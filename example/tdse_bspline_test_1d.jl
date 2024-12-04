@@ -30,12 +30,11 @@ U3 = (I - 0.25im * D2 * delta_t) \ (I + 0.25im * D2 * delta_t)
 
 # B-Spline
 
-# S2 = diagm(0 => [[1/5, 1/3]; fill(11/20, cnt - )])
 po_func(x) = -1 / x
 
-breakpoints = range(-L / 2, L / 2, cnt)
-b_basis = BSplineBasis(BSplineOrder(3), breakpoints)
-bcnt = cnt + 1
+breakpoints = range(-L / 2, L / 2, cnt + 1)
+bspline_basis_total = BSplineBasis(BSplineOrder(3), breakpoints)
+b_basis = RecombinedBSplineBasis(bspline_basis_total, Derivative(0))
 
 quadrature = Galerkin.gausslegendre(Val(100))
 S_bs = galerkin_matrix(b_basis, quadrature = quadrature)
@@ -48,9 +47,9 @@ U_bs = (S_bs + 0.5im * H_bs * delta_t) \ (S_bs - 0.5im * H_bs * delta_t)
 ######
 # propagation
 
-const x0::Float64 = 0.0
-const k0::Float64 = 5.0
-const omega_x::Float64 = 1.0
+x0::Float64 = 0.0
+k0::Float64 = 5.0
+omega_x::Float64 = 1.0
 
 wavepkg_func(x) = @. (1.0 / (2π) ^ 0.25) * exp(1im * k0 * x) * exp(-((x - x0) / (2 * omega_x)) ^ 2)
 wavepkg_func_real(x) = @. real((1.0 / (2π) ^ 0.25) * exp(1im * k0 * x) * exp(-((x - x0) / (2 * omega_x)) ^ 2))
@@ -70,6 +69,3 @@ end
 
 plot(xs, [norm.(normalize(vec1)) norm.(normalize(vec2)) normalize(norm.(vec_bs))[1:cnt]], label=["Initial wave" "Classic FD" "FD with B-Spline"], title="1D TDSE Propagation In Free Space")
 # plot(1: length(b_basis), norm.(vec_bs))
-
-
-ldlt(D_bs)

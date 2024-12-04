@@ -1,0 +1,98 @@
+  Activating project at `~/JuliaProp_v0.1`
+Number of Threads: 32
+[ITP]: 10000.467658484333
+[ITP]: 0.022336055694753276
+[ITP]: 0.005059779887372162
+[ITP]: 0.0021489463687915933
+[ITP]: 0.0011094453881916877
+[ITP]: 0.0006320330792940476
+[ITP]: 0.0003819196385753121
+[ITP]: 0.00023991278853047193
+[ITP]: 0.0001548547356572949
+[ITP]: 0.00010195491015219105
+[ITP]: 6.81379029559559e-5
+[ITP]: 4.606744158064391e-5
+[ITP]: 3.143139936084838e-5
+[ITP]: 2.1602918395535742e-5
+[ITP]: 1.4936383017971622e-5
+[ITP]: 1.0377759407820264e-5
+[ITP]: 7.239801431913051e-6
+[ITP]: 5.067900115340862e-6
+[ITP]: 3.5577633425987187e-6
+[ITP]: 2.5037211661693703e-6
+[ITP]: 1.7656336310789555e-6
+[ITP]: 1.2473642301280563e-6
+[ITP]: 8.825870176920603e-7
+[ITP]: 6.253222639696077e-7
+[ITP]: 4.435644971323427e-7
+[ITP]: 3.149575211747191e-7
+[ITP]: 2.238384469999133e-7
+[ITP]: 1.5920542206782073e-7
+[ITP]: 1.1331332461228527e-7
+[ITP]: 8.069916523911758e-8
+[ITP]: 5.750315212882384e-8
+[ITP]: 4.0994190264598274e-8
+[ITP]: 2.9237345322563613e-8
+[ITP]: 2.0860190019789115e-8
+[ITP]: 1.4888315580385836e-8
+[ITP]: 1.0629286228969193e-8
+[ITP]: 7.590669759416357e-9
+Energy of ground state: -0.5000403480038643
+[TDSE] Runing TDSE-SH-linear. step 0 energy = -0.5000403480038642 
+     | block_size = 3 
+[TDSE] Runing TDSE-SH-linear. step 0 energy = -0.5000403480038642 
+     | block_size = 3 
+step 0 energy = -0.5000403480038643
+[TDSE] Runing TDSE-SH-linear. step 0 energy = -0.500040348003864 
+     | block_size = 3 
+[TDSE] Runing TDSE-SH-linear. step 200 energy = -0.5000403356510563 
+     | block_size = 3 
+[TDSE] Runing TDSE-SH-linear. step 400 energy = -0.5000353374955753 
+     | block_size = 4 
+[TDSE] Runing TDSE-SH-linear. step 600 energy = -0.4999397320884729 
+     | block_size = 5 
+[TDSE] Runing TDSE-SH-linear. step 800 energy = -0.4994779454186513 
+     | block_size = 6 
+[TDSE] Runing TDSE-SH-linear. step 1000 energy = -0.49864743107480763 
+     | block_size = 7 
+[TDSE] Runing TDSE-SH-linear. step 1200 energy = -0.4985832256829023 
+     | block_size = 7 
+[TDSE] Runing TDSE-SH-linear. step 1400 energy = -0.49973225597863496 
+     | block_size = 7 
+[TDSE] Runing TDSE-SH-linear. step 1600 energy = -0.4972480310310941 
+     | block_size = 7 
+[TDSE] Runing TDSE-SH-linear. step 1800 energy = -0.4823229847088814 
+     | block_size = 8 
+  7.349900 seconds (3.13 M allocations: 2.008 GiB, 0.16% compilation time)
+[TDSE] Runing TDSE-SH-linear. step 0 energy = -0.456097650335992 
+     | block_size = 9 
+[TDSE] Runing TDSE-SH-linear. step 200 energy = -0.45608679910621885 
+     | block_size = 9 
+[TDSE] Runing TDSE-SH-linear. step 400 energy = -0.4565258526127786 
+     | block_size = 10 
+[TDSE] Runing TDSE-SH-linear. step 600 energy = -0.45371409133412716 
+     | block_size = 10 
+[TDSE] Runing TDSE-SH-linear. step 800 energy = -0.46075443785828946 
+     | block_size = 11 
+[TDSE] Runing TDSE-SH-linear. step 1000 energy = -0.4476925557283261 
+     | block_size = 12 
+[TDSE] Runing TDSE-SH-linear. step 1200 energy = -0.4601119192809254 
+     | block_size = 13 
+[TDSE] Runing TDSE-SH-linear. step 1400 energy = -0.45709607521765083 
+     | block_size = 14 
+[TDSE] Runing TDSE-SH-linear. step 1600 energy = -0.44286858863792405 
+     | block_size = 15 
+[TDSE] Runing TDSE-SH-linear. step 1800 energy = -0.4540225219370879 
+     | block_size = 16 
+  9.941431 seconds (2.65 M allocations: 422.664 MiB, 0.18% compilation time)
+step 0 energy = -0.40198803406077815
+step 200 energy = -0.4019643787296696
+step 400 energy = -0.402603420989377
+step 600 energy = -0.3989537211215503
+step 800 energy = -0.4057339084227282
+step 1000 energy = -0.39627487398907285
+step 1200 energy = -0.40140050650502085
+step 1400 energy = -0.40850346023608564
+step 1600 energy = -0.3956531433534501
+step 1800 energy = -0.3884226619508185
+ 16.158567 seconds (2.74 M allocations: 425.081 MiB)

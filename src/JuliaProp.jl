@@ -10,6 +10,7 @@ using SpecialFunctions
 using SphericalHarmonics
 using HDF5
 using FFTW
+using Statistics
 
 export Grid1D, GridSH
 export xyz_to_sphere, sphere_to_xyz, CG_coefficient, spherical_bessel_func
@@ -23,17 +24,19 @@ export get_derivative_two_order, get_integral
 export get_m_from_mm, create_lmmap, get_index_from_lm
 export save_object, open_object, save_shwave, open_shwave
 export computeYlm
+export numerical_integral
 
 export create_physics_world_1d
 export create_tdse_rt_1d
 export gauss_package_1d
-export get_energy_1d
+export get_energy_1d, get_energy_1d_laser
 export itp_fd1d
 export tdse_fd1d_mainloop
 export tdse_fd1d_mainloop_penta
 export tdse_laser_fd1d_mainloop_penta
-export windows_operator_method_1d
+export windows_operator_method_1d, windows_operator_method_1d_laser
 export tsurf_1d
+export gauge_transform_V2L
 
 export get_energy_sh_mbunch
 export get_energy_sh_so
@@ -46,12 +49,16 @@ export create_tdse_rt_sh
 
 export tdseln_sh_mainloop
 export tdseln_sh_mainloop_record
+export tdseln_sh_mainloop_record_optimized
+export tdseln_sh_mainloop_record_optimized_hhg
 export tdseln_sh_mainloop_length_gauge
+export tdseln_sh_mainloop_length_gauge_hhg
 export tdse_elli_sh_mainloop_record
 export tdse_elli_sh_mainloop_record_xy
 export tdse_elli_sh_mainloop_record_xy_hhg
 export tdse_elli_sh_mainloop_record_xy_optimized
 export tdse_elli_sh_mainloop_record_xy_hhg_optimized
+export tdse_elli_sh_mainloop_record_xy_hhg_long_prop
 
 export window_operator_method_sh
 
@@ -78,9 +85,11 @@ export coulomb_potiential_helium_zero_fixed_plus
 export absorb_boundary_r
 export create_linspace
 export store_mat, store_obj, retrieve_mat, retrieve_obj
+export get_smoothness_1, get_smoothness_2
 
 export coulomb_potiential_zero_fixed_COS
 export get_hhg_spectrum_xy
+export flap_top_windows_f
 
 include("util.jl")
 

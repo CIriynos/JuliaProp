@@ -10,17 +10,22 @@ using FFTW
 
 ps = []
 
-# tau_list = [-1000, -500, 0, 500, 1000, 1500, 2000]
-tau_list = [0]
+Ats = []
+Ets = []
+
+# tau_list = -500: 100: 800
+# tau_list = [-500, 900, 100, 300, 500]
+tau_list = [-500, 100, 300, 500, 900]
 for tau_var in tau_list 
 
 # Basic Parameters
-Nr = 5000
-Δr = 0.2
-l_num = 60
-Δt = 0.05
+grid_ratio = 3
+Nr = 5000 * grid_ratio
+Δr = 0.2 / grid_ratio
+l_num = 50
+Δt = 0.05 / grid_ratio
 Z = 1.0
-rmax = Nr * Δr
+rmax = Nr * Δr  # 1000
 Ri_tsurf = 800.0
 po_func_r = coulomb_potiential_zero_fixed_COS(600.0, 800.0)
 absorb_func = absorb_boundary_r(rmax, Ri_tsurf, pow_value=8.0, max_value=100.0)
@@ -40,6 +45,7 @@ THZ_X = 1
 THZ_Y = 2
 thz_direction = THZ_X
 
+induce_time = 400
 tau = tau_var
 eps1 = 0.3
 E_peak1 = 0.0533
@@ -58,21 +64,32 @@ phase_1x = 0.5pi
 phase_2x = 0.0
 phase_1y = 0.0
 phase_2y = 0.0    # ???
-tau_fs = (tau < 0.0) * abs(tau)
-tau_thz = (tau >= 0.0) * abs(tau)
+tau_fs = (tau < 0.0) * abs(tau) + induce_time
+tau_thz = (tau >= 0.0) * abs(tau) + induce_time
 
-Ex(t) = (E1x) * sin(ω1 * (t - tau_fs) / 2 / nc1) ^2 * sin(ω1 * (t - tau_fs) + phase_1x) * (t - tau_fs > 0 && t - tau_fs < (2 * nc1 * pi / ω1)) + 
-        (E2x) * sin(ω2 * (t - tau_thz) / 2 / nc2)^2 * sin(ω2 * (t - tau_thz) + phase_2x) * (t - tau_thz > 0 && t - tau_thz < (2 * nc2 * pi / ω2)) + 
-        (E_constant_x)
+# Ex(t) = (E1x) * sin(ω1 * (t - tau_fs) / 2 / nc1) ^2 * sin(ω1 * (t - tau_fs) + phase_1x) * (t - tau_fs > 0 && t - tau_fs < (2 * nc1 * pi / ω1)) + 
+#         (E2x) * sin(ω2 * (t - tau_thz) / 2 / nc2)^2 * sin(ω2 * (t - tau_thz) + phase_2x) * (t - tau_thz > 0 && t - tau_thz < (2 * nc2 * pi / ω2)) + 
+#         (E_constant_x) *  flap_top_windows_f(t, 0, 2 * induce_time, 1/2, right_flag = false)
 
-Ey(t) = (E1y) * sin(ω1 * (t - tau_fs) / 2 / nc1) ^2 * sin(ω1 * (t - tau_fs) + phase_1y) * (t - tau_fs > 0 && t - tau_fs < (2 * nc1 * pi / ω1)) + 
-        (E2y) * sin(ω2 * (t - tau_thz) / 2 / nc2)^2 * sin(ω2 * (t - tau_thz) + phase_2y) * (t - tau_thz > 0 && t - tau_thz < (2 * nc2 * pi / ω2))
+# Ey(t) = (E1y) * sin(ω1 * (t - tau_fs) / 2 / nc1) ^2 * sin(ω1 * (t - tau_fs) + phase_1y) * (t - tau_fs > 0 && t - tau_fs < (2 * nc1 * pi / ω1)) + 
+#         (E2y) * sin(ω2 * (t - tau_thz) / 2 / nc2)^2 * sin(ω2 * (t - tau_thz) + phase_2y) * (t - tau_thz > 0 && t - tau_thz < (2 * nc2 * pi / ω2))
+
+Ex_fs(t) = (E1x) * sin(ω1 * (t - tau_fs) / 2 / nc1) ^2 * sin(ω1 * (t - tau_fs) + phase_1x) * (t - tau_fs > 0 && t - tau_fs < (2 * nc1 * pi / ω1))
+Ex_thz(t) = (E2x) * sin(ω2 * (t - tau_thz) / 2 / nc2)^2 * sin(ω2 * (t - tau_thz) + phase_2x) * (t - tau_thz > 0 && t - tau_thz < (2 * nc2 * pi / ω2))
+
+Ey_fs(t) = (E1y) * sin(ω1 * (t - tau_fs) / 2 / nc1) ^2 * sin(ω1 * (t - tau_fs) + phase_1y) * (t - tau_fs > 0 && t - tau_fs < (2 * nc1 * pi / ω1))
+Ey_thz(t) = (E2y) * sin(ω2 * (t - tau_thz) / 2 / nc2)^2 * sin(ω2 * (t - tau_thz) + phase_2y) * (t - tau_thz > 0 && t - tau_thz < (2 * nc2 * pi / ω2))
+
+Ex_c(t) = (E_constant_x) *  flap_top_windows_f(t, 0, 2 * induce_time, 1/2, right_flag = false)
+
+Ex(t) = Ex_fs(t) + Ex_thz(t) + Ex_c(t)
+Ey(t) = Ey_fs(t) + Ey_thz(t)
 
 steps_1 = Int64((2 * nc1 * pi / ω1) ÷ Δt + 1) + Int64(tau_fs ÷ Δt + 1)
 steps_2 = Int64((2 * nc2 * pi / ω2) ÷ Δt + 1) + Int64(tau_thz ÷ Δt + 1)
 # fs: 1655.5  thz: 1103.65
 # -1500 -> 2000
-residual_steps = 3000
+residual_steps = 2000
 steps = max(steps_1, steps_2) + residual_steps
 t_linspace = create_linspace(steps, Δt)
 
@@ -83,8 +100,10 @@ Et_data_z = zeros(Float64, steps)
 At_data_x = -get_integral(Et_data_x, Δt)
 At_data_y = -get_integral(Et_data_y, Δt)
 At_data_z = -get_integral(Et_data_z, Δt)
-# plot([At_data_x At_data_y])
-# plot([Et_data_x Et_data_y])
+atp = plot([At_data_x At_data_y])
+etp = plot([Ex_fs.(t_linspace) (Ex_thz.(t_linspace) .+ Ex_c.(t_linspace)) .* 100])
+push!(Ats, atp)
+push!(Ets, etp)
 
 # Define k Space
 k_delta = 0.01
@@ -103,7 +122,7 @@ k_space = create_k_space(k_linspace, fixed_theta(pi/2), phi_linspace(Nk_phi))
 # # tsurf_plot_xy_momentum_spectrum(δa_lm, k_space, pw, k_min=0.01)
 
 # # Store Data
-# example_name = "fs_thz_hhg_tau$(tau)"
+# example_name = "fs_thz_hhg_tau$(tau)_2"
 # h5open("./data/$example_name.h5", "w") do file
 #     write(file, "crt_shwave", hcat(crt_shwave...))
 #     write(file, "phi_record", hcat(phi_record...))
@@ -112,24 +131,28 @@ k_space = create_k_space(k_linspace, fixed_theta(pi/2), phi_linspace(Nk_phi))
 #     write(file, "hhg_integral_t", hhg_integral_t)
 # end
 
+
 # Retrieve Data.
-example_name = "fs_thz_hhg_tau$(tau)"
-crt_shwave = retrieve_obj(example_name, "crt_shwave")
-phi_record = retrieve_obj(example_name, "phi_record")
-dphi_record = retrieve_obj(example_name, "dphi_record")
+example_name = "fs_thz_hhg_tau$(tau)_2"
+# crt_shwave = retrieve_obj(example_name, "crt_shwave")
+# phi_record = retrieve_obj(example_name, "phi_record")
+# dphi_record = retrieve_obj(example_name, "dphi_record")
 hhg_integral_t = retrieve_mat(example_name, "hhg_integral_t")
 
 
 # HHG
+Tp = 2 * nc1 * pi / ω1
+id_range = (Int64(tau_fs ÷ Δt)): (Int64((tau_fs + Tp) ÷ Δt) + 1)
+# println(id_range)
 hhg_xy_t = -hhg_integral_t .- (Et_data_x .+ im .* Et_data_y)
 hhg_len = steps
 
-hhg_window_f(t) = sin(t / hhg_len * pi) ^ 2
-hhg_windows_data = hhg_window_f.(eachindex(hhg_xy_t))
+hhg_windows_f(t, tmin, tmax) = (1 - cos(2 * pi * (t - tmin) / (tmax - tmin))) / 2 * (t >= tmin && t <= tmax)
+hhg_windows_data = hhg_windows_f.(t_linspace, tau_fs, Tp + tau_fs)
 # hhg_windows_data = ones(Float64, steps)
 
-hhg_spectrum_x = fft(real.(hhg_xy_t) .* hhg_windows_data)
-hhg_spectrum_y = fft(imag.(hhg_xy_t) .* hhg_windows_data)
+hhg_spectrum_x = fft(real.(hhg_xy_t[id_range]) .* hhg_windows_data[id_range])
+hhg_spectrum_y = fft(imag.(hhg_xy_t[id_range]) .* hhg_windows_data[id_range])
 hhg_spectrum = norm.(hhg_spectrum_x) .^ 2 + norm.(hhg_spectrum_y) .^ 2
 
 push!(ps, hhg_spectrum)
@@ -137,22 +160,41 @@ push!(ps, hhg_spectrum)
 end
 
 
+
 pt = plot()
+pp = []
+rg = 1: 100
 for (i, p) in enumerate(ps)
 hhg_len = length(p)
 hhg_delta_k = 2pi / hhg_len / 0.05
 hhg_k_linspace = [hhg_delta_k * i for i = 1: hhg_len]
 
-plot!(pt, hhg_k_linspace[1: 500] ./ 0.05693, log10.(norm.(p))[1: 500], label="Delay τ=$(tau_list[i])")
-
+plot!(pt, rg, log10.(norm.(p))[rg], label="Delay τ=$(tau_list[i])")
+push!(pp, p[29])
 end
 pt
 
-plot(norm.(ps[1]))
+k0 = (first(pp) - last(pp)) / (length(pp) - 1)
+# y = first(pp) + k0 * (x - 1)
+plot(tau_list[1: length(tau_list)], pp .- [(first(pp) .- k0 .* ((1: length(tau_list)) .- 1));])
+plot(tau_list, pp)
 
 
-# plot(log10.(norm.(ps[3]))[1: 200])
 
+
+
+
+
+
+
+# example_name = "fs_thz_hhg_tau-500.0"
+# crt_shwave = retrieve_obj(example_name, "crt_shwave")
+# phi_record = retrieve_obj(example_name, "phi_record")
+# dphi_record = retrieve_obj(example_name, "dphi_record")
+# hhg_integral_t = retrieve_mat(example_name, "hhg_integral_t")
+
+
+# plot([real.(hhg_integral_t) imag.(hhg_integral_t)])
 
 # plot(hhg_k_linspace[1: 100] ./ omega, log10.(norm.(hhg_spectrum_x))[1: 100])
 # plot(hhg_k_linspace[1: 200] ./ omega, log10.(norm.(hhg_spectrum))[1: 200], xlabel="N times of ω=0.0569")

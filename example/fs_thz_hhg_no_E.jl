@@ -87,7 +87,17 @@ At_data_z = -get_integral(Et_data_z, Δt)
 
 E_THz(t) = (0.02) * sin(ω2 * (t - tau_thz) / 2 / nc2)^2 * sin(ω2 * (t - tau_thz) + phase_2x) * (t - tau_thz > 0 && t - tau_thz < (2 * nc2 * pi / ω2))
 Et_data_thz = E_THz.(t_linspace)
-sss = plot([Et_data_thz Et_data_x Et_data_y], label=["Et_data_thz" "Et_data_x" "Et_data_y"])
+sss = plot([Et_data_thz Et_data_x Et_data_y], label=["E_thz" "E_fs_x" "E_fs_y"],
+        guidefont=Plots.font(14, "Times"),
+        tickfont=Plots.font(14, "Times"),
+        titlefont=Plots.font(14, "Times"),
+        legendfont=Plots.font(14, "Times"),
+        margin = 5 * Plots.mm,
+        xlabel= "Time (a.u.)",
+        ylabel = "Electric field amplitude (a.u.)",
+        title = "Time Delay τ = $(tau)",
+        linewidth = 1.5
+        )
 push!(delay_image, sss)
 
 # Define k Space
@@ -142,19 +152,30 @@ end
 
 pt = plot()
 for (i, p) in enumerate(ps)
-if i == 1
-        continue
+if i != 1
+        break
 end
 hhg_len = length(p)
 hhg_delta_k = 2pi / hhg_len / 0.05
 hhg_k_linspace = [hhg_delta_k * i for i = 1: hhg_len]
-
-plot!(pt, hhg_k_linspace[1: 100] ./ 0.05693, log10.(norm.(p))[1: 100], label="Delay τ=$(tau_list[i])")
-
+plot!(pt, hhg_k_linspace[1: 800] ./ 0.05693,
+        p[1: 800],
+        yscale=:log10,
+        ylimits=(10 ^ -9, 10 ^ 6),
+        guidefont=Plots.font(14, "Times"),
+        tickfont=Plots.font(14, "Times"),
+        legendfont=Plots.font(14, "Times"),
+        margin = 5 * Plots.mm,
+        xlabel="N times of ω = 0.05693",
+        ylabel = "Amplitude",
+        label = "Delay τ = $(tau_list[i])",
+        legend = false,
+        linewidth = 1.5)
 end
 pt
 
-delay_image[4]
+
+# delay_image[5]
 
 
 # plot(log10.(norm.(ps[3]))[1: 200])

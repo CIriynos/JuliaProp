@@ -124,10 +124,17 @@ end
 
 
 
+k_delta = 0.01
+kmin = 0.01
+kmax = 2.0
+k_linspace = kmin: k_delta: kmax
+Nk_phi = 360
+k_space = create_k_space(k_linspace, fixed_theta(pi/2), phi_linspace(Nk_phi))
 # Retrieve Data.
-gamma_str = @sprintf("%.2f", gamma)
-rmax_str = @sprintf("%.2f", rmax)
-example_name = "ac_plus_test_sin2_L50_Rmax1500.00_gamma2.50"
+# gamma_str = @sprintf("%.2f", gamma)
+# rmax_str = @sprintf("%.2f", rmax)
+example_name = "ac_plus_H_sin2_L80_Rmax2000.00_gamma1.50"
+# example_name = "ac_plus_H_sin2_L100_Rmax2000.00_gamma0.7"
 crt_shwave = retrieve_obj(example_name, "crt_shwave")
 phi_record = retrieve_obj(example_name, "phi_record")
 dphi_record = retrieve_obj(example_name, "dphi_record")
@@ -135,6 +142,7 @@ a_tsurff_vec = retrieve_mat(example_name, "a_tsurff_vec")
 
 # Plot and Get the Angle
 tsurf_plot_xy_momentum_spectrum_vector(a_tsurff_vec, k_space, kr_flag=true)
+
 a_vec_phi = zeros(Float64, Nk_phi+1)
 ttt = zeros(Float64, length(k_linspace))
 for (p, k_vec) in enumerate(k_space.k_collection)

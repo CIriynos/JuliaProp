@@ -103,7 +103,8 @@ grid_index(grid::Grid1D, i::Int64) = grid.delta * i - grid.delta + grid.shift
 
 grid_reduce(grid::Grid1D, x) = round(Int64, (x - grid.shift) / grid.delta) + 1
 
-create_empty_shwave_array(shgrid::GridSH) = [zeros(ComplexF64, shgrid.rgrid.count) for i in range(1, shgrid.l_num * shgrid.l_num)]
+# create_empty_shwave_array(shgrid::GridSH) = [zeros(ComplexF64, shgrid.rgrid.count) for i in range(1, shgrid.l_num * shgrid.l_num)]
+create_empty_shwave_array(shgrid::GridSH) = [ones(ComplexF64, shgrid.rgrid.count) * 1e-50 for i in range(1, shgrid.l_num * shgrid.l_num)]
 
 create_empty_shwave_array_fixed(shgrid::GridSH) = [ones(ComplexF64, shgrid.rgrid.count) * 1e-50 for i in range(1, shgrid.l_num * shgrid.l_num)]
 
@@ -179,7 +180,7 @@ end
 
 function pentamat_to_mat(ptmat)
     cnt = size(ptmat)[1]
-    M = zeros(cnt, cnt)
+    M = zeros(ComplexF64, cnt, cnt)
     for i in 1: cnt
         for j in range(i - 2, i + 2)
             if j >= 1 && j <= cnt
@@ -292,6 +293,18 @@ function get_integral(X1, X2, X3, dx)
     return Y
 end
 
+function numerical_integral(F, dx)
+    ans = first(F)
+    for i in 1: length(F) - 1
+        if i == 1
+            ans = dx * (F[1] + F[2]) / 2
+        else
+            ans += dx * (F[i] + F[i + 1]) / 2
+        end
+    end
+    return ans
+end
+
 # SH
 
 get_m_from_mm(mm::Int64) = (mm % 2 == 0) ? (mm - (mm ÷ 2) * 3) : (mm - (mm - 1) ÷ 2)
@@ -359,4 +372,28 @@ end
 function open_shwave(filename)
     mat = open_object(filename, ComplexF64)
     return convert_mat_to_shwave(mat)
+end
+
+function exert_limit(lb, ub, number, cycle)
+    while number > ub
+        number -= cycle
+    end
+    while number < lb
+        number += cycle
+    end
+    return number
+end
+
+
+# Smoothness of wavefunction
+function get_smoothness_1(data_set, delta)
+    res1 = get_derivative_two_order(data_set, delta)
+    res2 = get_derivative_two_order(res1, delta)
+    return sum(norm.(res2)) * delta
+end
+
+function get_smoothness_2(data_set, delta)
+    res1 = get_derivative_two_order(data_set, delta)
+    res2 = get_derivative_two_order(res1, delta)
+    return std(res2)
 end

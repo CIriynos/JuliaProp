@@ -112,6 +112,6 @@ hhg_delta_k = 2pi / hhg_len / Δt
 hhg_k_linspace = [hhg_delta_k * i for i = 1: hhg_len]
 
 plot(hhg_k_linspace[1: 380] ./ omega, log10.(norm.(hhg_spectrum_x))[1: 380])
-plot(hhg_k_linspace[1: 380] ./ omega, log10.(norm.(hhg_spectrum))[1: 380])
+# plot(hhg_k_linspace[1: 380] ./ omega, log10.(norm.(hhg_spectrum))[1: 380])
 
 # plot(log10.(norm.(hhg_spectrum_x))[hhg_len - 380: hhg_len])

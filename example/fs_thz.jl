@@ -13,23 +13,23 @@ using HDF5
 # Basic Parameters
 Nr = 5000
 Δr = 0.2
-l_num = 50
+l_num = 40
 Δt = 0.05
 Z = 1.0
 rmax = Nr * Δr
-Ri_tsurf = 800.0
-po_func_r = coulomb_potiential_zero_fixed_COS(600.0, 800.0)
+Ri_tsurf = 0.8 * rmax
+po_func_r_shit(r) = -(r^2 + 0) ^ (-0.5) * flap_top_windows_f(r, 0, Ri_tsurf, 1/4, left_flag=false)
 absorb_func = absorb_boundary_r(rmax, Ri_tsurf, pow_value=8.0, max_value=100.0)
 
 # Create Physical World and Runtime
-pw = create_physics_world_sh(Nr, l_num, Δr, Δt, po_func_r, Z, absorb_func)
+pw = create_physics_world_sh(Nr, l_num, Δr, Δt, po_func_r_shit, Z, absorb_func)
 rt = create_tdse_rt_sh(pw);
 
 # Initial Wave
-init_wave_list = itp_fdsh(pw, rt, err=1e-9);
+init_wave_list = itp_fdsh(pw, rt, err=1e-8);
 crt_shwave = deepcopy(init_wave_list[1]);
 get_energy_sh(init_wave_list[1], rt, pw.shgrid) # He:-0.944  H:-0.5
-
+# plot(norm.(init_wave_list[1][1:100]))
 
 # Define the Laser. 
 THZ_X = 1
@@ -110,25 +110,25 @@ k_space = create_k_space(k_linspace, fixed_theta(pi/2), phi_linspace(Nk_phi))
 # end
 
 
-# Retrieve Data.
-example_name = "fs_thz_tau$(tau)"
-crt_shwave = retrieve_obj(example_name, "crt_shwave")
-phi_record = retrieve_obj(example_name, "phi_record")
-dphi_record = retrieve_obj(example_name, "dphi_record")
-δa_lm = retrieve_obj(example_name, "δa_lm")
+# # Retrieve Data.
+# example_name = "fs_thz_tau$(tau)"
+# crt_shwave = retrieve_obj(example_name, "crt_shwave")
+# phi_record = retrieve_obj(example_name, "phi_record")
+# dphi_record = retrieve_obj(example_name, "dphi_record")
+# δa_lm = retrieve_obj(example_name, "δa_lm")
 
 
-k_delta = 0.002
-kmin = 0.002
-kmax = 1.5
-k_linspace = kmin: k_delta: kmax
-Nk_phi = 360
-k_space = create_k_space(k_linspace, fixed_theta(pi/2), phi_linspace(Nk_phi))
-δa_lm = isurf_rest_part(crt_shwave, k_linspace, last(t_linspace), Ri_tsurf, pw, rt)
+# k_delta = 0.002
+# kmin = 0.002
+# kmax = 1.5
+# k_linspace = kmin: k_delta: kmax
+# Nk_phi = 360
+# k_space = create_k_space(k_linspace, fixed_theta(pi/2), phi_linspace(Nk_phi))
+# δa_lm = isurf_rest_part(crt_shwave, k_linspace, last(t_linspace), Ri_tsurf, pw, rt)
 
-tsurf_plot_energy_spectrum(δa_lm, k_linspace, pw, ylimit_min_log=-6.0)
+# tsurf_plot_energy_spectrum(δa_lm, k_linspace, pw, ylimit_min_log=-6.0)
 
-tsurf_plot_xy_momentum_spectrum(δa_lm, k_space, pw, k_min=0.02)
+# tsurf_plot_xy_momentum_spectrum(δa_lm, k_space, pw, k_min=0.02)
 
 
 

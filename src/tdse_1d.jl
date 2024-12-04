@@ -111,6 +111,12 @@ function get_energy_1d(crt_wave::wave_t, rt::tdse_rt_1d_t)
     return real(dot(crt_wave, rt.tmp_wave))
 end
 
+function get_energy_1d_laser(crt_wave::wave_t, At::Float64, rt::tdse_rt_1d_t)
+    tmp_mat = rt.H_penta .- im .* At .* rt.D1_penta #.+ rt.I_penta .* (0.5 * At^2)
+    penta_mul(rt.tmp_wave, tmp_mat, crt_wave)
+    return real(dot(crt_wave, rt.tmp_wave))
+end
+
 function tdse_fd1d_mainloop(crt_wave::wave_t, rt::tdse_rt_1d_t, steps)
     for _ = 1: steps
         mul!(rt.half_wave, rt.A_pos, crt_wave)
@@ -147,15 +153,26 @@ function itp_fd1d(seed_wave::wave_t, rt::tdse_rt_1d_t; min_error::Float64 = 1e-8
 end
 
 
-function tdse_laser_fd1d_mainloop_penta(crt_wave::wave_t, rt::tdse_rt_1d_t, pw::physics_world_1d_t, Ats, steps, X)
+function tdse_laser_fd1d_mainloop_penta(crt_wave::wave_t, rt::tdse_rt_1d_t, pw::physics_world_1d_t, Ats, steps, X; record_steps::Int64 = 200)
     println("[TDSE_1d]: tdse process starts. 1d with laser in dipole approximation.")
-    # energy_list = []
+    energy_list = []
+    smooth_record = []
     X_pos_vals = zeros(ComplexF64, steps)
     X_neg_vals = zeros(ComplexF64, steps)
     X_pos_dvals = zeros(ComplexF64, steps)
     X_neg_dvals = zeros(ComplexF64, steps)
     X_pos_id = grid_reduce(pw.xgrid, X)
     X_neg_id = grid_reduce(pw.xgrid, -X)
+
+    mid_len = 5
+    mask = [!(i in pw.Nx ÷ 2 - mid_len: pw.Nx ÷ 2 + mid_len + 2) for i in 1: pw.Nx]
+    dU_dx = get_derivative_two_order(pw.po_data, pw.delta_x) #.* mask
+    hhg_integral = zeros(ComplexF64, steps)
+    x_linspace = get_linspace(pw.xgrid)
+
+    d_po_func(x) = x * (x^2 + 1) ^ (-1.5)
+    dU_dx_2 = d_po_func.(x_linspace)
+
     @inbounds for i = 1: steps
         @fastmath @. rt.tmp_penta_1 = rt.A_pos_penta - 0.5 * pw.delta_t * Ats[i] * rt.D1_penta
         @fastmath @. rt.tmp_penta_2 = rt.A_neg_penta + 0.5 * pw.delta_t * Ats[i] * rt.D1_penta
@@ -168,14 +185,23 @@ function tdse_laser_fd1d_mainloop_penta(crt_wave::wave_t, rt::tdse_rt_1d_t, pw::
         X_pos_dvals[i] = four_order_difference(crt_wave, X_pos_id, pw.delta_x)
         X_neg_dvals[i] = four_order_difference(crt_wave, X_neg_id, pw.delta_x)
         
-        if i % 200 == 0
-            en = get_energy_1d(crt_wave, rt)
-            # push!(energy_list, en)
-            println("[FD_1d]:step $i, energy = $en")
+        # normalize!(crt_wave)
+        if i % record_steps == 0
+            crt_wave_L = gauge_transform_V2L(crt_wave, Ats[1:i], pw.delta_t, x_linspace)
+            en = get_energy_1d(crt_wave_L, rt)
+            nm = dot(crt_wave, crt_wave)
+            sm = get_smoothness_1(crt_wave, pw.delta_x)
+            push!(energy_list, en)
+            push!(smooth_record, sm)
+            println("[FD_1d]:step $i, energy = $en, norm = $nm")
         end
+
+        # HHG
+        # hhg_integral[i] = dot(crt_wave, crt_wave .* dU_dx)
+        hhg_integral[i] = numerical_integral(dU_dx .* norm.(crt_wave) .^ 2, 1.0)
     end
     println("[TDSE_1d]: tdse process end.")
-    return X_pos_vals, X_neg_vals, X_pos_dvals, X_neg_dvals
+    return [X_pos_vals, X_neg_vals, X_pos_dvals, X_neg_dvals], hhg_integral, energy_list, smooth_record
     # return energy_list
 end
 
@@ -218,10 +244,52 @@ function windows_operator_method_1d(crt_wave, gamma, n, Ev_list, rt::tdse_rt_1d_
     return Plist_total, Plist
 end
 
+# function exert_windows_operator_1d_penta_laser(At::Float64, phi::wave_t, gamma::Float64, Ev::Float64, n::Int64, rt::tdse_rt_1d_t)
+#     phi .*= gamma ^ (2 ^ n)
+#     @inbounds @fastmath for k = reverse(1: 2 ^ (n - 1))
+#         alpha_pos = -Ev + exp(im * (2k - 1) * pi / 2 ^ n) * gamma
+#         alpha_neg = -Ev - exp(im * (2k - 1) * pi / 2 ^ n) * gamma
+#         rt.tmp_penta_1 .= rt.H_penta .- (im * At) .* rt.D1_penta + 0.5 * At^2 * rt.I_penta .+ alpha_pos .* rt.I_penta
+#         pentamat_elimination(rt.tmp_wave, rt.tmp_penta_1, phi, rt.A_buffer, rt.B_buffer)
+#         phi .= rt.tmp_wave
 
-function tsurf_1d(pw::physics_world_1d_t, k_linspace, t_linspace, At_data, X, X_pos_vals, X_neg_vals, X_pos_dvals, X_neg_dvals)
+#         rt.tmp_penta_2 .= rt.H_penta .- (im * At) .* rt.D1_penta + 0.5 * At^2 * rt.I_penta .+ alpha_neg .* rt.I_penta
+#         pentamat_elimination(rt.tmp_wave, rt.tmp_penta_2, phi, rt.A_buffer, rt.B_buffer)
+#         phi .= rt.tmp_wave
+#     end
+# end
+
+# function windows_operator_method_1d_laser(crt_wave, At, gamma, n, Ev_list, rt::tdse_rt_1d_t, pw::physics_world_1d_t)
+#     Plist_pos = zeros(Float64, length(Ev_list))
+#     Plist_neg = zeros(Float64, length(Ev_list))
+#     Plist = zeros(Float64, length(Ev_list))
+#     phi = copy(crt_wave)
+#     zero_id = grid_reduce(pw.xgrid, 0.0)
+
+#     for (i, Ev) in enumerate(Ev_list)
+#         phi .= crt_wave
+#         exert_windows_operator_1d_penta_laser(At, phi, gamma, Ev, n, rt)
+#         p_pos = real(dot(phi[zero_id: length(crt_wave)], phi[zero_id: length(crt_wave)]))
+#         p_neg = real(dot(phi[1: zero_id], phi[1: zero_id]))
+#         p = real(dot(phi, phi))
+
+#         Plist_pos[i] = p_pos
+#         Plist_neg[i] = p_neg
+#         Plist[i] = p
+#     end
+
+#     Plist_total = [reverse(Plist_neg); Plist_pos[2: length(Plist_pos)]]
+#     return Plist_total, Plist
+# end
+
+
+function tsurf_1d(pw::physics_world_1d_t, k_linspace, t_linspace, At_data, X, Xi_data)
     h(t) = 0.5 * (1 - cos(2 * pi * t / last(t_linspace)))
 
+    X_pos_vals = Xi_data[1]
+    X_neg_vals = Xi_data[2]
+    X_pos_dvals = Xi_data[3]
+    X_neg_dvals = Xi_data[4]
     b1k = zeros(ComplexF64, length(k_linspace))
     b2k = zeros(ComplexF64, length(k_linspace))
 
@@ -244,4 +312,12 @@ function tsurf_1d(pw::physics_world_1d_t, k_linspace, t_linspace, At_data, X, X_
 
     Pk = norm.(b1k .+ b2k) .^ 2
     return Pk
+end
+
+
+# gauge transform
+function gauge_transform_V2L(wave_V, Ats, delta_t, x_linspace)
+    tmp = get_integral(Ats .^ 2, delta_t)
+    wave_L = wave_V .* exp.(im * last(Ats) .* x_linspace .- 0.5im * last(tmp))
+    return wave_L
 end
