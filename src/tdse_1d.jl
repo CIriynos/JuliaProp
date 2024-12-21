@@ -165,7 +165,7 @@ function tdse_laser_fd1d_mainloop_penta(crt_wave::wave_t, rt::tdse_rt_1d_t, pw::
     X_neg_id = grid_reduce(pw.xgrid, -X)
 
     mid_len = 5
-    mask = [!(i in pw.Nx ÷ 2 - mid_len: pw.Nx ÷ 2 + mid_len + 2) for i in 1: pw.Nx]
+    mask = [!(i in pw.Nx ÷ 2 - mid_len: pw.Nx ÷ 2 + mid_len + 1) for i in 1: pw.Nx]
     dU_dx = get_derivative_two_order(pw.po_data, pw.delta_x) #.* mask
     hhg_integral = zeros(ComplexF64, steps)
     x_linspace = get_linspace(pw.xgrid)
@@ -198,7 +198,10 @@ function tdse_laser_fd1d_mainloop_penta(crt_wave::wave_t, rt::tdse_rt_1d_t, pw::
 
         # HHG
         # hhg_integral[i] = dot(crt_wave, crt_wave .* dU_dx)
-        hhg_integral[i] = numerical_integral(dU_dx .* norm.(crt_wave) .^ 2, 1.0)
+        # hhg_integral[i] = numerical_integral(dU_dx .* norm.(crt_wave) .^ 2, 1.0)
+        for k = 1: pw.Nx
+            hhg_integral[i] += dU_dx[k] * norm.(crt_wave[k]) .^ 2 * pw.delta_x
+        end 
     end
     println("[TDSE_1d]: tdse process end.")
     return [X_pos_vals, X_neg_vals, X_pos_dvals, X_neg_dvals], hhg_integral, energy_list, smooth_record

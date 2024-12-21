@@ -125,7 +125,7 @@ hhg_integral_t = retrieve_mat(example_name, "hhg_integral_t")
 Tp = 2 * nc1 * pi / ω1
 id_range = 1: steps
 # println(id_range)
-hhg_xy_t = -hhg_integral_t .- (Et_data_x .+ im .* Et_data_y)
+hhg_xy_t = -hhg_integral_t #.- (Et_data_x .+ im .* Et_data_y)
 hhg_len = steps
 hhg_delta_k = 2pi / hhg_len / Δt
 hhg_k_linspace = [hhg_delta_k * i for i = 1: hhg_len]
@@ -144,7 +144,7 @@ hhg_spectrum = sqrt.(hhg_spectrum_x_norm .^ 2 .+ hhg_spectrum_y_norm .^ 2)
 
 
 push!(shg_yields, hhg_spectrum[shg_id])
-push!(hhg_data, hhg_spectrum_y_norm)
+push!(hhg_data, hhg_spectrum_x_norm)
 push!(hhg_t, hhg_integral_t)
 println("shg_id = $shg_id")
 

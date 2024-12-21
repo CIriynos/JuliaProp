@@ -853,9 +853,10 @@ function isurf_rest_part(crt_shwave::shwave_t, k_linspace, tau_p, Ri_tsurf, pw::
     for i in eachindex(k_linspace)
         k = k_linspace[i]
         Ek = k ^ 2 / 2
+        println("[i-SURFF] i = $i, k = $k")
 
         copy_shwave(rt.phi, crt_shwave)
-        for id = 1: pw.l_num ^ 2
+        Threads.@threads for id = 1: pw.l_num ^ 2
             l = rt.lmap[id]
             m = rt.mmap[id]
 

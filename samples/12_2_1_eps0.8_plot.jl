@@ -43,8 +43,8 @@ induce_time = 0
 # tau = tau_var
 eps1 = 0.8
 E_peak1 = 0.0533
-E_peak2 = 0.000005           # 25.7 kV/cm
-E_constant_x = 0.000005      # 25.7 kV/cm
+E_peak2 = 0.00001           # 200 kV/cm
+E_constant_x = 0.00001      # 200 kV/cm
 E_thz = 0.00017
 
 ω1 = 0.05693    # 800 nm (375 THz)

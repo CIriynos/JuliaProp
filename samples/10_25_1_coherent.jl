@@ -31,7 +31,7 @@ iter_list = [(x, y) for y in E_ratio_var for x in tau_list]
 # println("task id = $__TASK_ID")
 # println(sub_iter_list)
 # 2
-sub_iter_list = iter_list
+sub_iter_list = [(-7000, 1)]
 
 # in-program sweeping
 for (tau_var, E_ratio_var) in sub_iter_list
@@ -183,7 +183,7 @@ hhg_windows_data = hhg_windows_f.(t_linspace, tau_fs, Tp + tau_fs)
 
 hhg_spectrum_x = fft(real.(hhg_xy_t[id_range]) .* hhg_windows_data[id_range])
 hhg_spectrum_y = fft(imag.(hhg_xy_t[id_range]) .* hhg_windows_data[id_range])
-hhg_spectrum = norm.(hhg_spectrum_x) .^ 2 + norm.(hhg_spectrum_y) .^ 2
+hhg_spectrum = norm.(hhg_spectrum_x) .^ 2 #+ norm.(hhg_spectrum_y) .^ 2
 
 push!(ps, hhg_spectrum)
 push!(tps, hhg_xy_t[id_range])

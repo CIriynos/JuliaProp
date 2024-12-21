@@ -13,7 +13,7 @@ using FFTW
 # 现在，托偏光程序绝对是OK的了！！！！
 
 # __TASK_ID = parse(Int64, ARGS[1])
-__TASK_ID = 2
+__TASK_ID = 1
 
 # Basic Parameters
 Nr = 5000
@@ -111,7 +111,7 @@ hhg_spectrum_x = fft(real.(hhg_xy_t[id_range]) .* hhg_windows_data[id_range])
 hhg_spectrum_y = fft(imag.(hhg_xy_t[id_range]) .* hhg_windows_data[id_range])
 hhg_spectrum_x_norm = norm.(hhg_spectrum_x) .^ 2
 hhg_spectrum_y_norm = norm.(hhg_spectrum_y) .^ 2
-hhg_spectrum = hhg_spectrum_x_norm + hhg_spectrum_y_norm
+hhg_spectrum = sqrt.(hhg_spectrum_x_norm .+ hhg_spectrum_y_norm)
 
 spectrum_range = 1:200
 plot([norm.(hhg_spectrum_x)[spectrum_range] norm.(hhg_spectrum_y)[spectrum_range]], yscale=:log10)

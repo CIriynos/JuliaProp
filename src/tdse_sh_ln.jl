@@ -288,7 +288,7 @@ function tdseln_sh_mainloop_record_optimized_hhg(crt_shwave, pw::physics_world_s
         ids_mask .= 0   # clear first
 
         # We do not need to get optimized_count every time, just sometimes.
-        if (i - 1) % 200 == 0
+        if (i - 1) % 20 == 0
             optimized_count = 0
 
             Threads.@threads for j = 1: bundle_size
@@ -343,11 +343,21 @@ function tdseln_sh_mainloop_record_optimized_hhg(crt_shwave, pw::physics_world_s
             id2 = get_index_from_lm(l + 1, m, pw.shgrid.l_num)
 
             integral_buffer[l + 1] = 0      # clear it first
-            if id1 != -1    # if id1 (l - 1, m) is in bound, then add 
-                @fastmath integral_buffer[l + 1] += dot(crt_shwave[id], crt_shwave[id1] .* dU_data) * pw.delta_r * c_expr(l - 1, m)
+            # if id1 != -1    # if id1 (l - 1, m) is in bound, then add 
+            #     @fastmath integral_buffer[l + 1] += dot(crt_shwave[id], crt_shwave[id1] .* dU_data) * pw.delta_r * c_expr(l - 1, m)
+            # end
+            # if id2 != -1    # if id2 (l + 1, m) is in bound, then add
+            #     @fastmath integral_buffer[l + 1] += dot(crt_shwave[id], crt_shwave[id2] .* dU_data) * pw.delta_r * c_expr(l, m)
+            # end
+            if id1 != -1
+                for k = 1: pw.Nr
+                    integral_buffer[l + 1] += conj(crt_shwave[id][k]) * crt_shwave[id1][k] * dU_data[k] * pw.delta_r * c_expr(l - 1, m)
+                end
             end
-            if id2 != -1    # if id2 (l + 1, m) is in bound, then add
-                @fastmath integral_buffer[l + 1] += dot(crt_shwave[id], crt_shwave[id2] .* dU_data) * pw.delta_r * c_expr(l, m)
+            if id2 != -1
+                for k = 1: pw.Nr
+                    integral_buffer[l + 1] += conj(crt_shwave[id][k]) * crt_shwave[id2][k] * dU_data[k] * pw.delta_r * c_expr(l, m)
+                end
             end
         end
         for j = 1: bundle_size - optimized_count
