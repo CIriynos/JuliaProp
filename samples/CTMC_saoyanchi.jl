@@ -159,6 +159,8 @@ function traj_get_acc(P_ID, traj, tid, t_num, delta_t)
     return acc_data
 end
 
+# The function of Movement
+F1(E, Z, x, y, z, rj) = -E - Z * rj / (x^2 + y^2 + z^2 + 1e-5) ^ (3 / 2)
 
 
 
@@ -172,13 +174,15 @@ end
 
 #################################
 
-# The function of Movement
-F1(E, Z, x, y, z, rj) = -E - Z * rj / (x^2 + y^2 + z^2 + 1e-5) ^ (3 / 2)
+hhgs = []
+e_figs = []
+
+for tau_id = 1: 16
 
 # Core Parameters
 Z = 1.0
 Ip = 0.5
-ϵ = 0.3
+ϵ = 0.5
 
 # Laser Parameters 1
 ω1 = 0.057
@@ -199,7 +203,8 @@ tau2 = 500
 E3 = 0.00002 * 1
 E_DC = 0.00002 * 1
 Tp3 = 2pi / ω_thz
-tau3 = -2000
+tau_lst = [tau1 - 2pi/ω_thz; range(tau1 - 2pi/ω_thz + tau1, tau1 + nc1*2pi/ω1 - tau1, 14); tau1 + nc1*2pi/ω1]
+tau3 = tau_lst[tau_id]
 
 # CTMC Parameters
 Δt = 0.2
@@ -221,8 +226,8 @@ filter_threshold = 2.0
 
 
 # Laser & THz Waveform
-E_laser_1(t) = E1 * sin(ω1 * (t - tau1) / 2 / nc1)^2 * cos(ω1 * (t - tau1)) * (t > tau1 && t < tau1 + Tp1)
-E_laser_2(t) = E2 * sin(ω2 * (t - tau2) / 2 / nc2)^2 * sin(ω2 * (t - tau2)) * (t > tau2 && t < tau2 + Tp2)
+E_laser_1(t) = E1 * sin(ω1 * (t - tau1) / 2 / nc1)^2 * sin(ω1 * (t - tau1)) * (t > tau1 && t < tau1 + Tp1)
+E_laser_2(t) = E2 * sin(ω2 * (t - tau2) / 2 / nc2)^2 * cos(ω2 * (t - tau2)) * (t > tau2 && t < tau2 + Tp2)
 E_thz(t) = E_DC + E3 * sin(ω_thz * (t - tau3)) * (t > tau3 && t < tau3 + Tp3)
 E_x(t) = E_laser_1(t) + E_thz(t)
 E_y(t) = E_laser_2(t)
@@ -232,8 +237,8 @@ E_data = [E_x.(ts) .+ 1e-20, E_y.(ts) .+ 1e-20, E_z.(ts) .+ 1e-20]
 E_hf_data = [E_x.(ts_hf), E_y.(ts_hf), E_z.(ts)]
 E_norm_data = sqrt.(E_x.(ts).^2 .+ E_y.(ts).^2 .+ E_z.(ts).^2) .+ 1e-20
 E_norm_data_no_thz = sqrt.((E_laser_1.(ts)).^2 .+ E_y.(ts).^2) .+ 1e-20
-plot([E_data[1] E_data[2] E_thz.(ts) .* 1e2],
-    labels=["Ex" "Ey" "THz+DC"])
+push!(e_figs, plot([E_data[1] E_data[2] E_thz.(ts) .* 1e2]))
+
 
 # RK4 Data Allocation Reusable (It spends a lot of time)
 trajs_num = t_num
@@ -255,31 +260,16 @@ az_data = zeros(Float64, t_num)
 # phase_fig = plot()
 
 
-# m = 1
-for m = 1: 50
-
-# Random Start-Point Generator
-tid_cc = zeros(Int64, trajs_num)
-p = 1
-while p <= trajs_num
-    tid = Int64(rand(1: t_num))
-    w = W.(E_norm_data[tid], 0, Ip, Z)
-    if w > 1e-8
-        tid_cc[p] = tid
-        p += 1
-    end
-end
-# tid_cc = rand(1: t_num, trajs_num)
-pv_cc = rand(trajs_num) * pv_max
-theta_cc = rand(trajs_num) * 2pi
+m = 1
+# for m = 1: 1
 
 
-# # Uniform Start-Point Generator
-# theta_m_list = [0; range(0, 2*pi, 6); range(0, 2*pi, 12); range(0, 2*pi, 18)]
-# pv_m_list = [1e-5; ones(6) .* 0.2; ones(12) .* 0.4; ones(18) .* 0.8]
-# tid_cc = 1: trajs_num
-# pv_cc = ones(trajs_num) .* pv_m_list[m]
-# theta_cc = ones(trajs_num) .* theta_m_list[m]
+# Uniform Start-Point Generator
+theta_m_list = [0; range(0, 2*pi, 6); range(0, 2*pi, 12); range(0, 2*pi, 18)]
+pv_m_list = [1e-5; ones(6) .* 0.2; ones(12) .* 0.4; ones(18) .* 0.8]
+tid_cc = 1: trajs_num
+pv_cc = ones(trajs_num) .* pv_m_list[m]
+theta_cc = ones(trajs_num) .* theta_m_list[m]
 
 
 # Preparation for Start Point 
@@ -406,9 +396,7 @@ combine_trajs_data(PZ_ID, az_data, traj_data, traj_filter_flag, weight_cc, tid_c
 
 # rad2deg(angle(tmp1))
 # rad2deg(angle(tmp2))
-
-
-end
+# end
 
 
 
@@ -454,6 +442,9 @@ p2 = plot(hhg_k_linspace[spectrum_range] / ω1,
     legendfont=Plots.font(10, "Times"),
     margin = 5 * Plots.mm,
     ylimit=(1e-6, 1e3))
+
+push!(hhgs, norm.(hhg_spectrum_x))
+
 # plot!(p2, [shg_id, shg_id], [1e-10, 1e10])
 # plot!(p2, [base_id, base_id], [1e-10, 1e10])
 
@@ -474,5 +465,25 @@ p2 = plot(hhg_k_linspace[spectrum_range] / ω1,
 # barp = plot(norm.(fft(E_data[1]))[1:100], yscale=:log10)
 # plot!(barp, [base_id, base_id], [1e-2,1e2])
 
-# PMD
-Plots.heatmap(p_axis, p_axis, pxy_final, color=:jet1, size=(500, 420))
+# # PMD
+# Plots.heatmap(p_axis, p_axis, pxy_final, color=:jet1, size=(500, 420))
+
+
+end
+
+p2 = plot(hhg_k_linspace[spectrum_range] / ω1, 
+    1e1 * [hhgs[1][spectrum_range] hhgs[6][spectrum_range] hhgs[8][spectrum_range] hhgs[12][spectrum_range] hhgs[16][spectrum_range]],
+    yscale=:log10,
+    xlabel="N Times of ωfs",
+    ylabel="Yield (arb.u.)",
+    title="HHG Spectrum in Direction of z-axis",
+    labels=["τ1" "τ2" "τ3" "τ4" "τ5"],
+    guidefont=Plots.font(14, "Times"),
+    tickfont=Plots.font(14, "Times"),
+    titlefont=Plots.font(18, "Times"),
+    legendfont=Plots.font(10, "Times"),
+    margin = 5 * Plots.mm,
+    ylimit=(1e-6, 1e3))
+
+hhg_ctmc = [hhgs[i][shg_id] for i = 1: 16]
+plot(hhg_ctmc)

@@ -11,6 +11,7 @@ using FFTW
 
 # Plotting / Task-based Sweeping
 shg_yields = []
+mid_thz = []
 tau_lst = []
 hhg_data = []
 etps = []
@@ -42,11 +43,11 @@ thz_direction = THZ_X
 
 induce_time = 0
 # tau = tau_var
-eps1 = 0.85
+eps1 = 0.5
 E_peak1 = 0.0533
 E_peak2 = 0.00002           # 100 kV/cm
-E_constant_x = 0.00002      # 100 kV/cm
-if tau_id == 6
+E_constant_x = 0.00002 * 0      # 100 kV/cm
+if tau_id == 17
     E_peak2 = 0.0
     E_constant_x = 0.0
 end
@@ -108,6 +109,8 @@ etp = plot(t_linspace, [Ex_fs.(t_linspace) Ey_fs.(t_linspace) ((Ex_thz.(t_linspa
     legendfont=Plots.font(10, "Times"),
     margin = 5 * Plots.mm)
 push!(etps, etp)
+push!(mid_thz, (Ex_thz.(t_linspace[Int64((tau_fs + nc1*pi/ω1) ÷ Δt)]) .+ E_constant_x))
+
 
 # Define k Space
 k_delta = 0.01
@@ -119,13 +122,13 @@ k_space = create_k_space(k_linspace, fixed_theta(pi/2), phi_linspace(Nk_phi))
 
 
 # Retrieve Data.
-example_name = "12_21_1_$(tau_id)"
+example_name = "12_22_1_$(tau_id)"
 hhg_integral_t_1 = retrieve_mat(example_name, "hhg_integral_t_1")
 # plot([real.(hhg_integral_t_1) imag.(hhg_integral_t_1)])
 
 # HHG
 Tp = 2 * pi * nc1 / ω1
-hhg_xy_t = -hhg_integral_t_1 #.- Et_data_x
+hhg_xy_t = -hhg_integral_t_1 .- Et_data_x
 hhg_delta_k = 2pi / steps / Δt
 hhg_k_linspace = [hhg_delta_k * i for i = 1: steps]
 shg_id = Int64(floor(2 * ω1 / hhg_delta_k)) + 2
@@ -137,7 +140,7 @@ hhg_spectrum_x = fft(real.(hhg_xy_t) .* hhg_windows_data)
 hhg_spectrum_y = fft(imag.(hhg_xy_t) .* hhg_windows_data)
 hhg_spectrum = sqrt.(norm.(hhg_spectrum_x) .^ 2 + norm.(hhg_spectrum_y) .^ 2)
 
-spectrum_range = 1: Int64((15 * ω1) ÷ hhg_delta_k)
+spectrum_range = 1: Int64((8 * ω1) ÷ hhg_delta_k)
 push!(shg_yields, norm.(hhg_spectrum_x[shg_id]))
 push!(hhg_data, norm.(hhg_spectrum_x))
 push!(hhg_t, hhg_integral_t_1)
@@ -167,19 +170,19 @@ mid_point_shift = mid_point - (-600)
 p1
 
 
-plot([hhg_data[1][spectrum_range], hhg_data[2][spectrum_range],
-    hhg_data[3][spectrum_range], hhg_data[4][spectrum_range],
-    hhg_data[5][spectrum_range], hhg_data[6][spectrum_range]],
-    yscale=:log10,
-    xlabel="N Times of ωfs",
-    ylabel="Yield (arb.u.)",
-    title="HHG Spectrum in Direction of z-axis",
-    labels=["τ1" "τ2" "τ3" "τ4" "τ5" "None"],
-    guidefont=Plots.font(14, "Times"),
-    tickfont=Plots.font(14, "Times"),
-    titlefont=Plots.font(18, "Times"),
-    legendfont=Plots.font(10, "Times"),
-    margin = 5 * Plots.mm,
-    ylimit=(1e-6, 1e3))
+# plot([hhg_data[1][spectrum_range], hhg_data[2][spectrum_range],
+#     hhg_data[3][spectrum_range], hhg_data[4][spectrum_range],
+#     hhg_data[5][spectrum_range], hhg_data[6][spectrum_range]],
+#     yscale=:log10,
+#     xlabel="N Times of ωfs",
+#     ylabel="Yield (arb.u.)",
+#     title="HHG Spectrum in Direction of z-axis",
+#     labels=["τ1" "τ2" "τ3" "τ4" "τ5" "None"],
+#     guidefont=Plots.font(14, "Times"),
+#     tickfont=Plots.font(14, "Times"),
+#     titlefont=Plots.font(18, "Times"),
+#     legendfont=Plots.font(10, "Times"),
+#     margin = 5 * Plots.mm,
+#     ylimit=(1e-6, 1e3))
 
 # plot(real.(hhg_t[13]))

@@ -47,7 +47,7 @@ k_space = create_k_space(k_linspace, fixed_theta(pi/2), phi_linspace(Nk_phi))
 
 # propagation
 Ri_tsurf = 450.0
-@time phi_record, dphi_record = tdse_elli_sh_mainloop_record_xy(crt_shwave, pw, rt, At_data_x, At_data_y, steps, Ri_tsurf);
+@time phi_record, dphi_record = tdse_elli_sh_mainloop_record_xy_optimized(crt_shwave, pw, rt, At_data_x, At_data_y, steps, Ri_tsurf);
 
 Ri_tsurf = 450.0
 a_tsurff_vec = isurf_sh_vector(pw, rt, phi_record, dphi_record, crt_shwave, At_data_x, At_data_y, At_data_z, Ri_tsurf, t_linspace, k_space, TSURF_MODE_ELLI);
@@ -73,10 +73,10 @@ end
 
 ########################
 # retrieve data.
-# crt_shwave = retrieve_obj("attoclock", "crt_shwave")
-# phi_record = retrieve_obj("attoclock", "phi_record")
-# dphi_record = retrieve_obj("attoclock", "dphi_record")
-# a_tsurff_vec = retrieve_mat("attoclock", "a_tsurff_vec")
+crt_shwave = retrieve_obj("attoclock", "crt_shwave")
+phi_record = retrieve_obj("attoclock", "phi_record")
+dphi_record = retrieve_obj("attoclock", "dphi_record")
+a_tsurff_vec = retrieve_mat("attoclock", "a_tsurff_vec")
 
-# # a_tsurff_vec = isurf_sh_vector(pw, rt, phi_record, dphi_record, crt_shwave, At_data_x, At_data_y, At_data_z, Ri_tsurf, t_linspace, k_space, TSURF_MODE_ELLI);
-# tsurf_plot_xy_momentum_spectrum_vector(a_tsurff_vec, k_space, kr_flag=true)
+# a_tsurff_vec = isurf_sh_vector(pw, rt, phi_record, dphi_record, crt_shwave, At_data_x, At_data_y, At_data_z, Ri_tsurf, t_linspace, k_space, TSURF_MODE_ELLI);
+tsurf_plot_xy_momentum_spectrum_vector(a_tsurff_vec, k_space, kr_flag=true)
