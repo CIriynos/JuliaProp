@@ -169,7 +169,7 @@ mid_point_shift = mid_point - (-4600)
 p1
 
 
-plot((spectrum_range .- 1) .* hhg_delta_k ./ ω1, [hhg_data[1][spectrum_range], hhg_data[4][spectrum_range],
+plot((spectrum_range .- 1) .* 0.00278 ./ 0.05, [hhg_data[1][spectrum_range], hhg_data[4][spectrum_range],
     hhg_data[8][spectrum_range], hhg_data[12][spectrum_range],
     hhg_data[16][spectrum_range]],
     yscale=:log10,

@@ -176,6 +176,9 @@ F1(E, Z, x, y, z, rj) = -E - Z * rj / (x^2 + y^2 + z^2 + 1e-5) ^ (3 / 2)
 
 hhgs = []
 e_figs = []
+shg_id::Float64 = 0.0
+hhg_k_linspace = 1:10
+spectrum_range = 1:10
 
 for tau_id = 1: 16
 
@@ -485,5 +488,5 @@ p2 = plot(hhg_k_linspace[spectrum_range] / ω1,
     margin = 5 * Plots.mm,
     ylimit=(1e-6, 1e3))
 
-hhg_ctmc = [hhgs[i][shg_id] for i = 1: 16]
+hhg_ctmc = [hhgs[i][49] for i = 1: 16]
 plot(hhg_ctmc)

@@ -25,6 +25,9 @@ export get_m_from_mm, create_lmmap, get_index_from_lm
 export save_object, open_object, save_shwave, open_shwave
 export computeYlm
 export numerical_integral
+export store_mat, store_obj, retrieve_mat, retrieve_obj
+export get_smoothness_1, get_smoothness_2
+export get_task_id_from_cmd_args
 
 export create_physics_world_1d
 export create_tdse_rt_1d
@@ -82,14 +85,37 @@ export tsurf_get_average_momentum
 export coulomb_potiential_zero_fixed
 export coulomb_potiential_zero_fixed_plus
 export coulomb_potiential_helium_zero_fixed_plus
+export coulomb_potiential_zero_fixed_COS
+export coulomb_potiential_zero_fixed_windows
 export absorb_boundary_r
 export create_linspace
-export store_mat, store_obj, retrieve_mat, retrieve_obj
-export get_smoothness_1, get_smoothness_2
 
-export coulomb_potiential_zero_fixed_COS
 export get_hhg_spectrum_xy
 export flap_top_windows_f
+export light_pulse
+export dc_bias
+export no_light
+export get_1c_thz_delay_list
+export get_1c_thz_delay_list_ok
+export get_1c_thz_delay_list_selected
+export get_exactly_coincided_delay
+export plot_fs_thz_figure
+export get_hhg_spectrum_xy
+export create_tdata
+
+# ctmc.jl
+export create_ctmc_rt
+export generate_start_point_random, generate_start_point_uniform_special
+export update_start_point
+export ctmc_mainloop
+export calculate_asymptotic_momentum
+export add_to_pmd
+export add_to_hhg
+export ctmc_get_hhg_spectrum
+export trajs_analyse
+export clear_ctmc_rt
+export calculate_asymptotic_momentum
+export get_average_p_ctmc
 
 include("util.jl")
 
@@ -106,9 +132,16 @@ include("tdse_sh_elli.jl")
 include("tsurf_sh.jl")
 include("wom_sh.jl")
 
+# prefabricated.jl
 include("prefabricated.jl")
+
+# ctmc.jl
+include("ctmc.jl")
+
 
 greet() = println("helloworld.")
 
 
 end # module JuliaProp
+
+println("Number of Threads: $(Threads.nthreads())")

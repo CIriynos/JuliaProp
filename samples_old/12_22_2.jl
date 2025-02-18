@@ -28,14 +28,14 @@ Nr = 5000 * grid_ratio
 l_num = 60
 Δt = 0.05 / grid_ratio
 Z = 1.0
-rmax = Nr * Δr  # 1000
+rmax = Nr * Δr
 Ri_tsurf = 800.0
-po_func_r(r) = -1.0 * (r^2) ^ (-0.5) * flap_top_windows_f(r, 0, Ri_tsurf, 1/4, left_flag=false)
-absorb_func = absorb_boundary_r(rmax, Ri_tsurf, pow_value=8.0, max_value=100.0)
+po_func_r = coulomb_potiential_zero_fixed_windows(Ri_tsurf)
+absorb_func = absorb_boundary_r(rmax, Ri_tsurf)
 
 
 # Create Physical World and Runtime
-pw = create_physics_world_sh(Nr, l_num, Δr, Δt, po_func_r, Z, absorb_func)
+pw = create_physics_world_sh(Nr, l_num, Δr, Δt, coub, Z, absorb_func)
 rt = create_tdse_rt_sh(pw);
 
 

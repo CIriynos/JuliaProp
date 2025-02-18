@@ -116,6 +116,8 @@ const shwave_t = Vector{Vector{ComplexF64}}
 
 const wave_t = Vector{ComplexF64}
 
+const MIN_ERROR = 1e-50
+
 function copy_shwave(to::shwave_t, from::shwave_t)
     for i in eachindex(from)
         to[i] .= from[i]
@@ -396,4 +398,26 @@ function get_smoothness_2(data_set, delta)
     res1 = get_derivative_two_order(data_set, delta)
     res2 = get_derivative_two_order(res1, delta)
     return std(res2)
+end
+
+
+function retrieve_mat(example_name, var_name)
+    var = h5open("./data/$example_name.h5", "r") do file
+        read(file, var_name)
+    end
+    return var
+end
+
+
+function retrieve_obj(example_name, var_name)
+    obj = h5open("./data/$example_name.h5", "r") do file
+        read(file, var_name)
+    end
+    var = [(obj[:, i]) for i = 1: size(obj)[2]]
+    return var
+end
+
+
+function get_task_id_from_cmd_args()
+    return parse(Int64, ARGS[1])
 end

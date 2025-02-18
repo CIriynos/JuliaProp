@@ -145,10 +145,10 @@ plot(-0.75: 0.01: 0.75, [normalize(p[2][1] ./ p[2][2]) / 10 normalize(p[1][1] ./
         linewidth = 1.5
 )
 
-tmp = [normalize(p[2][1] ./ p[2][2]) / 10 normalize(p[1][1] ./ p[1][2]) / 10]
-f = open("dtt", "w")
-write(f, tmp)
-close(f)
+# tmp = [normalize(p[2][1] ./ p[2][2]) / 10 normalize(p[1][1] ./ p[1][2]) / 10]
+# f = open("dtt", "w")
+# write(f, tmp)
+# close(f)
 
 
 # x_range = -0.75: 0.01: 0.75
