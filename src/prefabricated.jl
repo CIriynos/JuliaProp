@@ -196,7 +196,7 @@ end
 
 function get_hhg_spectrum_xy(hhg_integral_t, Et_data_x, Et_data_y, pulse_start, pulse_end, ω0, ts, delta_t; max_display_rate=15, min_log_limit=1e-7, max_log_limit=1e3)
     
-    hhg_xy_t = -hhg_integral_t .- (Et_data_x .+ im .* Et_data_y)
+    hhg_xy_t = -hhg_integral_t #.- (Et_data_x .+ im .* Et_data_y)
 
     start_id = Int64(floor(pulse_start ÷ delta_t)) + 1
     end_id = Int64(floor((pulse_end ÷ delta_t))) + 1
@@ -214,9 +214,11 @@ function get_hhg_spectrum_xy(hhg_integral_t, Et_data_x, Et_data_y, pulse_start, 
 
     spectrum_range = 1: Int64((max_display_rate * ω0) ÷ hhg_delta_k + 1)
 
-    # plot(hhg_k_linspace[spectrum_range] ./ ω0, hhg_spectrum[spectrum_range], yscale=:log10)
-    p = plot(hhg_k_linspace[spectrum_range] ./ ω0,
-        [norm.(hhg_spectrum_x[spectrum_range]) norm.(hhg_spectrum_y[spectrum_range])],
+    # p = plot(hhg_k_linspace[spectrum_range] ./ ω0,
+    #     [norm.(hhg_spectrum_x[spectrum_range]) norm.(hhg_spectrum_y[spectrum_range])],
+    #     yscale=:log10, ylimit=(min_log_limit, max_log_limit))
+    
+    p = plot(hhg_k_linspace[spectrum_range] ./ ω0, norm.(hhg_spectrum_x[spectrum_range]),
         yscale=:log10, ylimit=(min_log_limit, max_log_limit))
     
     ll = Int64((ω0) ÷ hhg_delta_k) * hhg_delta_k / ω0

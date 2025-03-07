@@ -47,22 +47,21 @@ for task_id = 1: 16
 # println("Energy of ground state: ", en)
 
 # Define the Laser. 
-E_fs = 0.0533 / 2.0
-E_thz = 0.00002
-E_dc = 0.00002
+E_fs = 0.0533
+E_thz = 0.00005
+E_dc = 0.00005
 ω_fs = 0.05693
-ω_thz = ω_fs / 50
-nc = 12
+ω_thz = ω_fs / 30
+nc = 15
 tau_fs = 0
 tau_list = get_1c_thz_delay_list_ok(ω_fs, tau_fs, nc, ω_thz)
 tau_thz = tau_list[task_id]
 
-Ex_fs, Ey_fs, Ez_fs, tmax = light_pulse(ω_fs, E_fs, nc, tau_fs, ellipticity=0.0)
+Ex_fs, Ey_fs, Ez_fs, tmax = light_pulse(ω_fs, E_fs, nc, tau_fs, ellipticity=0.8, phase1=0.5pi, phase2=0.0)
 Ex_thz, = light_pulse(ω_thz, E_thz, 1, tau_thz, pulse_shape="sin2", phase1=0.5pi)
 E_applied(t) = (Ex_thz(t) + E_dc) * flap_top_windows_f(t, 0, tmax, 1/2)
 At_datas, Et_datas, ts, steps = create_tdata(tmax, 0, Δt, t -> Ex_fs(t) + E_applied(t), Ey_fs, no_light, appendix_steps=1)
 plot_fs_thz_figure(Ex_fs, Ey_fs, E_applied, ts)
-
 
 
 # # Propagation
@@ -80,11 +79,11 @@ plot_fs_thz_figure(Ex_fs, Ey_fs, E_applied, ts)
 # end
 
 # Retrieve Data.
-example_name = "2025_2_17_5_$(task_id)"
-hhg_integral_t = retrieve_mat(example_name, "hhg_integral_t")
+example_name = "2025_2_19_2_$(task_id)"
+hhg_integral_t = retrieve_mat(example_name, "hhg_integral_t_1")
 
 # HHG
-p, hhg_data_x, hhg_data_y, base_id, hhg_k_linspace = get_hhg_spectrum_xy(hhg_integral_t, Et_datas[1], Et_datas[2], tau_fs, tmax, ω_fs, ts, Δt, max_display_rate=6)
+p, hhg_data_x, hhg_data_y, base_id, hhg_k_linspace = get_hhg_spectrum_xy(hhg_integral_t, Et_datas[1], Et_datas[2], tau_fs, tmax, ω_fs, ts, Δt, max_display_rate=10)
 
 # recording
 shg_id = base_id * 2
@@ -109,11 +108,13 @@ plot(tau_list, shg_yields)
 plot(tau_list, mid_Efs_record)
 
 unify(data) = (data .- minimum(data)) ./ (maximum(data) - minimum(data))
-p2 = plot(unify(tau_list), unify(shg_yields))
-plot!(p2, unify(tau_list), unify(mid_Efs_record))
+p2 = plot(tau_list, unify(mid_Efs_record), label="actual THz", xlabel="delay τ a.u.", ylabel="relative amplitude")
+plot!(p2, tau_list, unify(shg_yields), label="SHG (TDSE)")
+# plot!(p2, tau_list, unify(theory_record_shg), label="SHG (CTMC)")
 
-hhg_plt_list[1]
+hhg_plt_list[14]
 p2
+
 
 # unify(data) = (data .- minimum(data)) ./ (maximum(data) - minimum(data))
 # p2 = plot(unify(tau_list), unify(shg_yields))

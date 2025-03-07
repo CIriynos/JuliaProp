@@ -28,15 +28,16 @@ l_num = 50
 Z = 1.0
 rmax = Nr * Δr  # 1000
 Ri_tsurf = rmax * 0.8
-a0 = 0.5
-po_func(r) = -1.57 * (r^2 + a0) ^ (-0.5) * flap_top_windows_f(r, 0, Ri_tsurf, 1/4, left_flag=false) * exp(-0.1 * (r^2 + a0) ^ (0.5))
+# a0 = 0.5
+# po_func(r) = -1.57 * (r^2 + a0) ^ (-0.5) * flap_top_windows_f(r, 0, Ri_tsurf, 1/4, left_flag=false) * exp(-0.1 * (r^2 + a0) ^ (0.5))
+po_func_c = coulomb_potiential_zero_fixed_windows(Ri_tsurf)
 absorb_func = absorb_boundary_r(rmax, Ri_tsurf)
 
 
 for task_id = 1: 16
 
 # # Create Physical World & Runtime
-# pw = create_physics_world_sh(Nr, l_num, Δr, Δt, po_func_r, Z, absorb_func)
+# pw = create_physics_world_sh(Nr, l_num, Δr, Δt, po_func_c, Z, absorb_func)
 # rt = create_tdse_rt_sh(pw);
 
 # # Initial Wave
@@ -58,7 +59,7 @@ tau_thz = tau_list[task_id]
 
 Ex_fs, Ey_fs, Ez_fs, tmax = light_pulse(ω_fs, E_fs, nc, tau_fs, ellipticity=0.0)
 Ex_thz, = light_pulse(ω_thz, E_thz, 1, tau_thz, pulse_shape="sin2", phase1=0.5pi)
-E_applied(t) = (Ex_thz(t) + E_dc) * flap_top_windows_f(t, 0, tmax, 1/2)
+E_applied(t) = (Ex_thz(t) + E_dc) #* flap_top_windows_f(t, 0, tmax, 1/2)
 At_datas, Et_datas, ts, steps = create_tdata(tmax, 0, Δt, t -> Ex_fs(t) + E_applied(t), Ey_fs, no_light, appendix_steps=1)
 plot_fs_thz_figure(Ex_fs, Ey_fs, E_applied, ts)
 
@@ -78,7 +79,7 @@ plot_fs_thz_figure(Ex_fs, Ey_fs, E_applied, ts)
 # end
 
 # Retrieve Data.
-example_name = "2025_2_17_1_$(task_id)"
+example_name = "2025_2_18_5_$(task_id)"
 hhg_integral_t = retrieve_mat(example_name, "hhg_integral_t")
 
 # HHG

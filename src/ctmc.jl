@@ -251,10 +251,10 @@ function generate_start_point_random(trajs_num, t_num, pv_max, E_data, Ip, Z; mi
     return tid_cc, pv_cc, theta_cc
 end
 
-function generate_start_point_uniform_special(trajs_num, m)
+function generate_start_point_uniform_special(trajs_num, m; shift::Int64 = 0)
     theta_m_list = [0; range(0, 2*pi, 6); range(0, 2*pi, 12); range(0, 2*pi, 18)]
     pv_m_list = [1e-5; ones(6) .* 0.2; ones(12) .* 0.4; ones(18) .* 0.8]
-    tid_cc = 1: trajs_num
+    tid_cc = 1 + shift: trajs_num + shift
     pv_cc = ones(trajs_num) .* pv_m_list[m]
     theta_cc = ones(trajs_num) .* theta_m_list[m]
     return tid_cc, pv_cc, theta_cc

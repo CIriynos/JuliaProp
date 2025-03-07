@@ -16,6 +16,7 @@ shg_yields = []
 thz_data = []
 tau_list = []
 hhg_k_linspace = []
+mid_Efs_record = []
 tau_thz_mid = 0.0
 shg_id = 0
 
@@ -83,7 +84,7 @@ example_name = "2025_2_17_4_$(task_id)"
 hhg_integral_t = retrieve_mat(example_name, "hhg_integral_t_1")
 
 # HHG
-p, hhg_data_x, hhg_data_y, base_id, hhg_k_linspace = get_hhg_spectrum_xy(hhg_integral_t, Et_datas[1], Et_datas[2], tau_fs, tmax, ω_fs, ts, Δt, max_display_rate=6)
+p, hhg_data_x, hhg_data_y, base_id, hhg_k_linspace = get_hhg_spectrum_xy(hhg_integral_t, Et_datas[1], Et_datas[2], tau_fs, tmax, ω_fs, ts, Δt, max_display_rate=10)
 
 # recording
 shg_id = base_id * 2
@@ -97,18 +98,23 @@ Ex_thz_tmp, Ey_thz_tmp, Ez_thz_tmp, tmax_tmp = light_pulse(ω_thz, E_thz, 1, 0, 
 At_datas_tmp, Et_datas_tmp, ts_tmp = create_tdata(tmax_tmp, 0, Δt, Ex_thz_tmp, no_light, no_light)
 thz_data = [Et_datas_tmp[1], ts_tmp]
 
+At_THz_datas, Et_THz_datas, = create_tdata(tmax, 0, Δt, t -> E_applied(t), no_light, no_light, appendix_steps=1)
+push!(mid_Efs_record, Et_THz_datas[1][Int64(floor((tau_fs + nc * pi / ω_fs) ÷ Δt) + 1)])
+
 end
 
-hhg_plt_list[1]
 
 plot(hhg_k_linspace, norm.(hhg_data_x_list[4][1:length(hhg_k_linspace)]), yscale=:log10)
 plot(hhg_k_linspace, norm.(hhg_data_x_list[10][1:length(hhg_k_linspace)]), yscale=:log10)
 plot(tau_list, shg_yields)
+plot(tau_list, mid_Efs_record)
 
 unify(data) = (data .- minimum(data)) ./ (maximum(data) - minimum(data))
 p2 = plot(unify(tau_list), unify(shg_yields))
-plot!(p2, unify(thz_data[2]), unify(-thz_data[1]))
+plot!(p2, unify(tau_list), unify(mid_Efs_record))
 
+hhg_plt_list[1]
+p2
 
 # unify(data) = (data .- minimum(data)) ./ (maximum(data) - minimum(data))
 # p2 = plot(unify(tau_list), unify(shg_yields))
