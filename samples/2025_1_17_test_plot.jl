@@ -87,7 +87,7 @@ example_name = "2025_1_17_test_$(task_id)"
 hhg_integral_t = retrieve_mat(example_name, "hhg_integral_t_1")
 
 # HHG
-p, hhg_data_x, hhg_data_y, base_id = get_hhg_spectrum_xy(hhg_integral_t, Et_data_x, Et_data_y, tau_fs, tmax, ω_fs, ts, Δt, max_display_rate=10)
+p, hhg_data_x, hhg_data_y, base_id = get_hhg_spectrum_xy(hhg_integral_t, Et_data_x, Et_data_y, tau_fs, tmax, ω_fs, ts, Δt, max_display_rate=20)
 
 push!(hhg_plt_list, p)
 push!(hhg_data_x_list, hhg_data_x)

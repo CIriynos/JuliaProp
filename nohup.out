@@ -1114,3 +1114,373 @@ unknown function (ip: (nil))
 Allocations: 145029759 (Pool: 144800274; Big: 229485); GC: 98
   Activating project at `~/JuliaProp_v0.1`
 ./doit.sh: line 3: 38955 Terminated              julia --project=. --threads $2 ./samples/$1.jl > ./samples/$1.log
+JuliaProp v0.1 starts...
+core_per_task = 4
+Task starts. task id = 1.
+Task starts. task id = 2.
+Task starts. task id = 3.
+Task starts. task id = 4.
+Task starts. task id = 5.
+Task starts. task id = 6.
+Task starts. task id = 7.
+Task starts. task id = 8.
+Task starts. task id = 9.
+Task starts. task id = 10.
+Task starts. task id = 11.
+Task starts. task id = 12.
+Task starts. task id = 13.
+Task starts. task id = 14.
+Task starts. task id = 15.
+Task starts. task id = 16.
+  Activating project at `~/JuliaProp_v0.1`
+ERROR: LoadError: UndefVarError: `a0` not defined
+Stacktrace:
+ [1] po_func(r::Float64)
+   @ Main ~/JuliaProp_v0.1/samples/2025_2_18_5.jl:24
+ [2] _broadcast_getindex_evalf
+   @ ./broadcast.jl:683 [inlined]
+ [3] _broadcast_getindex
+   @ ./broadcast.jl:656 [inlined]
+ [4] getindex
+   @ ./broadcast.jl:610 [inlined]
+ [5] copy
+   @ ./broadcast.jl:912 [inlined]
+ [6] materialize
+   @ ./broadcast.jl:873 [inlined]
+ [7] create_physics_world_sh(Nr::Int64, l_num::Int64, delta_r::Float64, delta_t::Float64, po_func_r::typeof(po_func), Z::Float64, imb_func::JuliaProp.var"#285#286"{Float64, Float64, Float64, Float64}; delta_t_im::Float64, manually_converge_to_zero_flag::Bool, Rco::Float64)
+   @ JuliaProp ~/JuliaProp_v0.1/src/tdse_sh_base.jl:253
+ [8] create_physics_world_sh(Nr::Int64, l_num::Int64, delta_r::Float64, delta_t::Float64, po_func_r::Function, Z::Float64, imb_func::Function)
+   @ JuliaProp ~/JuliaProp_v0.1/src/tdse_sh_base.jl:247
+ [9] top-level scope
+   @ ~/JuliaProp_v0.1/samples/2025_2_18_5.jl:29
+in expression starting at /home/tang_wenqi/JuliaProp_v0.1/samples/2025_2_18_5.jl:29
+  Activating project at `~/JuliaProp_v0.1`
+ERROR: LoadError: UndefVarError: `a0` not defined
+Stacktrace:
+ [1] po_func(r::Float64)
+   @ Main ~/JuliaProp_v0.1/samples/2025_2_18_5.jl:24
+ [2] _broadcast_getindex_evalf
+   @ ./broadcast.jl:683 [inlined]
+ [3] _broadcast_getindex
+   @ ./broadcast.jl:656 [inlined]
+ [4] getindex
+   @ ./broadcast.jl:610 [inlined]
+ [5] copy
+   @ ./broadcast.jl:912 [inlined]
+ [6] materialize
+   @ ./broadcast.jl:873 [inlined]
+ [7] create_physics_world_sh(Nr::Int64, l_num::Int64, delta_r::Float64, delta_t::Float64, po_func_r::typeof(po_func), Z::Float64, imb_func::JuliaProp.var"#285#286"{Float64, Float64, Float64, Float64}; delta_t_im::Float64, manually_converge_to_zero_flag::Bool, Rco::Float64)
+   @ JuliaProp ~/JuliaProp_v0.1/src/tdse_sh_base.jl:253
+ [8] create_physics_world_sh(Nr::Int64, l_num::Int64, delta_r::Float64, delta_t::Float64, po_func_r::Function, Z::Float64, imb_func::Function)
+   @ JuliaProp ~/JuliaProp_v0.1/src/tdse_sh_base.jl:247
+ [9] top-level scope
+   @ ~/JuliaProp_v0.1/samples/2025_2_18_5.jl:29
+in expression starting at /home/tang_wenqi/JuliaProp_v0.1/samples/2025_2_18_5.jl:29
+  Activating project at `~/JuliaProp_v0.1`
+ERROR: LoadError: UndefVarError: `a0` not defined
+Stacktrace:
+ [1] po_func(r::Float64)
+   @ Main ~/JuliaProp_v0.1/samples/2025_2_18_5.jl:24
+ [2] _broadcast_getindex_evalf
+   @ ./broadcast.jl:683 [inlined]
+ [3] _broadcast_getindex
+   @ ./broadcast.jl:656 [inlined]
+ [4] getindex
+   @ ./broadcast.jl:610 [inlined]
+ [5] copy
+   @ ./broadcast.jl:912 [inlined]
+ [6] materialize
+   @ ./broadcast.jl:873 [inlined]
+ [7] create_physics_world_sh(Nr::Int64, l_num::Int64, delta_r::Float64, delta_t::Float64, po_func_r::typeof(po_func), Z::Float64, imb_func::JuliaProp.var"#285#286"{Float64, Float64, Float64, Float64}; delta_t_im::Float64, manually_converge_to_zero_flag::Bool, Rco::Float64)
+   @ JuliaProp ~/JuliaProp_v0.1/src/tdse_sh_base.jl:253
+ [8] create_physics_world_sh(Nr::Int64, l_num::Int64, delta_r::Float64, delta_t::Float64, po_func_r::Function, Z::Float64, imb_func::Function)
+   @ JuliaProp ~/JuliaProp_v0.1/src/tdse_sh_base.jl:247
+ [9] top-level scope
+   @ ~/JuliaProp_v0.1/samples/2025_2_18_5.jl:29
+in expression starting at /home/tang_wenqi/JuliaProp_v0.1/samples/2025_2_18_5.jl:29
+  Activating project at `~/JuliaProp_v0.1`
+ERROR: LoadError: UndefVarError: `a0` not defined
+Stacktrace:
+ [1] po_func(r::Float64)
+   @ Main ~/JuliaProp_v0.1/samples/2025_2_18_5.jl:24
+ [2] _broadcast_getindex_evalf
+   @ ./broadcast.jl:683 [inlined]
+ [3] _broadcast_getindex
+   @ ./broadcast.jl:656 [inlined]
+ [4] getindex
+   @ ./broadcast.jl:610 [inlined]
+ [5] copy
+   @ ./broadcast.jl:912 [inlined]
+ [6] materialize
+   @ ./broadcast.jl:873 [inlined]
+ [7] create_physics_world_sh(Nr::Int64, l_num::Int64, delta_r::Float64, delta_t::Float64, po_func_r::typeof(po_func), Z::Float64, imb_func::JuliaProp.var"#285#286"{Float64, Float64, Float64, Float64}; delta_t_im::Float64, manually_converge_to_zero_flag::Bool, Rco::Float64)
+   @ JuliaProp ~/JuliaProp_v0.1/src/tdse_sh_base.jl:253
+ [8] create_physics_world_sh(Nr::Int64, l_num::Int64, delta_r::Float64, delta_t::Float64, po_func_r::Function, Z::Float64, imb_func::Function)
+   @ JuliaProp ~/JuliaProp_v0.1/src/tdse_sh_base.jl:247
+ [9] top-level scope
+   @ ~/JuliaProp_v0.1/samples/2025_2_18_5.jl:29
+in expression starting at /home/tang_wenqi/JuliaProp_v0.1/samples/2025_2_18_5.jl:29
+  Activating project at `~/JuliaProp_v0.1`
+ERROR: LoadError: UndefVarError: `a0` not defined
+Stacktrace:
+ [1] po_func(r::Float64)
+   @ Main ~/JuliaProp_v0.1/samples/2025_2_18_5.jl:24
+ [2] _broadcast_getindex_evalf
+   @ ./broadcast.jl:683 [inlined]
+ [3] _broadcast_getindex
+   @ ./broadcast.jl:656 [inlined]
+ [4] getindex
+   @ ./broadcast.jl:610 [inlined]
+ [5] copy
+   @ ./broadcast.jl:912 [inlined]
+ [6] materialize
+   @ ./broadcast.jl:873 [inlined]
+ [7] create_physics_world_sh(Nr::Int64, l_num::Int64, delta_r::Float64, delta_t::Float64, po_func_r::typeof(po_func), Z::Float64, imb_func::JuliaProp.var"#285#286"{Float64, Float64, Float64, Float64}; delta_t_im::Float64, manually_converge_to_zero_flag::Bool, Rco::Float64)
+   @ JuliaProp ~/JuliaProp_v0.1/src/tdse_sh_base.jl:253
+ [8] create_physics_world_sh(Nr::Int64, l_num::Int64, delta_r::Float64, delta_t::Float64, po_func_r::Function, Z::Float64, imb_func::Function)
+   @ JuliaProp ~/JuliaProp_v0.1/src/tdse_sh_base.jl:247
+ [9] top-level scope
+   @ ~/JuliaProp_v0.1/samples/2025_2_18_5.jl:29
+in expression starting at /home/tang_wenqi/JuliaProp_v0.1/samples/2025_2_18_5.jl:29
+  Activating project at `~/JuliaProp_v0.1`
+ERROR: LoadError: UndefVarError: `a0` not defined
+Stacktrace:
+ [1] po_func(r::Float64)
+   @ Main ~/JuliaProp_v0.1/samples/2025_2_18_5.jl:24
+ [2] _broadcast_getindex_evalf
+   @ ./broadcast.jl:683 [inlined]
+ [3] _broadcast_getindex
+   @ ./broadcast.jl:656 [inlined]
+ [4] getindex
+   @ ./broadcast.jl:610 [inlined]
+ [5] copy
+   @ ./broadcast.jl:912 [inlined]
+ [6] materialize
+   @ ./broadcast.jl:873 [inlined]
+ [7] create_physics_world_sh(Nr::Int64, l_num::Int64, delta_r::Float64, delta_t::Float64, po_func_r::typeof(po_func), Z::Float64, imb_func::JuliaProp.var"#285#286"{Float64, Float64, Float64, Float64}; delta_t_im::Float64, manually_converge_to_zero_flag::Bool, Rco::Float64)
+   @ JuliaProp ~/JuliaProp_v0.1/src/tdse_sh_base.jl:253
+ [8] create_physics_world_sh(Nr::Int64, l_num::Int64, delta_r::Float64, delta_t::Float64, po_func_r::Function, Z::Float64, imb_func::Function)
+   @ JuliaProp ~/JuliaProp_v0.1/src/tdse_sh_base.jl:247
+ [9] top-level scope
+   @ ~/JuliaProp_v0.1/samples/2025_2_18_5.jl:29
+in expression starting at /home/tang_wenqi/JuliaProp_v0.1/samples/2025_2_18_5.jl:29
+  Activating project at `~/JuliaProp_v0.1`
+ERROR: LoadError: UndefVarError: `a0` not defined
+Stacktrace:
+ [1] po_func(r::Float64)
+   @ Main ~/JuliaProp_v0.1/samples/2025_2_18_5.jl:24
+ [2] _broadcast_getindex_evalf
+   @ ./broadcast.jl:683 [inlined]
+ [3] _broadcast_getindex
+   @ ./broadcast.jl:656 [inlined]
+ [4] getindex
+   @ ./broadcast.jl:610 [inlined]
+ [5] copy
+   @ ./broadcast.jl:912 [inlined]
+ [6] materialize
+   @ ./broadcast.jl:873 [inlined]
+ [7] create_physics_world_sh(Nr::Int64, l_num::Int64, delta_r::Float64, delta_t::Float64, po_func_r::typeof(po_func), Z::Float64, imb_func::JuliaProp.var"#285#286"{Float64, Float64, Float64, Float64}; delta_t_im::Float64, manually_converge_to_zero_flag::Bool, Rco::Float64)
+   @ JuliaProp ~/JuliaProp_v0.1/src/tdse_sh_base.jl:253
+ [8] create_physics_world_sh(Nr::Int64, l_num::Int64, delta_r::Float64, delta_t::Float64, po_func_r::Function, Z::Float64, imb_func::Function)
+   @ JuliaProp ~/JuliaProp_v0.1/src/tdse_sh_base.jl:247
+ [9] top-level scope
+   @ ~/JuliaProp_v0.1/samples/2025_2_18_5.jl:29
+in expression starting at /home/tang_wenqi/JuliaProp_v0.1/samples/2025_2_18_5.jl:29
+  Activating project at `~/JuliaProp_v0.1`
+ERROR: LoadError: UndefVarError: `a0` not defined
+Stacktrace:
+ [1] po_func(r::Float64)
+   @ Main ~/JuliaProp_v0.1/samples/2025_2_18_5.jl:24
+ [2] _broadcast_getindex_evalf
+   @ ./broadcast.jl:683 [inlined]
+ [3] _broadcast_getindex
+   @ ./broadcast.jl:656 [inlined]
+ [4] getindex
+   @ ./broadcast.jl:610 [inlined]
+ [5] copy
+   @ ./broadcast.jl:912 [inlined]
+ [6] materialize
+   @ ./broadcast.jl:873 [inlined]
+ [7] create_physics_world_sh(Nr::Int64, l_num::Int64, delta_r::Float64, delta_t::Float64, po_func_r::typeof(po_func), Z::Float64, imb_func::JuliaProp.var"#285#286"{Float64, Float64, Float64, Float64}; delta_t_im::Float64, manually_converge_to_zero_flag::Bool, Rco::Float64)
+   @ JuliaProp ~/JuliaProp_v0.1/src/tdse_sh_base.jl:253
+ [8] create_physics_world_sh(Nr::Int64, l_num::Int64, delta_r::Float64, delta_t::Float64, po_func_r::Function, Z::Float64, imb_func::Function)
+   @ JuliaProp ~/JuliaProp_v0.1/src/tdse_sh_base.jl:247
+ [9] top-level scope
+   @ ~/JuliaProp_v0.1/samples/2025_2_18_5.jl:29
+in expression starting at /home/tang_wenqi/JuliaProp_v0.1/samples/2025_2_18_5.jl:29
+  Activating project at `~/JuliaProp_v0.1`
+ERROR: LoadError: UndefVarError: `a0` not defined
+Stacktrace:
+ [1] po_func(r::Float64)
+   @ Main ~/JuliaProp_v0.1/samples/2025_2_18_5.jl:24
+ [2] _broadcast_getindex_evalf
+   @ ./broadcast.jl:683 [inlined]
+ [3] _broadcast_getindex
+   @ ./broadcast.jl:656 [inlined]
+ [4] getindex
+   @ ./broadcast.jl:610 [inlined]
+ [5] copy
+   @ ./broadcast.jl:912 [inlined]
+ [6] materialize
+   @ ./broadcast.jl:873 [inlined]
+ [7] create_physics_world_sh(Nr::Int64, l_num::Int64, delta_r::Float64, delta_t::Float64, po_func_r::typeof(po_func), Z::Float64, imb_func::JuliaProp.var"#285#286"{Float64, Float64, Float64, Float64}; delta_t_im::Float64, manually_converge_to_zero_flag::Bool, Rco::Float64)
+   @ JuliaProp ~/JuliaProp_v0.1/src/tdse_sh_base.jl:253
+ [8] create_physics_world_sh(Nr::Int64, l_num::Int64, delta_r::Float64, delta_t::Float64, po_func_r::Function, Z::Float64, imb_func::Function)
+   @ JuliaProp ~/JuliaProp_v0.1/src/tdse_sh_base.jl:247
+ [9] top-level scope
+   @ ~/JuliaProp_v0.1/samples/2025_2_18_5.jl:29
+in expression starting at /home/tang_wenqi/JuliaProp_v0.1/samples/2025_2_18_5.jl:29
+  Activating project at `~/JuliaProp_v0.1`
+ERROR: LoadError: UndefVarError: `a0` not defined
+Stacktrace:
+ [1] po_func(r::Float64)
+   @ Main ~/JuliaProp_v0.1/samples/2025_2_18_5.jl:24
+ [2] _broadcast_getindex_evalf
+   @ ./broadcast.jl:683 [inlined]
+ [3] _broadcast_getindex
+   @ ./broadcast.jl:656 [inlined]
+ [4] getindex
+   @ ./broadcast.jl:610 [inlined]
+ [5] copy
+   @ ./broadcast.jl:912 [inlined]
+ [6] materialize
+   @ ./broadcast.jl:873 [inlined]
+ [7] create_physics_world_sh(Nr::Int64, l_num::Int64, delta_r::Float64, delta_t::Float64, po_func_r::typeof(po_func), Z::Float64, imb_func::JuliaProp.var"#285#286"{Float64, Float64, Float64, Float64}; delta_t_im::Float64, manually_converge_to_zero_flag::Bool, Rco::Float64)
+   @ JuliaProp ~/JuliaProp_v0.1/src/tdse_sh_base.jl:253
+ [8] create_physics_world_sh(Nr::Int64, l_num::Int64, delta_r::Float64, delta_t::Float64, po_func_r::Function, Z::Float64, imb_func::Function)
+   @ JuliaProp ~/JuliaProp_v0.1/src/tdse_sh_base.jl:247
+ [9] top-level scope
+   @ ~/JuliaProp_v0.1/samples/2025_2_18_5.jl:29
+in expression starting at /home/tang_wenqi/JuliaProp_v0.1/samples/2025_2_18_5.jl:29
+  Activating project at `~/JuliaProp_v0.1`
+ERROR: LoadError: UndefVarError: `a0` not defined
+Stacktrace:
+ [1] po_func(r::Float64)
+   @ Main ~/JuliaProp_v0.1/samples/2025_2_18_5.jl:24
+ [2] _broadcast_getindex_evalf
+   @ ./broadcast.jl:683 [inlined]
+ [3] _broadcast_getindex
+   @ ./broadcast.jl:656 [inlined]
+ [4] getindex
+   @ ./broadcast.jl:610 [inlined]
+ [5] copy
+   @ ./broadcast.jl:912 [inlined]
+ [6] materialize
+   @ ./broadcast.jl:873 [inlined]
+ [7] create_physics_world_sh(Nr::Int64, l_num::Int64, delta_r::Float64, delta_t::Float64, po_func_r::typeof(po_func), Z::Float64, imb_func::JuliaProp.var"#285#286"{Float64, Float64, Float64, Float64}; delta_t_im::Float64, manually_converge_to_zero_flag::Bool, Rco::Float64)
+   @ JuliaProp ~/JuliaProp_v0.1/src/tdse_sh_base.jl:253
+ [8] create_physics_world_sh(Nr::Int64, l_num::Int64, delta_r::Float64, delta_t::Float64, po_func_r::Function, Z::Float64, imb_func::Function)
+   @ JuliaProp ~/JuliaProp_v0.1/src/tdse_sh_base.jl:247
+ [9] top-level scope
+   @ ~/JuliaProp_v0.1/samples/2025_2_18_5.jl:29
+in expression starting at /home/tang_wenqi/JuliaProp_v0.1/samples/2025_2_18_5.jl:29
+  Activating project at `~/JuliaProp_v0.1`
+ERROR: LoadError: UndefVarError: `a0` not defined
+Stacktrace:
+ [1] po_func(r::Float64)
+   @ Main ~/JuliaProp_v0.1/samples/2025_2_18_5.jl:24
+ [2] _broadcast_getindex_evalf
+   @ ./broadcast.jl:683 [inlined]
+ [3] _broadcast_getindex
+   @ ./broadcast.jl:656 [inlined]
+ [4] getindex
+   @ ./broadcast.jl:610 [inlined]
+ [5] copy
+   @ ./broadcast.jl:912 [inlined]
+ [6] materialize
+   @ ./broadcast.jl:873 [inlined]
+ [7] create_physics_world_sh(Nr::Int64, l_num::Int64, delta_r::Float64, delta_t::Float64, po_func_r::typeof(po_func), Z::Float64, imb_func::JuliaProp.var"#285#286"{Float64, Float64, Float64, Float64}; delta_t_im::Float64, manually_converge_to_zero_flag::Bool, Rco::Float64)
+   @ JuliaProp ~/JuliaProp_v0.1/src/tdse_sh_base.jl:253
+ [8] create_physics_world_sh(Nr::Int64, l_num::Int64, delta_r::Float64, delta_t::Float64, po_func_r::Function, Z::Float64, imb_func::Function)
+   @ JuliaProp ~/JuliaProp_v0.1/src/tdse_sh_base.jl:247
+ [9] top-level scope
+   @ ~/JuliaProp_v0.1/samples/2025_2_18_5.jl:29
+in expression starting at /home/tang_wenqi/JuliaProp_v0.1/samples/2025_2_18_5.jl:29
+  Activating project at `~/JuliaProp_v0.1`
+ERROR: LoadError: UndefVarError: `a0` not defined
+Stacktrace:
+ [1] po_func(r::Float64)
+   @ Main ~/JuliaProp_v0.1/samples/2025_2_18_5.jl:24
+ [2] _broadcast_getindex_evalf
+   @ ./broadcast.jl:683 [inlined]
+ [3] _broadcast_getindex
+   @ ./broadcast.jl:656 [inlined]
+ [4] getindex
+   @ ./broadcast.jl:610 [inlined]
+ [5] copy
+   @ ./broadcast.jl:912 [inlined]
+ [6] materialize
+   @ ./broadcast.jl:873 [inlined]
+ [7] create_physics_world_sh(Nr::Int64, l_num::Int64, delta_r::Float64, delta_t::Float64, po_func_r::typeof(po_func), Z::Float64, imb_func::JuliaProp.var"#285#286"{Float64, Float64, Float64, Float64}; delta_t_im::Float64, manually_converge_to_zero_flag::Bool, Rco::Float64)
+   @ JuliaProp ~/JuliaProp_v0.1/src/tdse_sh_base.jl:253
+ [8] create_physics_world_sh(Nr::Int64, l_num::Int64, delta_r::Float64, delta_t::Float64, po_func_r::Function, Z::Float64, imb_func::Function)
+   @ JuliaProp ~/JuliaProp_v0.1/src/tdse_sh_base.jl:247
+ [9] top-level scope
+   @ ~/JuliaProp_v0.1/samples/2025_2_18_5.jl:29
+in expression starting at /home/tang_wenqi/JuliaProp_v0.1/samples/2025_2_18_5.jl:29
+  Activating project at `~/JuliaProp_v0.1`
+ERROR: LoadError: UndefVarError: `a0` not defined
+Stacktrace:
+ [1] po_func(r::Float64)
+   @ Main ~/JuliaProp_v0.1/samples/2025_2_18_5.jl:24
+ [2] _broadcast_getindex_evalf
+   @ ./broadcast.jl:683 [inlined]
+ [3] _broadcast_getindex
+   @ ./broadcast.jl:656 [inlined]
+ [4] getindex
+   @ ./broadcast.jl:610 [inlined]
+ [5] copy
+   @ ./broadcast.jl:912 [inlined]
+ [6] materialize
+   @ ./broadcast.jl:873 [inlined]
+ [7] create_physics_world_sh(Nr::Int64, l_num::Int64, delta_r::Float64, delta_t::Float64, po_func_r::typeof(po_func), Z::Float64, imb_func::JuliaProp.var"#285#286"{Float64, Float64, Float64, Float64}; delta_t_im::Float64, manually_converge_to_zero_flag::Bool, Rco::Float64)
+   @ JuliaProp ~/JuliaProp_v0.1/src/tdse_sh_base.jl:253
+ [8] create_physics_world_sh(Nr::Int64, l_num::Int64, delta_r::Float64, delta_t::Float64, po_func_r::Function, Z::Float64, imb_func::Function)
+   @ JuliaProp ~/JuliaProp_v0.1/src/tdse_sh_base.jl:247
+ [9] top-level scope
+   @ ~/JuliaProp_v0.1/samples/2025_2_18_5.jl:29
+in expression starting at /home/tang_wenqi/JuliaProp_v0.1/samples/2025_2_18_5.jl:29
+  Activating project at `~/JuliaProp_v0.1`
+ERROR: LoadError: UndefVarError: `a0` not defined
+Stacktrace:
+ [1] po_func(r::Float64)
+   @ Main ~/JuliaProp_v0.1/samples/2025_2_18_5.jl:24
+ [2] _broadcast_getindex_evalf
+   @ ./broadcast.jl:683 [inlined]
+ [3] _broadcast_getindex
+   @ ./broadcast.jl:656 [inlined]
+ [4] getindex
+   @ ./broadcast.jl:610 [inlined]
+ [5] copy
+   @ ./broadcast.jl:912 [inlined]
+ [6] materialize
+   @ ./broadcast.jl:873 [inlined]
+ [7] create_physics_world_sh(Nr::Int64, l_num::Int64, delta_r::Float64, delta_t::Float64, po_func_r::typeof(po_func), Z::Float64, imb_func::JuliaProp.var"#285#286"{Float64, Float64, Float64, Float64}; delta_t_im::Float64, manually_converge_to_zero_flag::Bool, Rco::Float64)
+   @ JuliaProp ~/JuliaProp_v0.1/src/tdse_sh_base.jl:253
+ [8] create_physics_world_sh(Nr::Int64, l_num::Int64, delta_r::Float64, delta_t::Float64, po_func_r::Function, Z::Float64, imb_func::Function)
+   @ JuliaProp ~/JuliaProp_v0.1/src/tdse_sh_base.jl:247
+ [9] top-level scope
+   @ ~/JuliaProp_v0.1/samples/2025_2_18_5.jl:29
+in expression starting at /home/tang_wenqi/JuliaProp_v0.1/samples/2025_2_18_5.jl:29
+  Activating project at `~/JuliaProp_v0.1`
+ERROR: LoadError: UndefVarError: `a0` not defined
+Stacktrace:
+ [1] po_func(r::Float64)
+   @ Main ~/JuliaProp_v0.1/samples/2025_2_18_5.jl:24
+ [2] _broadcast_getindex_evalf
+   @ ./broadcast.jl:683 [inlined]
+ [3] _broadcast_getindex
+   @ ./broadcast.jl:656 [inlined]
+ [4] getindex
+   @ ./broadcast.jl:610 [inlined]
+ [5] copy
+   @ ./broadcast.jl:912 [inlined]
+ [6] materialize
+   @ ./broadcast.jl:873 [inlined]
+ [7] create_physics_world_sh(Nr::Int64, l_num::Int64, delta_r::Float64, delta_t::Float64, po_func_r::typeof(po_func), Z::Float64, imb_func::JuliaProp.var"#285#286"{Float64, Float64, Float64, Float64}; delta_t_im::Float64, manually_converge_to_zero_flag::Bool, Rco::Float64)
+   @ JuliaProp ~/JuliaProp_v0.1/src/tdse_sh_base.jl:253
+ [8] create_physics_world_sh(Nr::Int64, l_num::Int64, delta_r::Float64, delta_t::Float64, po_func_r::Function, Z::Float64, imb_func::Function)
+   @ JuliaProp ~/JuliaProp_v0.1/src/tdse_sh_base.jl:247
+ [9] top-level scope
+   @ ~/JuliaProp_v0.1/samples/2025_2_18_5.jl:29
+in expression starting at /home/tang_wenqi/JuliaProp_v0.1/samples/2025_2_18_5.jl:29

@@ -9,12 +9,13 @@ using BSplineKit
 
 
 cnt = 1000
-delta_x = 0.05
-delta_t = 0.01
+delta_x = 0.05 * 1
+delta_t = 0.01 * 1
 L = cnt * delta_x
 S = diagm(0 => fill(2/3, cnt), 1 => fill(1/6, cnt - 1), -1 => fill(1/6, cnt - 1)) * delta_x
 D = diagm(0 => fill(-2, cnt), 1 => fill(1, cnt - 1), -1 => fill(1, cnt - 1)) * (1 / delta_x)
-H = -0.5 * D
+V = diagm(0 => [x^2 / 2 for x in range(-L / 2, L / 2, cnt)]) * delta_x
+H = -0.5 * D + V
 
 D2 = SymTridiagonal(fill(-2, cnt), fill(1, cnt - 1)) * (1.0 / delta_x ^ 2)
 M2 = SymTridiagonal(fill(10, cnt), fill(1, cnt - 1)) * (-1.0 / 6.0)
@@ -30,7 +31,7 @@ U3 = (I - 0.25im * D2 * delta_t) \ (I + 0.25im * D2 * delta_t)
 
 # B-Spline
 
-po_func(x) = -1 / x
+po_func(x) = x ^ 2 / 2
 
 breakpoints = range(-L / 2, L / 2, cnt + 1)
 bspline_basis_total = BSplineBasis(BSplineOrder(3), breakpoints)
@@ -40,7 +41,7 @@ quadrature = Galerkin.gausslegendre(Val(100))
 S_bs = galerkin_matrix(b_basis, quadrature = quadrature)
 D_bs = galerkin_matrix(b_basis, (Derivative(0), Derivative(2)))
 V_bs = galerkin_matrix(po_func, b_basis, (Derivative(0), Derivative(0)))
-H_bs = -0.5 * D_bs
+H_bs = -0.5 * D_bs + V_bs
 U_bs = (S_bs + 0.5im * H_bs * delta_t) \ (S_bs - 0.5im * H_bs * delta_t)
 
 
@@ -63,7 +64,7 @@ vec2 = copy(vec1)
 vec_bs = galerkin_projection(wavepkg_func_real, b_basis) .+ im * galerkin_projection(wavepkg_func_imag, b_basis)
 
 for i = 1: 200
-    vec2 = U2 * vec2
+    vec2 = U1 * vec2
     vec_bs = U_bs * vec_bs
 end
 

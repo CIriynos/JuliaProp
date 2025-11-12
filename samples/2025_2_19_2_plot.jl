@@ -100,6 +100,11 @@ thz_data = [Et_datas_tmp[1], ts_tmp]
 At_THz_datas, Et_THz_datas, = create_tdata(tmax, 0, Δt, t -> E_applied(t), no_light, no_light, appendix_steps=1)
 push!(mid_Efs_record, Et_THz_datas[1][Int64(floor((tau_fs + nc * pi / ω_fs) ÷ Δt) + 1)])
 
+Tp = 2 * nc * pi / ω_fs
+Ex_thz_tmp, Ey_thz_tmp, Ez_thz_tmp, tmax_tmp = light_pulse(ω_thz, E_thz, 1, 0, pulse_shape="sin2", phase1=0.5pi)
+At_datas_tmp, Et_datas_tmp, ts_tmp = create_tdata(tmax_tmp + Tp/2, -Tp/2, 10*Δt, Ex_thz_tmp, no_light, no_light)
+thz_data = [Et_datas_tmp[1], ts_tmp]
+
 end
 
 plot(hhg_k_linspace, norm.(hhg_data_x_list[4][1:length(hhg_k_linspace)]), yscale=:log10)
@@ -108,12 +113,39 @@ plot(tau_list, shg_yields)
 plot(tau_list, mid_Efs_record)
 
 unify(data) = (data .- minimum(data)) ./ (maximum(data) - minimum(data))
-p2 = plot(tau_list, unify(mid_Efs_record), label="actual THz", xlabel="delay τ a.u.", ylabel="relative amplitude")
-plot!(p2, tau_list, unify(shg_yields), label="SHG (TDSE)")
-# plot!(p2, tau_list, unify(theory_record_shg), label="SHG (CTMC)")
+s = 0.096
+shg_yields_scaled = s * (shg_yields .- shg_yields[1])
+p2 = plot(unify(tau_list), shg_yields_scaled)
+plot!(p2, unify(thz_data[2]), (reverse(thz_data[1])))
+# plot!(p2, unify(tau_list), (mid_Efs_record))
 
 hhg_plt_list[14]
 p2
+
+println(shg_yields_scaled)
+
+f = open("fig2_thz_origin_data.txt", "w+")
+for i = 1: size(reverse(thz_data[1]))[1]
+    write(f, "$(reverse(thz_data[1])[i])\n")
+end
+close(f)
+f = open("fig2_tdse_point.txt", "w+")
+for i = 1: length(tau_list)
+    write(f, "$(tau_list[i]) $(shg_yields_scaled[i])\n")
+end
+close(f)
+
+# # Create Physical World & Runtime
+# pw = create_physics_world_sh(Nr, l_num, Δr, Δt, po_func, Z, absorb_func)
+# rt = create_tdse_rt_sh(pw);
+
+# # Initial Wave
+# init_wave_list = itp_fdsh(pw, rt, err=1e-8);
+# crt_shwave = deepcopy(init_wave_list[1]);
+# en = get_energy_sh(init_wave_list[1], rt, pw.shgrid) # He:-0.944  H:-0.5
+# println("Energy of ground state: ", en)
+# sum([norm(crt_shwave[i]) for i = 1: 2500])
+
 
 
 # unify(data) = (data .- minimum(data)) ./ (maximum(data) - minimum(data))

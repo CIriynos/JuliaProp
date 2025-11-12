@@ -98,8 +98,13 @@ Ex_thz_tmp, Ey_thz_tmp, Ez_thz_tmp, tmax_tmp = light_pulse(ω_thz, E_thz, 1, 0, 
 At_datas_tmp, Et_datas_tmp, ts_tmp = create_tdata(tmax_tmp, 0, Δt, Ex_thz_tmp, no_light, no_light)
 thz_data = [Et_datas_tmp[1], ts_tmp]
 
-At_THz_datas, Et_THz_datas, = create_tdata(tmax, 0, Δt, t -> E_applied(t), no_light, no_light, appendix_steps=1)
-push!(mid_Efs_record, Et_THz_datas[1][Int64(floor((tau_fs + nc * pi / ω_fs) ÷ Δt) + 1)])
+# At_THz_datas, Et_THz_datas, = create_tdata(tmax, 0, Δt, t -> E_applied(t), no_light, no_light, appendix_steps=1)
+# push!(mid_Efs_record, Et_THz_datas[1][Int64(floor((tau_fs + nc * pi / ω_fs) ÷ Δt) + 1)])
+
+Tp = 2 * nc * pi / ω_fs
+Ex_thz_tmp, Ey_thz_tmp, Ez_thz_tmp, tmax_tmp = light_pulse(ω_thz, E_thz, 1, 0, pulse_shape="sin2", phase1=0.5pi)
+At_datas_tmp, Et_datas_tmp, ts_tmp = create_tdata(tmax_tmp + Tp/2, -Tp/2, Δt, Ex_thz_tmp, no_light, no_light)
+thz_data = [Et_datas_tmp[1], ts_tmp]
 
 end
 
@@ -111,7 +116,7 @@ plot(tau_list, mid_Efs_record)
 
 unify(data) = (data .- minimum(data)) ./ (maximum(data) - minimum(data))
 p2 = plot(unify(tau_list), unify(shg_yields))
-plot!(p2, unify(tau_list), unify(mid_Efs_record))
+plot!(p2, unify(thz_data[2]), unify(reverse(thz_data[1])))
 
 hhg_plt_list[1]
 p2

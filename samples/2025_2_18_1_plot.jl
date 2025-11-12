@@ -113,6 +113,7 @@ p2 = plot(unify(tau_list), unify(shg_yields))
 plot!(p2, unify(tau_list), unify(mid_Efs_record))
 
 hhg_plt_list[1]
+p2
 
 
 # unify(data) = (data .- minimum(data)) ./ (maximum(data) - minimum(data))

@@ -73,14 +73,15 @@ export tsurf_plot_energy_spectrum
 export tsurf_plot_xy_momentum_spectrum
 export tsurf_plot_xy_momentum_spectrum_vector
 export tsurf_plot_xz_momentum_spectrum_vector
-export tsurf_get_average_momentum_parallel
-export tsurf_get_average_momentum_vector_parallel
+export tsurf_plot_xproj_momentum_spectrum_vector
+export tsurf_get_average_momentum
+# export tsurf_get_average_momentum_parallel
+# export tsurf_get_average_momentum_vector_parallel
 export isurf_sh, isurf_rest_part, isurf_sh_vector
 export create_k_space, theta_linspace, phi_linspace
 export fixed_r, fixed_theta, fixed_phi
 export tsurf_combine_lm_vec
 export plot_line_order
-export tsurf_get_average_momentum
 
 export coulomb_potiential_zero_fixed
 export coulomb_potiential_zero_fixed_plus
@@ -98,6 +99,7 @@ export no_light
 export get_1c_thz_delay_list
 export get_1c_thz_delay_list_ok
 export get_1c_thz_delay_list_selected
+export get_1c_thz_delay_list_combined
 export get_exactly_coincided_delay
 export plot_fs_thz_figure
 export get_hhg_spectrum_xy
@@ -112,7 +114,7 @@ export calculate_asymptotic_momentum
 export add_to_pmd
 export add_to_hhg
 export ctmc_get_hhg_spectrum
-export trajs_analyse
+export trajs_analyse, trajs_pdd_analyse
 export clear_ctmc_rt
 export calculate_asymptotic_momentum
 export get_average_p_ctmc

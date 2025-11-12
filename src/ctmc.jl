@@ -132,7 +132,7 @@ end
 
 function traj_get_acc(P_ID, traj, tid, t_num, delta_t)
     acc_data = zeros(Float64, t_num)
-    for j = tid: t_num
+    for j = 1: t_num
         if j - 2 >= 1 && j + 2 <= t_num
             acc_data[j] = four_order_difference(traj, j, delta_t)
         elseif j == 2 || j == t_num - 1
@@ -267,8 +267,7 @@ function update_start_point(rt, trajs_num, tid_cc, pv_cc, theta_cc, E_data, Ip, 
     
     # wt_data = W.(E_norm_data[tid_cc], pv_cc, Ip, Z)
     # wt_int_data = get_integral(wt_data, Δt)
-    # println(last(wt_int_data))
-    # C = 1500
+    # println(last(wt_intupdate_start_point
     # @. rt.weight_cc = 1.0 * wt_data * exp(-wt_int_data * C)
 
     @. rt.weight_cc = W.(E_norm_data[tid_cc], pv_cc, Ip, Z)
@@ -293,7 +292,7 @@ function ctmc_mainloop(F1, rt, t_num, trajs_num, tid_cc, Δt, E_data, E_hf_data,
         flag = RK4_procedure(F1, i, rt.traj_data, rt.start_point_cc, tid_cc[i], t_num, Δt, E_data, E_hf_data, Z, filter_threshold)
         traj_filter_flag[i] = flag
     end
-    println("RK4 ended.")
+    # println("RK4 ended.")
     return traj_filter_flag
 end
 
@@ -407,7 +406,8 @@ function ctmc_get_hhg_spectrum(rt, E_data, tmax, t_num, ts, Δt, ω, tau; max_di
         titlefont=Plots.font(18, "Times"),
         legendfont=Plots.font(10, "Times"),
         margin = 5 * Plots.mm,
-        ylimit=(1e-7, 1e3))
+        ylimit=(1e-7, 1e3),
+        xticks=0:1:max_display_rate)
     
     # id1 = Int64((2 * (nc1 ÷ 2 + 0) * π / ω) ÷ Δt)
     # id2 = Int64((2 * (nc1 ÷ 2 + 0.5) * π / ω) ÷ Δt)
@@ -434,23 +434,25 @@ function trajs_analyse(rt, E_data, trajs_num, tmax, t_num, ts, Δt, ω, tau, tid
     hhg_delta_k = 2pi / t_num / Δt
     hhg_k_linspace = [hhg_delta_k * (i - 1) for i = 1: t_num]
     spectrum_range = 1: Int64(floor(ω * max_display_rate / hhg_delta_k) + 1)
-    hhg_windows_f(t, tmin, tmax) = (1 - cos(2 * pi * (t - tmin) / (tmax - tmin))) / 2 * (t >= tmin && t <= tmax)
-    hhg_windows_data = hhg_windows_f.(ts, tau, tmax)
-    shg_id = Int64(floor((ω * 2) ÷ hhg_delta_k) + 1)
-    base_id = Int64(floor(ω ÷ hhg_delta_k) + 1)
+    hhg_windows_f(t, tmin, tmax) = (1 - cos(2 * pi * (t - tmin) / (tmax - tmin))) / 2 * (t > tmin && t < tmax)
+    hhg_windows_data = hhg_windows_f.(ts, 0, tmax)
+    shg_id = Int64(floor((ω * 2) / hhg_delta_k)) + 1
+    base_id = Int64(floor(ω / hhg_delta_k)) + 1
+    # shg_id = (base_id - 1) * 2 + 1
+    println("shg_id = $shg_id, base_id = $base_id")
 
     ax_data_single = zeros(Float64, t_num)
     shg_yield_data = zeros(ComplexF64, t_num)
-    # for i = 1: trajs_num
-    #     if traj_filter_flag[i] == true
-    #         continue
-    #     end
-    #     ax_data_single = traj_get_acc(PX_ID, rt.traj_data[PX_ID][i], tid_cc[i], t_num, Δt)
-    #     shg_yield_data[i] = fft(ax_data_single .* hhg_windows_data)[shg_id] .* rt.weight_cc[i]
-    # end
+    for i = 1: trajs_num
+        if traj_filter_flag[i] == true
+            continue
+        end
+        ax_data_single = traj_get_acc(PX_ID, rt.traj_data[PX_ID][i], tid_cc[i], t_num, Δt)
+        # shg_yield_data[i] = fft(E_data[1] .* (rt.traj_data[PX_ID][i] .!= 0.0))[shg_id] #.* rt.weight_cc[i]
+        shg_yield_data[i] = fft(ax_data_single)[shg_id] .* rt.weight_cc[i] * exp(-1im * deg2rad(-3.0))
+    end
 
-    norm_fig = plot([norm.(shg_yield_data) E_data[1] .* 1e-3],
-        labels=["|F(2ω)|(t)" "E_x(t)"])
+    norm_fig = plot([norm.(shg_yield_data) .* 1e3], labels=["|F(2ω)|(t)" "E_x(t)"])
     phase_fig = scatter(angle.(shg_yield_data), norm.(shg_yield_data),
         proj = :polar,
         markerstrokewidth = 0,
@@ -460,15 +462,116 @@ function trajs_analyse(rt, E_data, trajs_num, tmax, t_num, ts, Δt, ω, tau, tid
     # filtered_ids = [id for id = 1: trajs_num if traj_filter_flag[id] == true]
     # scatter!(norm_fig, filtered_ids, zeros(length(filtered_ids)))
 
-    id1 = Int64((tau + 2 * (nc1 ÷ 2 + 0) * π / ω) ÷ Δt + 1)
-    id2 = Int64((tau + 2 * (nc1 ÷ 2 + 0.5) * π / ω) ÷ Δt + 1)
-    scatter!(norm_fig, [id1 id2], [0, 0])
+    id1 = Int64((tau + (nc1 - 1 + 0.5) * π / ω) ÷ Δt + 1)
+    id2 = Int64((tau + (nc1 - 1 + 1.5) * π / ω) ÷ Δt + 1)
+    # scatter!(norm_fig, [id1 id2], [0, 0], marker='x')
+    traj1 = (rt.traj_data[X_ID][id1] .!= 0.0) .* (rt.traj_data[X_ID][id1] .- rt.traj_data[X_ID][id1][tid_cc[id1]]) .* 0.5e-3
+    traj2 = (rt.traj_data[X_ID][id2] .!= 0.0) .* (rt.traj_data[X_ID][id2] .- rt.traj_data[X_ID][id2][tid_cc[id2]]) .* 0.5e-3
+    # plot!(norm_fig, traj1)
+    # plot!(norm_fig, traj2)
 
     ax_data_single_1 = traj_get_acc(PX_ID, rt.traj_data[PX_ID][id1], tid_cc[id1], t_num, Δt)
     ax_data_single_2 = traj_get_acc(PX_ID, rt.traj_data[PX_ID][id2], tid_cc[id2], t_num, Δt)
     tmp1 = fft(ax_data_single_1 .* hhg_windows_data)
     tmp2 = fft(ax_data_single_2 .* hhg_windows_data)
-    p3 = plot([norm.(tmp1 .+ tmp2)[spectrum_range]], yscale=:log10)
+    p3 = plot(hhg_k_linspace[spectrum_range], [norm.(tmp1 .+ tmp2)[spectrum_range] norm.(tmp1)[spectrum_range] norm.(tmp2)[spectrum_range]], yscale=:log10)
+    plot!(p3, [shg_id - 1, shg_id - 1] .* hhg_delta_k, [1e-3, 1e1])
+    plot!(p3, [base_id - 1, base_id - 1] .* hhg_delta_k, [1e-3, 1e1])
 
-    return norm_fig, phase_fig, p3, shg_yield_data
+
+    p4 = plot()
+    ff(x) = sign(x) * log(1.0 + abs(x))
+    for i = 3: nc1 - 1 - 3
+        id1 = Int64((tau + 2 * (i + 0.25) * π / ω) ÷ Δt + 1)
+        id2 = Int64((tau + 2 * (i + 0.75) * π / ω) ÷ Δt + 1)
+
+        o1 = rt.traj_data[X_ID][id1][tid_cc[id1]]
+        o2 = rt.traj_data[Y_ID][id1][tid_cc[id1]]
+        if sqrt(o1.^2 + o2.^2) <= 1e2
+            plot!(p4, (rt.traj_data[X_ID][id1]),
+                (rt.traj_data[Y_ID][id1]),
+                xlimit=(-0.5e3, 0.5e3), ylimit=(-0.5e3, 0.5e3))
+        end
+
+        o1 = rt.traj_data[X_ID][id2][tid_cc[id2]]
+        o2 = rt.traj_data[Y_ID][id2][tid_cc[id2]]
+        if sqrt(o1.^2 + o2.^2) <= 1e2
+            plot!(p4, (rt.traj_data[X_ID][id2]),
+                (rt.traj_data[Y_ID][id2]),
+                xlimit=(-0.5e3, 0.5e3), ylimit=(-0.5e3, 0.5e3))
+        end
+    end
+
+    exit_point_norm = zeros(Float64, trajs_num)
+    for i = 1: trajs_num
+        if traj_filter_flag[i] == true
+            continue
+        end
+        o1 = rt.traj_data[X_ID][i][tid_cc[i]]
+        o2 = rt.traj_data[Y_ID][i][tid_cc[i]]
+        exit_point_norm[i] = sqrt(o1 ^ 2 + o2 ^ 2)
+    end
+    p5 = plot(exit_point_norm)
+
+    id1 = Int64((tau + (nc1 - 1 + 0.5) * π / ω) ÷ Δt + 2)
+    id2 = Int64((tau + (nc1 - 1 + 1.5) * π / ω) ÷ Δt + 1)
+    interval = 4
+    rgg1 = id1 - interval * 2: interval: id1 + interval * 2
+    rgg2 = id2 - interval * 2: interval: id2 + interval * 2
+    p6 = scatter(angle.(shg_yield_data[[rgg1; rgg2]]),
+        norm.(shg_yield_data[[rgg1; rgg2]]),
+        proj = :polar, ylimit=(1.5e-4, 1.9e-4),
+        yticks=[1.6e-4, 1.8e-4],
+        markerstrokewidth = 0,
+        markeralpha = 0.8,
+        markersize = 5,
+        markershape = :circle)
+
+    
+    # T_piece = 50
+    # ft_ana_1 = zeros(ComplexF64, t_num)
+    # ft_ana_2 = zeros(ComplexF64, t_num)
+    # for i = 1: t_num - Int64(T_piece ÷ Δt + 1) - 1
+    #     t_start = tau + (i - 1) * Δt
+    #     tmp1 = fft(ax_data_single_1 .* hhg_windows_f.(ts, t_start, t_start + T_piece))[shg_id * 2]
+    #     tmp2 = fft(ax_data_single_2 .* hhg_windows_f.(ts, t_start, t_start + T_piece))[shg_id * 2]
+    #     ft_ana_1[i] = tmp1
+    #     ft_ana_2[i] = tmp2
+    # end
+
+    traj_data = [E_data[1] traj1 traj2 ax_data_single_1 ax_data_single_2]
+    return norm_fig, phase_fig, p6, shg_yield_data[[rgg1; rgg2]], traj_data
+end
+
+
+function trajs_pdd_analyse(rt, tid_cc, traj_filter_flag, tau_fs, nc, ω_fs, Δt)
+
+    # dmin = -200.0
+    # dmax = 200.0
+    dmin = -0.6
+    dmax = 0.6
+    ddelta = (dmax - dmin) / 500
+    displace_x_range = dmin: ddelta: dmax
+    pdd_matrix = zeros(Float64, rt.t_num, length(displace_x_range))
+
+    id1 = Int64((tau_fs + (nc - 1 + 0.5) * π / ω_fs) ÷ Δt + 1)
+    id2 = Int64((tau_fs + (nc - 1 + 1.5) * π / ω_fs) ÷ Δt + 1)
+    
+    for i = 1: rt.trajs_num
+        if traj_filter_flag[i] == true
+            continue
+        end
+        for j = tid_cc[i]: rt.t_num
+            displacement = rt.traj_data[PY_ID][i][j] - rt.traj_data[PY_ID][i][tid_cc[i]]
+            displace_id = Int64((displacement - dmin) ÷ ddelta)
+            if  displace_id < 1 || displace_id > length(displace_x_range)
+                continue
+            end
+            pdd_matrix[j, displace_id] += rt.weight_cc[i]
+            if tid_cc[i] >= id1 && tid_cc[i] <= id2
+                pdd_matrix[j, displace_id] += 1e3
+            end
+        end
+    end
+    return pdd_matrix
 end

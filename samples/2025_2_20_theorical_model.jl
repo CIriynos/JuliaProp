@@ -62,10 +62,10 @@ Keldysh_ionz_rate(γ, Ip, ω) = exp(-(2 * Ip / ω) * ((1 + 1 / (2 * γ^2)) * asi
 E0 = 0.0533
 Ip = 0.5
 K0 = 0.5 / ω
-nc = 8
+nc = 15
 Δt = 1.0
-E0_thz = 0.00002 * 0
-E_dc = 0.00000
+E0_thz = 0.0001
+E_dc = 0.0001
 
 
 samples_num = 64
@@ -147,7 +147,9 @@ unify(data) = (data .- minimum(data)) ./ (maximum(data) - minimum(data))
 p2 = plot(unify(tau_list), unify(theory_record_shg))
 plot!(p2, unify(tau_list), unify(theory_mid_thz))
 
-# plot(theory_record_shg .- minimum(theory_record_shg))
+
+
+# p3 = plot!(p3, unify(theory_record_shg))
 
 # p3 = p
 # p3 = plot!(p3, theory_plt_list[1])

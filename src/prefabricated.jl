@@ -137,6 +137,38 @@ function dc_bias(amplitude, start_time, peak_time_1, peak_time_2, end_time; slop
     return f
 end
 
+
+# function ultrabroad_light_pulse(omega_list, amplitude, cycle_num, time_delay; pulse_shape="sin2", ellipticity=0.0, phase1=0.0, phase2=pi/2, mode="E")
+#     E1 = amplitude * 1 / sqrt(ellipticity^2 + 1)
+#     E2 = amplitude * ellipticity / sqrt(ellipticity^2 + 1)
+#     Tp = 2pi * cycle_num / omega
+#     fixed_shift = Tp / 2
+#     C = 1.0
+#     tmax = time_delay + Tp
+
+#     if pulse_shape == "sin2" || pulse_shape == "cos2"
+#         pulse_shape_f = t -> cos(t * pi / Tp) ^ 2 * (t > -Tp/2 && t < Tp/2)
+#     elseif pulse_shape == "sin8" || pulse_shape == "cos8"
+#         pulse_shape_f = t -> cos(t * pi / Tp) ^ 8 * (t > -Tp/2 && t < Tp/2)
+#     elseif pulse_shape == "gauss" || pulse_shape == "normal"
+#         pulse_shape_f = t -> exp(-(t / (Tp / 2)) ^ 2)
+#     elseif pulse_shape == "none"
+#         pulse_shape_f = t -> 1 * (t > -Tp/2 && t < Tp/2)
+#     end
+
+#     if mode == "E"
+#         C = 1.0
+#     elseif mode == "A"
+#         C = 1.0 / omega
+#     end
+
+#     f_1(t) = C * E1 * pulse_shape_f(t - fixed_shift - time_delay) * cos(omega * (t - fixed_shift - time_delay) + phase1) + MIN_ERROR
+#     f_2(t) = C * E2 * pulse_shape_f(t - fixed_shift - time_delay) * cos(omega * (t - fixed_shift - time_delay) + phase2) + MIN_ERROR
+#     f_3(t) = MIN_ERROR
+
+#     return f_1, f_2, f_3, tmax
+# end
+
 no_light(t) = 0.0
 
 
@@ -155,8 +187,8 @@ function get_1c_thz_delay_list(omega_pump, tau_pump, nc_pump, omega_thz; samples
     return tau_list
 end
 
-function get_1c_thz_delay_list_ok(omega_pump, tau_pump, nc_pump, omega_thz; samples_num=16)
-    T_thz = 2pi / omega_thz
+function get_1c_thz_delay_list_ok(omega_pump, tau_pump, nc_pump, omega_thz; samples_num=16, nc_thz=1)
+    T_thz = nc_thz * 2pi / omega_thz
     T_pump = nc_pump * 2pi / omega_pump
     tau_list = [tau_pump - T_thz; range(tau_pump - T_thz + T_pump * 0.3, tau_pump + T_pump - T_pump * 0.3, samples_num - 2); tau_pump + T_pump]
     return tau_list
@@ -174,6 +206,14 @@ function get_1c_thz_delay_list_selected(omega_pump, tau_pump, nc_pump, omega_thz
     return tau_list
 end
 
+
+function get_1c_thz_delay_list_combined(omega_pump, tau_pump, nc_pump, omega_thz, samples_num, t1, t2)
+    T_thz = 2pi / omega_thz
+    T_pump = nc_pump * 2pi / omega_pump
+    tau_list = [tau_pump - T_thz; range(tau_pump - T_thz + T_pump * 0.3, tau_pump + T_pump - T_pump * 0.3, samples_num - 2 - 2); tau_pump + T_pump]
+    return [tau_list; [tau_pump + nc_pump*pi/omega_pump - t1, tau_pump + nc_pump*pi/omega_pump - t2]]
+end
+
 function get_exactly_coincided_delay(omega_pump, tau_pump, nc_pump, omega_thz)
     return tau_pump + nc_pump*pi/omega_pump - pi/omega_thz
 end
@@ -185,11 +225,12 @@ function plot_fs_thz_figure(Ex_fs, Ey_fs, E_thz, ts; thz_ratio = 500)
     xlabel="Time t",
     ylabel="E (a.u.)",
     title="fs Laser & THz Field Visualization (τ3)",
-    guidefont=Plots.font(14, "Times"),
-    tickfont=Plots.font(14, "Times"),
-    titlefont=Plots.font(18, "Times"),
-    legendfont=Plots.font(10, "Times"),
-    margin = 5 * Plots.mm)
+    guidefont=Plots.font(14),
+    tickfont=Plots.font(14),
+    titlefont=Plots.font(18),
+    legendfont=Plots.font(10),
+    margin = 5 * Plots.mm,
+    size=(800, 200))
     return etp
 end
 
@@ -221,13 +262,13 @@ function get_hhg_spectrum_xy(hhg_integral_t, Et_data_x, Et_data_y, pulse_start, 
     p = plot(hhg_k_linspace[spectrum_range] ./ ω0, norm.(hhg_spectrum_x[spectrum_range]),
         yscale=:log10, ylimit=(min_log_limit, max_log_limit))
     
-    ll = Int64((ω0) ÷ hhg_delta_k) * hhg_delta_k / ω0
+    ll = (Int64((ω0) ÷ hhg_delta_k) + 1) * hhg_delta_k / ω0
     plot!(p, [ll, ll], [min_log_limit, max_log_limit])
-    ll = Int64((2ω0) ÷ hhg_delta_k) * hhg_delta_k / ω0
+    ll = (Int64((2ω0) ÷ hhg_delta_k) + 1) * hhg_delta_k / ω0
     plot!(p, [ll, ll], [min_log_limit, max_log_limit])
-    ll = Int64((3ω0) ÷ hhg_delta_k) * hhg_delta_k / ω0
+    ll = (Int64((3ω0) ÷ hhg_delta_k) + 1) * hhg_delta_k / ω0
     plot!(p, [ll, ll], [min_log_limit, max_log_limit])
-    ll = Int64((5ω0) ÷ hhg_delta_k) * hhg_delta_k / ω0
+    ll = (Int64((5ω0) ÷ hhg_delta_k) + 1) * hhg_delta_k / ω0
     plot!(p, [ll, ll], [min_log_limit, max_log_limit])
     return p, hhg_spectrum_x, hhg_spectrum_y, base_id, hhg_k_linspace[spectrum_range] ./ ω0, hhg_k_linspace[spectrum_range]
 end

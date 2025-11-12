@@ -153,7 +153,7 @@ function itp_fd1d(seed_wave::wave_t, rt::tdse_rt_1d_t; min_error::Float64 = 1e-8
 end
 
 
-function tdse_laser_fd1d_mainloop_penta(crt_wave::wave_t, rt::tdse_rt_1d_t, pw::physics_world_1d_t, Ats, steps, X; record_steps::Int64 = 200)
+function tdse_laser_fd1d_mainloop_penta(crt_wave::wave_t, rt::tdse_rt_1d_t, pw::physics_world_1d_t, Ats, steps, X; record_steps::Int64 = 2000)
     println("[TDSE_1d]: tdse process starts. 1d with laser in dipole approximation.")
     energy_list = []
     smooth_record = []
@@ -164,14 +164,12 @@ function tdse_laser_fd1d_mainloop_penta(crt_wave::wave_t, rt::tdse_rt_1d_t, pw::
     X_pos_id = grid_reduce(pw.xgrid, X)
     X_neg_id = grid_reduce(pw.xgrid, -X)
 
-    mid_len = 5
-    mask = [!(i in pw.Nx ÷ 2 - mid_len: pw.Nx ÷ 2 + mid_len + 1) for i in 1: pw.Nx]
-    dU_dx = get_derivative_two_order(pw.po_data, pw.delta_x) #.* mask
+    dU_dx = get_derivative_two_order(pw.po_data, pw.delta_x)
     hhg_integral = zeros(ComplexF64, steps)
     x_linspace = get_linspace(pw.xgrid)
 
-    d_po_func(x) = x * (x^2 + 1) ^ (-1.5)
-    dU_dx_2 = d_po_func.(x_linspace)
+    ttt(x) = x
+    tttd = ttt.(x_linspace)
 
     @inbounds for i = 1: steps
         @fastmath @. rt.tmp_penta_1 = rt.A_pos_penta - 0.5 * pw.delta_t * Ats[i] * rt.D1_penta
@@ -192,8 +190,14 @@ function tdse_laser_fd1d_mainloop_penta(crt_wave::wave_t, rt::tdse_rt_1d_t, pw::
             nm = dot(crt_wave, crt_wave)
             sm = get_smoothness_1(crt_wave, pw.delta_x)
             push!(energy_list, en)
-            push!(smooth_record, sm)
-            println("[FD_1d]:step $i, energy = $en, norm = $nm")
+
+            # verify
+            dcrt_wave = get_derivative_two_order(crt_wave, pw.delta_x)
+            ddcrt_wave = get_derivative_two_order(dcrt_wave, pw.delta_x)
+            u1 = dot(crt_wave, x_linspace .^ 2 .* crt_wave) - dot(crt_wave, x_linspace .* crt_wave) ^ 2
+            u2 = dot(crt_wave, -ddcrt_wave) - dot(crt_wave, -im * dcrt_wave) ^ 2
+            push!(smooth_record, real(u2))
+            println("[FD_1d]: step $i, energy = $en, norm = $nm, Uncertainty = $(real(u1 * u2))")
         end
 
         # HHG
@@ -201,7 +205,7 @@ function tdse_laser_fd1d_mainloop_penta(crt_wave::wave_t, rt::tdse_rt_1d_t, pw::
         # hhg_integral[i] = numerical_integral(dU_dx .* norm.(crt_wave) .^ 2, 1.0)
         for k = 1: pw.Nx
             hhg_integral[i] += dU_dx[k] * norm.(crt_wave[k]) .^ 2 * pw.delta_x
-        end 
+        end
     end
     println("[TDSE_1d]: tdse process end.")
     return [X_pos_vals, X_neg_vals, X_pos_dvals, X_neg_dvals], hhg_integral, energy_list, smooth_record

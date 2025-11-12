@@ -1,0 +1,199 @@
+import Pkg
+Pkg.activate(".")
+using Revise
+
+using JuliaProp
+using Plots
+using LinearAlgebra
+using HDF5
+using FFTW
+
+
+field_plt_list = []
+hhg_plt_list = []
+hhg_data_x_list = []
+shg_yields = []
+thz_data = []
+tau_list = []
+hhg_k_linspace = []
+mid_Efs_record = []
+hhg_integral_t_data = []
+ts__ = []
+tau_thz_mid = 0.0
+shg_id = 0
+
+
+# Basic Parameters
+Nr = 5000
+Δr = 0.2 / 2
+l_num = 50
+Δt = 0.05 / 2
+Z = 1.0
+rmax = Nr * Δr  # 1000
+Ri_tsurf = rmax * 0.8
+a0 = 0.5
+po_func(r) = -1.0 / r
+absorb_func = absorb_boundary_r(rmax, Ri_tsurf)
+
+
+# 1 2 3
+task_id = 2
+
+# # Create Physical World & Runtime
+# pw = create_physics_world_sh(Nr, l_num, Δr, Δt, po_func_r, Z, absorb_func)
+# rt = create_tdse_rt_sh(pw);
+
+# # Initial Wave
+# init_wave_list = itp_fdsh(pw, rt, err=1e-8);
+# crt_shwave = deepcopy(init_wave_list[1]);
+# en = get_energy_sh(init_wave_list[1], rt, pw.shgrid) # He:-0.944  H:-0.5
+# println("Energy of ground state: ", en)
+
+# Define the Laser. 
+E_fs = 0.0533 * 0.5
+E_thz = 0.0005
+E_dc = 0.0005
+ω_fs = 0.05693
+ω_thz = ω_fs / 30
+nc = 12
+tau_fs = 0
+tau_list = get_1c_thz_delay_list_ok(ω_fs, tau_fs, nc, ω_thz)
+tau_thz = tau_list[task_id]
+
+Ex_fs, Ey_fs, Ez_fs, tmax = light_pulse(ω_fs, E_fs, nc, tau_fs, ellipticity=0.0)
+Ex_thz, = light_pulse(ω_thz, E_thz, 1, tau_thz, pulse_shape="sin2", phase1=0.5pi)
+E_applied(t) = (Ex_thz(t) + E_dc) * flap_top_windows_f(t, 0, tmax, 1/2)
+At_datas, Et_datas, ts, steps = create_tdata(tmax, 0, Δt, t -> Ex_fs(t) + E_applied(t), Ey_fs, no_light, appendix_steps=1)
+plot_fs_thz_figure(Ex_fs, Ey_fs, E_applied, ts)
+
+
+# # Propagation
+# crt_shwave = deepcopy(init_wave_list[1])
+# hhg_integral_t_1, hhg_integral_t_2, hhg_integral_t_3 = tdse_elli_sh_mainloop_record_xy_hhg_optimized(crt_shwave, pw, rt, At_data_x, At_data_y, steps, Ri_tsurf);
+# # hhg_integral_t_1, phi_record, dphi_record = tdseln_sh_mainloop_record_optimized_hhg(crt_shwave, pw, rt, At_data_x, steps, Ri_tsurf);
+
+# # Store Data Manually
+# example_name = "2025_1_17_test_$(task_id)"
+# h5open("./data/$example_name.h5", "w") do file
+#     write(file, "crt_shwave", hcat(crt_shwave...))
+#     write(file, "hhg_integral_t_1", hhg_integral_t_1)
+#     write(file, "hhg_integral_t_2", hhg_integral_t_2)
+#     write(file, "hhg_integral_t_3", hhg_integral_t_3)
+# end
+
+# Retrieve Data.
+example_name = "2025_10_13_$(task_id)"
+hhg_integral_t = retrieve_mat(example_name, "hhg_integral_t")
+
+# HHG
+p, hhg_data_x, hhg_data_y, base_id, hhg_k_linspace = get_hhg_spectrum_xy(hhg_integral_t, Et_datas[1], Et_datas[2], tau_fs, tmax, ω_fs, ts, Δt, max_display_rate=10, min_log_limit=1e-12)
+
+# recording
+shg_id = base_id * 2
+tau_thz_mid = get_exactly_coincided_delay(ω_fs, tau_fs, nc, ω_thz)
+push!(hhg_plt_list, p)
+push!(hhg_data_x_list, hhg_data_x)
+push!(shg_yields, norm.(hhg_data_x[shg_id]))
+push!(field_plt_list, plot_fs_thz_figure(Ex_fs, Ey_fs, E_applied, ts))
+push!(hhg_integral_t_data, hhg_integral_t)
+
+Ex_thz_tmp, Ey_thz_tmp, Ez_thz_tmp, tmax_tmp = light_pulse(ω_thz, E_thz, 1, 0, pulse_shape="sin2", phase1=0.5pi)
+At_datas_tmp, Et_datas_tmp, ts_tmp = create_tdata(tmax_tmp, 0, Δt, Ex_thz_tmp, no_light, no_light)
+thz_data = [Et_datas_tmp[1], ts_tmp]
+
+# At_THz_datas, Et_THz_datas, = create_tdata(tmax, 0, Δt, t -> E_applied(t), no_light, no_light, appendix_steps=1)
+# push!(mid_Efs_record, Et_THz_datas[1][Int64(floor((tau_fs + nc * pi / ω_fs) ÷ Δt) + 1)])
+
+Tp = 2 * nc * pi / ω_fs
+Ex_thz_tmp, Ey_thz_tmp, Ez_thz_tmp, tmax_tmp = light_pulse(ω_thz, E_thz, 1, 0, pulse_shape="sin2", phase1=0.5pi)
+At_datas_tmp, Et_datas_tmp, ts_tmp = create_tdata(tmax_tmp + Tp/2, -Tp/2, Δt, Ex_thz_tmp, no_light, no_light)
+thz_data = [Et_datas_tmp[1], ts_tmp]
+
+ts__ = ts
+
+hhg_plt_list[1]
+
+
+gr()
+using ContinuousWavelets, Wavelets, Interpolations, DSP
+f = hhg_integral_t_data[1] .* hanning(length(hhg_integral_t_data[1]))
+# f = [zeros(5000); f; zeros(5000)]
+p0 = plot(ts__, real.(f), yticks=[-0.002, 0, 0.002], lw=1.5,
+    xlimits = (ts__[1], ts__[end]), legend=false, ylabel="d(t)")
+c = wavelet(Morlet(π*1.4), β=0.95)
+res = cwt(f, c)
+freqs = getMeanFreq(computeWavelets(length(f), c)[1])
+f0 = ω_fs / 2pi / Δt
+cd = size(res)[2] - 40
+
+p = heatmap(ts__, freqs[2:cd] ./ f0, log10.(norm.(res')[5:cd, :]), yscale=:log10)
+plot!(p, ts__, 2 * ones(length(ts__)), color=:white, lw=0.7, linestyle=:dash,
+    legend=false, xlims = (ts__[1], ts__[end]))
+p_angle = heatmap(ts__, freqs[5:cd] ./ f0, (angle.(res')[5:cd, :]),colormap=cgrad([:white, :grey, :white]))
+
+
+
+ffffid = 10
+
+x = ts__
+y = log10.(freqs[ffffid: cd] ./ f0 ./ 1.5)
+z = log10.(norm.(res)[:, ffffid: cd])
+itp = LinearInterpolation((x, y), z)
+x2 = range(extrema(x)..., length=length(x) ÷ 10)
+y2 = range(extrema(y)..., length=length(y) * 2)
+# Interpolate
+z2 = [itp(x,y) for y in y2, x in x2]
+# Plot
+yy2 = [10^i for i in y2]
+delta_clim = -0.45
+p1 = heatmap(x2, yy2, z2, yscale=:log10,
+    yticks=([1, 2, 3, 5, 10, 20], ["1", "2", "3", "5", "10", "20"]),
+    colorbar=true, c=cgrad(:jet, scale=:log10, rev=false),
+    clim=(-12 + delta_clim, -5 + delta_clim),
+    size=(600, 150), tickfontsize=10)
+plot!(p1, x2, 2.1 * ones(length(x2)), color=:yellow, lw=0.8, linestyle=:dash,
+    legend=false, xlims = (ts__[1], ts__[end]), ylims = (yy2[1], yy2[end]))
+plot!(p1, x2, 2.8 * ones(length(x2)), color=:white, lw=0.8, linestyle=:dash,
+    legend=false, xlims = (ts__[1], ts__[end]), ylims = (yy2[1], yy2[end]))
+
+mask = flap_top_windows_f.(x2, 0, 1500, 1/4, left_flag=false)
+p1
+
+# d3 = exp.(z2[24, :])
+p2 = heatmap(x2, [0.00015, 0.00035], [angle.(exp.(im*(2*ω_fs)*x2)) angle.(exp.(im*(2*ω_fs)*x2))],
+    colormap=cgrad([:white, :grey, :white]), colorbar=false, alpha=0.4)
+plot!(p2, x2, [d1 d1 .+ (d2 .- d1) * 6 (exp.(z2[22, :])) .* mask],
+    xlims = (ts__[1], ts__[end]), ylims=[0.00015, 0.00035], color=[:red :orange1 :green1],
+    yticks=[0.0002, 0.0003],
+    label=["χ=2 (τ1)" "χ=2 (τ2)" "χ=3"], legend=:topright,
+    size=(600, 150), tickfontsize=10, legendfontsize=10)
+
+
+
+
+# p3 = plot(x2, [(d3 - d1) .* mask],
+#     xlims = (ts__[1], ts__[end]), ylims=[-0.000025, 0.000025],
+#     yticks=[-0.000025, 0.000025], ylabel="Δ|X(2ω0,t)|",
+#     label="SHG diff")
+# p4 = heatmap(x2, [0.00015, 0.00035], [angle.(exp.(im*(6*ω_fs)*x2)) angle.(exp.(im*(6*ω_fs)*x2))],
+#     colormap=cgrad([:white, :grey, :white]), colorbar=false, alpha=0.4)
+# plot!(p4, x2, [(exp.(z2[30, :])) .* mask],
+#     xlims = (ts__[1], ts__[end]), ylims=[0.00015, 0.00035],
+#     yticks=[0.0002, 0.0003], ylabel="|X(ω,t)|", lw=1.5,
+#     label="THG", legend=:topright)
+
+# l = @layout [a{.2h}; b{.5h}; c{.3h}]
+# l = @layout [a{.5h}; b{.5h};]
+# plot(p1, p2, layout=l, link=:x, legendfontsize=8, labelfontsize=10, framestyle=[:box :box :box :box])
+
+
+# rg = 1700: 3300
+# tmp = 3.32 / 2
+# foo = 1
+# morlet_wavelet(t, sigma) = (1 / (π^0.25)) * exp(im * sigma * t) * exp(-t^2 / 4)
+# ml1 = real.(morlet_wavelet.((x2[rg] .- 607) * ω_fs / tmp * foo, 2*π * foo)) .* 1e-4 .+ 2e-4
+# ml2 = real.(-morlet_wavelet.((x2[rg] .- 665) * ω_fs / tmp * foo, 2*π * foo)) .* 1e-4 .+ 2e-4
+# p5 = plot(x2[rg], [d1[rg] ml1 ml2 ml1 .+ ml2 .- 1e-4],
+#     xlims = (x2[rg][1], x2[rg][end]), ylims=[0.00010, 0.00035],
+#     xticks=[0.0002, 0.0003], yticks=[], legend=false,
+#     legendfontsize=8, labelfontsize=10, framestyle=:box, layout=@layout[a{.2h,.6w};])

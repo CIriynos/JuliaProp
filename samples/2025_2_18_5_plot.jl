@@ -16,6 +16,7 @@ shg_yields = []
 thz_data = []
 tau_list = []
 hhg_k_linspace = []
+hhg_t_data = []
 tau_thz_mid = 0.0
 shg_id = 0
 
@@ -83,7 +84,7 @@ example_name = "2025_2_18_5_$(task_id)"
 hhg_integral_t = retrieve_mat(example_name, "hhg_integral_t")
 
 # HHG
-p, hhg_data_x, hhg_data_y, base_id, hhg_k_linspace = get_hhg_spectrum_xy(hhg_integral_t, Et_datas[1], Et_datas[2], tau_fs, tmax, ω_fs, ts, Δt, max_display_rate=10)
+p, hhg_data_x, hhg_data_y, base_id, hhg_k_linspace = get_hhg_spectrum_xy(hhg_integral_t, Et_datas[1], Et_datas[2], tau_fs, tmax, ω_fs, ts, Δt, max_display_rate=25)
 
 # recording
 shg_id = base_id * 2
@@ -92,15 +93,17 @@ push!(hhg_plt_list, p)
 push!(hhg_data_x_list, hhg_data_x)
 push!(shg_yields, norm.(hhg_data_x[shg_id]))
 push!(field_plt_list, plot_fs_thz_figure(Ex_fs, Ey_fs, E_applied, ts))
+push!(hhg_t_data, hhg_integral_t)
 
+Tp = 2 * nc * pi / ω_fs
 Ex_thz_tmp, Ey_thz_tmp, Ez_thz_tmp, tmax_tmp = light_pulse(ω_thz, E_thz, 1, 0, pulse_shape="sin2", phase1=0.5pi)
-At_datas_tmp, Et_datas_tmp, ts_tmp = create_tdata(tmax_tmp, 0, Δt, Ex_thz_tmp, no_light, no_light)
+At_datas_tmp, Et_datas_tmp, ts_tmp = create_tdata(tmax_tmp + Tp/2, -Tp/2, Δt, Ex_thz_tmp, no_light, no_light)
 thz_data = [Et_datas_tmp[1], ts_tmp]
 
 end
 
-plot(hhg_k_linspace, norm.(hhg_data_x_list[4][1:length(hhg_k_linspace)]), yscale=:log10)
-plot(hhg_k_linspace, norm.(hhg_data_x_list[10][1:length(hhg_k_linspace)]), yscale=:log10)
+plot(hhg_k_linspace, norm.(hhg_data_x_list[6][1:length(hhg_k_linspace)]), yscale=:log10, ylimits=(1e-7, 1e2))
+plot(hhg_k_linspace, norm.(hhg_data_x_list[11][1:length(hhg_k_linspace)]), yscale=:log10, ylimits=(1e-7, 1e2))
 plot(tau_list, shg_yields)
 
 unify(data) = (data .- minimum(data)) ./ (maximum(data) - minimum(data))
@@ -108,15 +111,39 @@ p2 = plot(unify(tau_list), unify(shg_yields))
 plot!(p2, unify(thz_data[2]), unify(-thz_data[1]))
 
 hhg_plt_list[1]
+p2
+hhg_t_data[1]
 
+# # Time-frequency Analysis
+# hhg_windows_f(t, tmin, tmax) = (1 - cos(2 * pi * (t - tmin) / (tmax - tmin))) / 2 * (t >= tmin && t <= tmax)
+# t_num = length(hhg_t_data[1])
+# w_num = 350
+# ts = 1: t_num
+# plot(norm.(hhg_t_data[1]))
 
-# unify(data) = (data .- minimum(data)) ./ (maximum(data) - minimum(data))
-# p2 = plot(unify(tau_list), unify(shg_yields))
-# plot!(p2, unify(thz_data[2]), unify(-thz_data[1]))
+# ft_ana = zeros(ComplexF64, w_num, t_num)
+# delta = 40000
+# j = 1
+# for i = 1: 500: t_num - delta
+#     ft_ana[:, j] = fft((real.(hhg_t_data[1]) .* hhg_windows_f.(ts, i, i + delta)))[1: w_num]
+#     j += 1
+# end
 
+# heatmap(log10.(norm.(ft_ana)[1: w_num, (1): (j)] .^ 2))
 
+plot(norm.(ft_ana)[1: w_num, j ÷ 2], yscale=:log10)
 # f = open("saoyanchi_data.txt", "w+")
 # for i = 1: length(tau_list)
 #     write(f, "$(tau_list[i]) $(shg_yields[4])\n")
 # end
 # close(f)
+
+
+# f = open("tmptmp_sao_6.txt", "w+")
+# for i = 1: length(hhg_t_data[6])
+#     write(f, "$(real(hhg_t_data[6][i]))\n")
+# end
+# close(f)
+
+plot(real.(hhg_t_data[1]))
+plot(norm.(fft(real.(hhg_t_data[1])))[1:300], yscale=:log10)

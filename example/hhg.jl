@@ -92,7 +92,7 @@ hhg_spectrum = get_hhg_spectrum_xy(hhg_integral_t, Et_data_x, Et_data_y)
 plot(log10.(hhg_spectrum)[1: 400])
 
 
-hhg_xy_t = -hhg_integral_t .- (Et_data_x .+ im .* Et_data_y)
+hhg_xy_t = -hhg_integral_t #.- (Et_data_x .+ im .* Et_data_y)
 hhg_len = length(hhg_xy_t)
 
 # two type of window function
@@ -111,7 +111,36 @@ hhg_spectrum = norm.(hhg_spectrum_x) .^ 2 + norm.(hhg_spectrum_y) .^ 2
 hhg_delta_k = 2pi / hhg_len / Δt
 hhg_k_linspace = [hhg_delta_k * i for i = 1: hhg_len]
 
-plot(hhg_k_linspace[1: 380] ./ omega, log10.(norm.(hhg_spectrum_x))[1: 380])
+plot(hhg_k_linspace[1: 380] ./ omega, log10.(norm.(hhg_spectrum_x).^2)[1: 380] .+ 2.0)
 # plot(hhg_k_linspace[1: 380] ./ omega, log10.(norm.(hhg_spectrum))[1: 380])
 
 # plot(log10.(norm.(hhg_spectrum_x))[hhg_len - 380: hhg_len])
+
+Tp = (2 * nc * pi / omega)
+p, hhg_data_x, hhg_data_y, base_id, hhg_k_linspace = get_hhg_spectrum_xy(hhg_integral_t, Et_data_x, Et_data_y, 0, maximum(t_linspace), omega, t_linspace, Δt, max_display_rate=65)
+plot(hhg_k_linspace ./ omega, log10.(norm.(hhg_data_x[1:390]).^2) .+ 2.0)
+p
+
+
+# Time-frequency Analysis
+hhg_windows_f(t, tmin, tmax) = (1 - cos(2 * pi * (t - tmin) / (tmax - tmin))) / 2 * (t >= tmin && t <= tmax)
+t_num = length(hhg_integral_t)
+w_num = 350
+ts = 1: t_num
+plot(norm.(hhg_integral_t))
+
+ft_ana = zeros(ComplexF64, w_num, t_num)
+delta = 1000
+j = 1
+for i = 1: 50: t_num - delta
+    ft_ana[:, j] = fft((real(hhg_integral_t) .* hhg_windows_f.(ts, i, i + delta)))[1: w_num]
+    j += 1
+end
+
+heatmap(log10.(norm.(ft_ana)[33: w_num, (1 + 50): (j - 30)] .^ 2), clim=(-4.5, 0))
+
+f = open("tmptmp.txt", "w+")
+for i = 1: length(hhg_integral_t)
+    write(f, "$(real(hhg_integral_t[i]))\n")
+end
+close(f)

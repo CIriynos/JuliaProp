@@ -487,14 +487,17 @@ function tsurf_plot_xy_momentum_spectrum(a_tsurff_lm, k_space::tsurf_k_space_t, 
     # temporary
     result_mat .*= 2 * 10 ^ (-4)
 
-    x_min = -0.75
-    x_max = 0.75
-    x_delta = 0.01
+    x_min = -0.5
+    x_max = 0.5
+    x_delta = 0.005
     x_range = x_min: x_delta: x_max
     x_proj_data = zeros(Float64, length(x_range))
     x_proj_times = zeros(Float64, length(x_range))
 
-    # projection
+    xy_proj_data = zeros(Float64, length(x_range), length(x_range))
+    xy_proj_times = zeros(Float64, length(x_range), length(x_range))
+
+    # projection x
     for (i, kr) = enumerate(k_r_range)
         for (j, k_phi) in enumerate(k_phi_range)
             actual_x = kr * cos(k_phi)
@@ -508,9 +511,51 @@ function tsurf_plot_xy_momentum_spectrum(a_tsurff_lm, k_space::tsurf_k_space_t, 
         end
     end
 
+    # projection xy
+    for (i, kr) = enumerate(k_r_range)
+        for (j, k_phi) in enumerate(k_phi_range)
+            actual_x = kr * cos(k_phi)
+            actual_y = kr * sin(k_phi)
+            x_id = Int64((actual_x - x_min) ÷ x_delta) + 1
+            y_id = Int64((actual_y - x_min) ÷ x_delta) + 1
+            if x_id <= 0 || x_id > length(x_range) || y_id <= 0 || y_id > length(x_range)
+                continue
+            end
+            # println(x_id)
+            xy_proj_data[y_id, x_id] += result_mat[i, j]
+            xy_proj_times[y_id, x_id] += 1
+        end
+    end
+
+    # fixing up
+    for i = 1: 2
+        for x_id = 1: length(x_range)
+            for y_id = 1: length(x_range)
+                if xy_proj_times[x_id, y_id] == 0
+                    if y_id + 1 <= length(x_range) && xy_proj_data[x_id, y_id + 1] != 0
+                        xy_proj_data[x_id, y_id] = xy_proj_data[x_id, y_id + 1] / xy_proj_times[x_id, y_id + 1]
+                        xy_proj_times[x_id, y_id] = 1
+                    end
+                end
+            end
+        end
+    end
+
+    for x_id = 1: length(x_range)
+        for y_id = 1: length(x_range)
+            if xy_proj_times[x_id, y_id] == 0
+                if x_id + 1 <= length(x_range) && xy_proj_data[x_id + 1, y_id] != 0
+                    xy_proj_data[x_id, y_id] = xy_proj_data[x_id + 1, y_id] / xy_proj_times[x_id + 1, y_id]
+                    xy_proj_times[x_id, y_id] = 1
+                end
+            end
+        end
+    end
+
     gr()
     # colormap = cgrad([:white, :black, :red, :blue, :white])
-    colormap = cgrad(:jet1, rev = false)
+    # colormap = cgrad(:jet1, rev = false)
+    colormap = cgrad([:white, :blue])
     if log_flag == true
         Plots.heatmap(k_phi_range, k_r_range,
             abs.(log10.(result_mat)); color = colormap,
@@ -527,64 +572,30 @@ function tsurf_plot_xy_momentum_spectrum(a_tsurff_lm, k_space::tsurf_k_space_t, 
             ylabel="Energy of Photoelectron (a.u.)",
             )
     end
+    return xy_proj_data ./ max.(xy_proj_times, 1), x_proj_data ./ max.(x_proj_times, 1)
+    # return k_phi_range, k_r_range, result_mat
     # return x_proj_data, x_proj_times
     # Plots.heatmap(k_phi_range, k_r_range, result_mat; color = colormap, right_margin = 8 * Plots.mm)
 end
 
 
-# function tsurf_get_average_momentum(a_tsurff_lm, k_space::tsurf_k_space_t, pw::physics_world_sh_t)
+function tsurf_get_average_momentum(a_tsurff_lm, k_space::tsurf_k_space_t, pw::physics_world_sh_t)
     
-#     Nk_theta = length(k_space.k_theta_range)
-#     Nk_phi = length(k_space.k_phi_range)
+    Nk_theta = length(k_space.k_theta_range)
+    Nk_phi = length(k_space.k_phi_range)
 
-#     Ylm_vals_buffer = Matrix{Any}(undef, Nk_theta, Nk_phi)
-#     for (j, k_theta) in enumerate(k_space.k_theta_range)
-#         for (p, k_phi) in enumerate(k_space.k_phi_range)
-#             Ylm_vals_buffer[j, p] = computeYlm(k_theta, k_phi, lmax=pw.l_num - 1)
-#         end
-#     end
-
-#     expected_kx::Float64 = 0.0
-#     expected_ky::Float64 = 0.0
-#     expected_kz::Float64 = 0.0
-#     P_sum::Float64 = 0.0
-#     for (i, kr) in enumerate(k_space.k_r_range)
-#         for (j, k_theta) in enumerate(k_space.k_theta_range)
-#             for (p, k_phi) in enumerate(k_space.k_phi_range)
-#                 tmp_result::ComplexF64 = 0.0
-#                 for id = 1: pw.l_num ^ 2
-#                     l = pw.lmap[id]
-#                     m = pw.mmap[id]
-#                     tmp_result += a_tsurff_lm[id][i] * Ylm_vals_buffer[j, p][(l, m)]
-#                 end
-#                 kx, ky, kz = sphere_to_xyz(kr, k_theta, k_phi)
-#                 P_result::Float64 = norm(tmp_result) ^ 2
-#                 expected_kx += P_result * kx
-#                 expected_ky += P_result * ky
-#                 expected_kz += P_result * kz
-#                 P_sum += P_result
-#             end
-#         end
-#     end
-    
-#     expected_kx /= P_sum
-#     expected_ky /= P_sum
-#     expected_kz /= P_sum
-#     return expected_kx, expected_ky, expected_kz
-# end
-
-
-function tsurf_get_average_momentum_single_kr(a_tsurff_lm, k_space::tsurf_k_space_t, pw::physics_world_sh_t, Ylm_vals_buffer, kr_id_list, k_min)
+    Ylm_vals_buffer = Matrix{Any}(undef, Nk_theta, Nk_phi)
+    for (j, k_theta) in enumerate(k_space.k_theta_range)
+        for (p, k_phi) in enumerate(k_space.k_phi_range)
+            Ylm_vals_buffer[j, p] = computeYlm(k_theta, k_phi, lmax=pw.l_num - 1)
+        end
+    end
 
     expected_kx::Float64 = 0.0
     expected_ky::Float64 = 0.0
     expected_kz::Float64 = 0.0
     P_sum::Float64 = 0.0
-    for i in kr_id_list
-        kr = k_space.k_r_range[i]
-        if kr < k_min
-            continue
-        end
+    for (i, kr) in enumerate(k_space.k_r_range)
         for (j, k_theta) in enumerate(k_space.k_theta_range)
             for (p, k_phi) in enumerate(k_space.k_phi_range)
                 tmp_result::ComplexF64 = 0.0
@@ -602,41 +613,7 @@ function tsurf_get_average_momentum_single_kr(a_tsurff_lm, k_space::tsurf_k_spac
             end
         end
     end
-    return (expected_kx, expected_ky, expected_kz, P_sum)
-end
-
-
-function tsurf_get_average_momentum_parallel(a_tsurff_lm, k_space::tsurf_k_space_t, pw::physics_world_sh_t; k_min::Float64=0.01)
     
-    Nk_theta = length(k_space.k_theta_range)
-    Nk_phi = length(k_space.k_phi_range)
-
-    Ylm_vals_buffer = Matrix{Any}(undef, Nk_theta, Nk_phi)
-    for (j, k_theta) in enumerate(k_space.k_theta_range)
-        for (p, k_phi) in enumerate(k_space.k_phi_range)
-            Ylm_vals_buffer[j, p] = computeYlm(k_theta, k_phi, lmax=pw.l_num - 1)
-        end
-    end
-
-    expected_kx = 0.0
-    expected_ky = 0.0
-    expected_kz = 0.0
-    P_sum = 0.0
-
-    kr_id_list_total = eachindex(k_space.k_r_range)
-    kr_list_chunks = Iterators.partition(kr_id_list_total, length(kr_id_list_total) ÷ Threads.nthreads())
-    tasks = map(kr_list_chunks) do chunk
-        Threads.@spawn tsurf_get_average_momentum_single_kr(a_tsurff_lm, k_space, pw, Ylm_vals_buffer, chunk, k_min)
-    end
-    chunk_results = fetch.(tasks)
-    
-    for res in chunk_results
-        expected_kx += res[1]
-        expected_ky += res[2]
-        expected_kz += res[3]
-        P_sum += res[4]
-    end
-
     expected_kx /= P_sum
     expected_ky /= P_sum
     expected_kz /= P_sum
@@ -644,8 +621,80 @@ function tsurf_get_average_momentum_parallel(a_tsurff_lm, k_space::tsurf_k_space
 end
 
 
+# function tsurf_get_average_momentum_single_kr(a_tsurff_lm, k_space::tsurf_k_space_t, pw::physics_world_sh_t, Ylm_vals_buffer, kr_id_list, k_min)
+
+#     expected_kx::Float64 = 0.0
+#     expected_ky::Float64 = 0.0
+#     expected_kz::Float64 = 0.0
+#     P_sum::Float64 = 0.0
+#     for i in kr_id_list
+#         kr = k_space.k_r_range[i]
+#         if kr < k_min
+#             continue
+#         end
+#         for (j, k_theta) in enumerate(k_space.k_theta_range)
+#             for (p, k_phi) in enumerate(k_space.k_phi_range)
+#                 tmp_result::ComplexF64 = 0.0
+#                 for id = 1: pw.l_num ^ 2
+#                     l = pw.lmap[id]
+#                     m = pw.mmap[id]
+#                     tmp_result += a_tsurff_lm[id][i] * Ylm_vals_buffer[j, p][(l, m)]
+#                 end
+#                 kx, ky, kz = sphere_to_xyz(kr, k_theta, k_phi)
+#                 P_result::Float64 = norm(tmp_result) ^ 2
+#                 expected_kx += P_result * kx
+#                 expected_ky += P_result * ky
+#                 expected_kz += P_result * kz
+#                 P_sum += P_result
+#             end
+#         end
+#     end
+#     return (expected_kx, expected_ky, expected_kz, P_sum)
+# end
+
+
+# function tsurf_get_average_momentum_parallel(a_tsurff_lm, k_space::tsurf_k_space_t, pw::physics_world_sh_t; k_min::Float64=0.01)
+    
+#     Nk_theta = length(k_space.k_theta_range)
+#     Nk_phi = length(k_space.k_phi_range)
+
+#     Ylm_vals_buffer = Matrix{Any}(undef, Nk_theta, Nk_phi)
+#     for (j, k_theta) in enumerate(k_space.k_theta_range)
+#         for (p, k_phi) in enumerate(k_space.k_phi_range)
+#             Ylm_vals_buffer[j, p] = computeYlm(k_theta, k_phi, lmax=pw.l_num - 1)
+#         end
+#     end
+
+#     expected_kx = 0.0
+#     expected_ky = 0.0
+#     expected_kz = 0.0
+#     P_sum = 0.0
+
+#     kr_id_list_total = eachindex(k_space.k_r_range)
+#     kr_list_chunks = Iterators.partition(kr_id_list_total, length(kr_id_list_total) ÷ Threads.nthreads())
+#     tasks = map(kr_list_chunks) do chunk
+#         Threads.@spawn tsurf_get_average_momentum_single_kr(a_tsurff_lm, k_space, pw, Ylm_vals_buffer, chunk, k_min)
+#     end
+#     chunk_results = fetch.(tasks)
+    
+#     for res in chunk_results
+#         expected_kx += res[1]
+#         expected_ky += res[2]
+#         expected_kz += res[3]
+#         P_sum += res[4]
+#     end
+
+#     expected_kx /= P_sum
+#     expected_ky /= P_sum
+#     expected_kz /= P_sum
+#     return expected_kx, expected_ky, expected_kz
+# end
+
+
 
 # ================================
+
+# vector -->
 
 fixed_r(r) = [r]
 fixed_theta(theta) = [theta]
@@ -744,8 +793,8 @@ function tsurf_plot_xz_momentum_spectrum_vector(a_tsurff_vec, k_space::tsurf_k_s
     end
 
     gr()
-    colormap = cgrad([:white, :black, :red, :blue, :white])
-    # colormap = cgrad(:hot, rev = true)
+    # colormap = cgrad([:white, :black, :red, :blue, :white])
+    colormap = cgrad(:jet1, rev = false)
     if log_flag == true
         colormap = cgrad([:white, :black, :red, :blue, :white], rev=false)
         fig = Plots.heatmap(k_theta_range, k_r_range, abs.(log10.(pes_mat)); color = colormap, projection = :polar, right_margin = 8 * Plots.mm)
@@ -759,76 +808,104 @@ function tsurf_plot_xz_momentum_spectrum_vector(a_tsurff_vec, k_space::tsurf_k_s
             end
         end
         fig = Plots.heatmap(k_theta_range, k_r_range, pes_mat; color = colormap, projection = :polar, right_margin = 8 * Plots.mm)
-        Plots.heatmap!(fig, k_theta_range .- pi, k_r_range, pes_mat; color = colormap, projection = :polar, right_margin = 8 * Plots.mm)
+        Plots.heatmap!(fig, k_theta_range .+ pi, k_r_range, reverse(pes_mat, dims=2); color = colormap, projection = :polar, right_margin = 8 * Plots.mm)
         return fig
     end
 end
 
-function tsurf_get_average_momentum_vector_parallel_single(a_tsurff_vec, k_space::tsurf_k_space_t, k_col_id_list, k_min)
-    expected_kx = 0.0
-    expected_ky = 0.0
-    expected_kz = 0.0
-    P_sum = 0.0
-    for p in k_col_id_list
-        k_vec = k_space.k_collection[p]
-        kr, _, _ = xyz_to_sphere(k_vec...)
-        if kr < k_min
-            continue
-        end
-        P_sum += norm(a_tsurff_vec[p]) ^ 2
-        expected_kx += norm(a_tsurff_vec[p]) ^ 2 * k_vec[1]
-        expected_ky += norm(a_tsurff_vec[p]) ^ 2 * k_vec[2]
-        expected_kz += norm(a_tsurff_vec[p]) ^ 2 * k_vec[3]
-    end
-    return (expected_kx, expected_ky, expected_kz, P_sum)
-end
 
-
-function tsurf_get_average_momentum_vector_parallel(a_tsurff_vec, k_space::tsurf_k_space_t; k_min::Float64 = 0.0)
-    expected_kx = 0.0
-    expected_ky = 0.0
-    expected_kz = 0.0
-    P_sum = 0.0
-    
-    k_col_id_list = eachindex(k_space.k_collection)
-    k_col_chunks = Iterators.partition(k_col_id_list, length(k_col_id_list) ÷ Threads.nthreads())
-    tasks = map(k_col_chunks) do chunk
-        Threads.@spawn tsurf_get_average_momentum_vector_parallel_single(a_tsurff_vec, k_space, chunk, k_min)
-    end
-    chunk_results = fetch.(tasks)
-    
-    for res in chunk_results
-        expected_kx += res[1]
-        expected_ky += res[2]
-        expected_kz += res[3]
-        P_sum += res[4]
-    end
-
-    expected_kx /= P_sum
-    expected_ky /= P_sum
-    expected_kz /= P_sum
-    return expected_kx, expected_ky, expected_kz
-end
-
-
-function plot_line_order(arr, k_space::tsurf_k_space_t)
+function tsurf_plot_xproj_momentum_spectrum_vector(a_tsurff_vec, k_space::tsurf_k_space_t; kr_flag::Bool = false, log_flag::Bool = false, min_threhold::Float64=0.0, kr_min::Float64=0.0)
 
     Nk_r = length(k_space.k_r_range)
-    Nk_phi = length(k_space.k_phi_range)
+    Nk_theta = length(k_space.k_theta_range)
     k_r_range = k_space.k_r_range
-    k_phi_range = k_space.k_phi_range
+    k_theta_range = k_space.k_theta_range
+    delta_k = k_space.k_r_range[2] - k_space.k_r_range[1]
 
-    result_mat = zeros(eltype(arr), Nk_r, Nk_phi)
+    xproj_data = zeros(Float64, 2 * Nk_r)
+    xproj_times = zeros(Int64, 2 * Nk_r)
     for (p, k_vec) in enumerate(k_space.k_collection)
-        i, _, k = k_space.ijk_mapping[p]
-        result_mat[i, k] = arr[p]
+        i, j, _ = k_space.ijk_mapping[p]
+        tmp = norm(a_tsurff_vec[p]) ^ 2 * norm(k_vec)
+        id1 = Int64((k_vec[1]) ÷ delta_k) + 1 + Nk_r
+        id2 = Int64((-k_vec[1] + last(k_r_range)) ÷ delta_k) + 1
+        xproj_data[id1] += tmp
+        xproj_data[id2] += tmp
+        xproj_times[id1] += 1
+        xproj_times[id2] += 1
     end
 
-    gr()
-    # colormap = cgrad([:white, :black, :red, :blue, :white])
-    colormap = cgrad(:hot, rev = true)
-    Plots.heatmap(k_phi_range, k_r_range, result_mat; color = colormap, projection = :polar, right_margin = 8 * Plots.mm)
+    x_linspace = [-reverse(k_space.k_r_range); k_space.k_r_range]
+    plot(x_linspace, xproj_data ./ xproj_times)
+    return x_linspace, xproj_data ./ xproj_times
 end
+
+
+# function tsurf_get_average_momentum_vector_parallel_single(a_tsurff_vec, k_space::tsurf_k_space_t, k_col_id_list, k_min)
+#     expected_kx = 0.0
+#     expected_ky = 0.0
+#     expected_kz = 0.0
+#     P_sum = 0.0
+#     for p in k_col_id_list
+#         k_vec = k_space.k_collection[p]
+#         kr, _, _ = xyz_to_sphere(k_vec...)
+#         if kr < k_min
+#             continue
+#         end
+#         P_sum += norm(a_tsurff_vec[p]) ^ 2
+#         expected_kx += norm(a_tsurff_vec[p]) ^ 2 * k_vec[1]
+#         expected_ky += norm(a_tsurff_vec[p]) ^ 2 * k_vec[2]
+#         expected_kz += norm(a_tsurff_vec[p]) ^ 2 * k_vec[3]
+#     end
+#     return (expected_kx, expected_ky, expected_kz, P_sum)
+# end
+
+
+# function tsurf_get_average_momentum_vector_parallel(a_tsurff_vec, k_space::tsurf_k_space_t; k_min::Float64 = 0.0)
+#     expected_kx = 0.0
+#     expected_ky = 0.0
+#     expected_kz = 0.0
+#     P_sum = 0.0
+    
+#     k_col_id_list = eachindex(k_space.k_collection)
+#     k_col_chunks = Iterators.partition(k_col_id_list, length(k_col_id_list) ÷ Threads.nthreads())
+#     tasks = map(k_col_chunks) do chunk
+#         Threads.@spawn tsurf_get_average_momentum_vector_parallel_single(a_tsurff_vec, k_space, chunk, k_min)
+#     end
+#     chunk_results = fetch.(tasks)
+    
+#     for res in chunk_results
+#         expected_kx += res[1]
+#         expected_ky += res[2]
+#         expected_kz += res[3]
+#         P_sum += res[4]
+#     end
+
+#     expected_kx /= P_sum
+#     expected_ky /= P_sum
+#     expected_kz /= P_sum
+#     return expected_kx, expected_ky, expected_kz
+# end
+
+
+# function plot_line_order(arr, k_space::tsurf_k_space_t)
+
+#     Nk_r = length(k_space.k_r_range)
+#     Nk_phi = length(k_space.k_phi_range)
+#     k_r_range = k_space.k_r_range
+#     k_phi_range = k_space.k_phi_range
+
+#     result_mat = zeros(eltype(arr), Nk_r, Nk_phi)
+#     for (p, k_vec) in enumerate(k_space.k_collection)
+#         i, _, k = k_space.ijk_mapping[p]
+#         result_mat[i, k] = arr[p]
+#     end
+
+#     gr()
+#     # colormap = cgrad([:white, :black, :red, :blue, :white])
+#     colormap = cgrad(:hot, rev = true)
+#     Plots.heatmap(k_phi_range, k_r_range, result_mat; color = colormap, projection = :polar, right_margin = 8 * Plots.mm)
+# end
 
 
 

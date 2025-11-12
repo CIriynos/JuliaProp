@@ -93,8 +93,9 @@ push!(hhg_data_x_list, hhg_data_x)
 push!(shg_yields, norm.(hhg_data_x[shg_id]))
 push!(field_plt_list, plot_fs_thz_figure(Ex_fs, Ey_fs, E_applied, ts))
 
+Tp = 2 * nc * pi / ω_fs
 Ex_thz_tmp, Ey_thz_tmp, Ez_thz_tmp, tmax_tmp = light_pulse(ω_thz, E_thz, 1, 0, pulse_shape="sin2", phase1=0.5pi)
-At_datas_tmp, Et_datas_tmp, ts_tmp = create_tdata(tmax_tmp, 0, Δt, Ex_thz_tmp, no_light, no_light)
+At_datas_tmp, Et_datas_tmp, ts_tmp = create_tdata(tmax_tmp + Tp/2, -Tp/2, Δt, Ex_thz_tmp, no_light, no_light)
 thz_data = [Et_datas_tmp[1], ts_tmp]
 
 end
@@ -106,7 +107,7 @@ plot(tau_list, shg_yields)
 
 unify(data) = (data .- minimum(data)) ./ (maximum(data) - minimum(data))
 p2 = plot(unify(tau_list), unify(shg_yields))
-plot!(p2, unify(thz_data[2]), unify(-thz_data[1]))
+plot!(p2, unify(thz_data[2]), unify(reverse(thz_data[1])))
 
 
 # unify(data) = (data .- minimum(data)) ./ (maximum(data) - minimum(data))

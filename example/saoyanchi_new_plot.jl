@@ -29,7 +29,7 @@ get_energy_sh(init_wave_list[1], rt, pw.shgrid) # He:-0.944  H:-0.5
 # tau_range = -700: 200: 1500
 # tau_range = [-700: 100: 700; 900: 200: 1500]
 # tau_range = [-700: 100: 1500; 1700: 200: 2100]
-tau_range = [300, 1700]
+# tau_range = [300, 1700]
 
 p = Vector{Any}(undef, length(tau_range))
 expected_kx_list = zeros(Float64, length(tau_range))
@@ -117,33 +117,41 @@ phi_record = retrieve_obj(example_name, "phi_record")
 dphi_record = retrieve_obj(example_name, "dphi_record")
 δa_lm = retrieve_obj(example_name, "delta_a_lm")
 
-p[example_id] = tsurf_plot_xy_momentum_spectrum(δa_lm, k_space, pw, kr_flag=false, k_min=0.05)
-# expected_kx, expected_ky, expected_kz = tsurf_get_average_momentum_parallel(δa_lm, k_space, pw, k_min=0.0)
-# expected_kx_list[example_id] = expected_kx
-# expected_ky_list[example_id] = expected_ky
-# expected_kz_list[example_id] = expected_kz
+xy_pmd_data, x_pmd_data = tsurf_plot_xy_momentum_spectrum(δa_lm, k_space, pw, kr_flag=false, k_min=0.05)
+p[example_id] = heatmap(xy_pmd_data)
 
-# expected_kx, expected_ky, expected_kz = tsurf_get_average_momentum_parallel(δa_lm, k_space_2, pw, k_min=0.0)
-# expected_kx_list[example_id] = expected_kx
-# expected_ky_list[example_id] = expected_ky
-# expected_kz_list[example_id] = expected_kz
+# f = open("xy_pmd_$tau_int.txt", "w+")
+# for i = 1: size(xy_pmd_data)[1]
+#     for j = 1: size(xy_pmd_data)[2]
+#         write(f, "$(xy_pmd_data[i, j]) ")
+#     end
+#     write(f, "\n")
+# end
+# close(f)
+
+# f = open("x_pmd_$tau_int.txt", "w+")
+# for i = 1: size(x_pmd_data)[1]
+#     write(f, "$(x_pmd_data[i])\n")
+# end
+# close(f)
 
 println("Now $tau_int")
 
 end
 
-using LaTeXStrings;
 
-plot(-0.75: 0.01: 0.75, [normalize(p[2][1] ./ p[2][2]) / 10 normalize(p[1][1] ./ p[1][2]) / 10],
-        guidefont=Plots.font(14, "Times"),
-        tickfont=Plots.font(14, "Times"),
-        legendfont=Plots.font(10),
-        margin = 5 * Plots.mm,
-        xlabel="Projection in the x",
-        ylabel = "Weight",
-        label = [L"THz(τ_2)" L"THz(τ_1)"],
-        linewidth = 1.5
-)
+# using LaTeXStrings;
+# plot(-0.75: 0.01: 0.75, [normalize(p[2][1] ./ p[2][2]) / 10 normalize(p[1][1] ./ p[1][2]) / 10],
+#         guidefont=Plots.font(14, "Times"),
+#         tickfont=Plots.font(14, "Times"),
+#         legendfont=Plots.font(10),
+#         margin = 5 * Plots.mm,
+#         xlabel="Projection in the x",
+#         ylabel = "Weight",
+#         label = [L"THz(τ_2)" L"THz(τ_1)"],
+#         linewidth = 1.5
+# )
+
 
 # tmp = [normalize(p[2][1] ./ p[2][2]) / 10 normalize(p[1][1] ./ p[1][2]) / 10]
 # f = open("dtt", "w")

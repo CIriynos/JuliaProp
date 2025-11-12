@@ -47,21 +47,21 @@ part_of_hhg_data = []
 shg_yield_record = []
 smooth_records = []
 
-# tau_id = 1
-for tau_id = 1: 5
+tau_id = 1
+# for tau_id = 1: 5
 
 # Define Laser.
 ω1 = 0.057           # 800 nm (375 THz)
 ω2 = ω1 / 20         # 16 μm (12.5 THz)
-E0 = 0.057 / 1
-E0_thz = 0.00005
-E0_c = 0.00005
+E0 = 0.057
+E0_thz = 0.0002 * 0
+E0_c = 0.01
 nc = 12
 Tp = 2 * nc * pi / ω1
 
 # Define the tau (Delay)
-induce_time = 1800
-tau_fs = induce_time + 500
+induce_time = 0
+tau_fs = induce_time
 tau_lst = [tau_fs - 2pi/ω2, tau_fs + nc*pi/ω1 - 1.5pi/ω2,
     tau_fs + nc*pi/ω1 - pi/ω2, tau_fs + nc*pi/ω1 - 0.5pi/ω2, tau_fs + nc*2pi/ω1]
 tau_thz = tau_lst[tau_id]
@@ -72,18 +72,18 @@ E_thz(t) = E0_thz * sin(ω2 * (t - tau_thz)) * (t - tau_thz < 2pi / ω2 && t - t
 E_thz_window(t) = flap_top_windows_f(t, 0, induce_time * 2, 1/2, right_flag = false)
 
 T_total = tau_fs + Tp
-steps = Int64(T_total ÷ delta_t)
+steps = Int64(T_total ÷ delta_t) + 1
 t_linspace = create_linspace(steps, delta_t)
 
 Et_data_fs = Et.(t_linspace)
-Et_data_thz = (E0_c .+ E_thz.(t_linspace)) #.* E_thz_window.(t_linspace)
+Et_data_thz = (E0_c .+ E_thz.(t_linspace)) .* flap_top_windows_f.(t_linspace, tau_fs, T_total, 1/2)
 
 Et_data = Et_data_fs + Et_data_thz
 At_data = -get_integral(Et_data, delta_t)
 
 # store the figures.
 fig1 = plot(At_data)
-fig2 = plot([Et_data_fs (Et_data_thz) * 100])
+fig2 = plot([Et_data_fs (Et_data_thz) * 1])
 push!(at_data_figs, fig1)
 push!(et_data_figs, fig2)
 
@@ -102,17 +102,17 @@ Xi_data, hhg_integral, energy_list = tdse_laser_fd1d_mainloop_penta(crt_wave, rt
 
 
 # HHG
-start_id = Int64(ceil(tau_fs ÷ delta_t))
-end_id = Int64(ceil((tau_fs + Tp) ÷ delta_t))
+start_id = Int64(floor(tau_fs ÷ delta_t)) + 1
+end_id = Int64(floor((tau_fs + Tp) ÷ delta_t)) + 1
 hhg_delta_k = 2pi / (end_id - start_id) / delta_t
 hhg_k_linspace = [hhg_delta_k * i for i = 1: (end_id - start_id)]
 
-hhg_t = -hhg_integral - Et_data
+hhg_t = -hhg_integral #- Et_data
 hhg_windows_f(t, tmin, tmax) = (1 - cos(2 * pi * (t - tmin) / (tmax - tmin))) / 2 * (t >= tmin && t <= tmax)
 hhg_windows_data = hhg_windows_f.(t_linspace, tau_fs, tau_fs + Tp)
 hhg_spectrum = fft((hhg_t .* hhg_windows_data)[start_id: end_id])
 
-max_hhg_id = Int64(floor(10 * ω1 / hhg_delta_k))
+max_hhg_id = Int64(floor(20 * ω1 / hhg_delta_k))
 shg_id = Int64(floor(2 * ω1 / hhg_delta_k))
 # plot(hhg_k_linspace[1: max_hhg_id] ./ ω1, norm.(hhg_spectrum)[1: max_hhg_id], yscale=:log10)
 
@@ -123,7 +123,7 @@ println("shg_id = ", shg_id)
 println("hhg_delta_k = ", hhg_delta_k)
 println("tau_fs = ", tau_fs)
 
-end
+# end
 
 second_hhg = [part_of_hhg_data[i][24] for i = 1: length(part_of_hhg_data)]
 plot(second_hhg .^ 0.5,
@@ -137,4 +137,37 @@ plot(second_hhg .^ 0.5,
     linewidth = 2.0
 )
 
-plot(part_of_hhg_data, yscale=:log10, ylimit=(1e-10, 1e3))
+plot(part_of_hhg_data, yscale=:log10, ylimit=(1e-7, 1e3))
+
+
+ll = (hhg_t .* hhg_windows_data)[start_id: end_id]
+plot(norm.(fft(ll))[1:400], yscale=:log10)
+
+plot(real.(hhg_t))
+
+
+
+# Time-frequency Analysis
+hhg_windows_f(t, tmin, tmax) = (1 - cos(2 * pi * (t - tmin) / (tmax - tmin))) / 2 * (t >= tmin && t <= tmax)
+t_num = length(hhg_t)
+w_num = 100
+ts = 1: t_num
+plot(norm.(hhg_t))
+
+ft_ana = zeros(ComplexF64, w_num, t_num)
+delta = t_num / 50
+j = 1
+for i = 1: (delta / 10): t_num - delta
+    ft_ana[:, j] = fft((real(hhg_t) .* hhg_windows_f.(ts, i, i + delta)))[1: w_num]
+    j += 1
+end
+
+heatmap(log10.(norm.(ft_ana)[1: w_num, (1 + 0): (j - 0)] .^ 2), clim=(-4.5, 0))
+heatmap((angle.(ft_ana)[1: w_num, (1): (j)]))
+
+
+f = open("tmptmp4.txt", "w+")
+for i = 1: length(hhg_t)
+    write(f, "$(real(hhg_t[i]))\n")
+end
+close(f)

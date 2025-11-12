@@ -69,6 +69,13 @@ function fdshpl_one_step(crt_shwave, rt, shgrid, delta_t, At, At_next, m; optimi
         apply_mix_v2(rt, crt_shwave[id], crt_shwave[id + 1], rt.tmp_shwave[id], rt.tmp_shwave[id + 1], id)
     end
 
+    # for j = 1: 1: bundle_size - 1
+    #     l = abs(m) + j - 1
+    #     id = head_ptr + j - 1
+    #     apply_ang_v2(crt_shwave[id], crt_shwave[id + 1], shgrid.rgrid, delta_t, At, l, m)
+    #     apply_mix_v2(rt, crt_shwave[id], crt_shwave[id + 1], rt.tmp_shwave[id], rt.tmp_shwave[id + 1], id)
+    # end
+
     # apply Hat
     Threads.@threads for j = 1: bundle_size
         l = abs(m) + j - 1
@@ -104,6 +111,13 @@ function fdshpl_one_step(crt_shwave, rt, shgrid, delta_t, At, At_next, m; optimi
         apply_mix_v2(rt, crt_shwave[id], crt_shwave[id + 1], rt.tmp_shwave[id], rt.tmp_shwave[id + 1], id)
         apply_ang_v2(crt_shwave[id], crt_shwave[id + 1], shgrid.rgrid, delta_t, At_next, l, m)
     end
+
+    # for j = bundle_size - 1: -1: 1
+    #     l = abs(m) + j - 1
+    #     id = head_ptr + j - 1
+    #     apply_ang_v2(crt_shwave[id], crt_shwave[id + 1], shgrid.rgrid, delta_t, At, l, m)
+    #     apply_mix_v2(rt, crt_shwave[id], crt_shwave[id + 1], rt.tmp_shwave[id], rt.tmp_shwave[id + 1], id)
+    # end
 end
 
 
@@ -168,8 +182,9 @@ function tdseln_sh_mainloop(crt_shwave, pw::physics_world_sh_t, rt::tdse_sh_rt, 
     for i in 1: steps
         if (i - 1) % 200 == 0
             en = get_energy_sh_mbunch(crt_shwave, rt, pw.shgrid, m)
+            norm_value = sum(map(rvec->dot(rvec, rvec), crt_shwave))
             push!(energy_list, en)
-            println("step $(i-1) energy = $en")
+            println("step $(i-1) energy = $en, norm_value = $norm_value")
         end
         At = At_data[i]
         At_next = At_data[min(i + 1, steps)]
@@ -327,7 +342,8 @@ function tdseln_sh_mainloop_record_optimized_hhg(crt_shwave, pw::physics_world_s
         # Printing Logging message
         if (i - 1) % 200 == 0
             en = get_energy_sh_mbunch(crt_shwave, rt, pw.shgrid, m)
-            println("[TDSE] Runing TDSE-SH-linear. step $(i-1) energy = $en ")
+            norm_value = sum(map(rvec->dot(rvec, rvec), crt_shwave))
+            println("[TDSE] Runing TDSE-SH-linear. step $(i-1) energy = $en, norm_value = $norm_value")
             println("     | block_size = $(bundle_size - optimized_count) ")
         end
 

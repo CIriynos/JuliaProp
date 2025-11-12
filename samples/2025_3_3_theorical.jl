@@ -16,20 +16,20 @@ println("Number of Threads: $(Threads.nthreads())")
 
 
 ω = 0.05693
-ω_thz = ω / 2
+ω_thz = ω / 20
 E0 = 0.0533
 Ip = 0.5
 K0 = 0.5 / ω
-nc = 12
-Δt = 0.1  
-E0_thz = 0.00002
-E_dc = 0.00002
-tau_fs = 2000
+nc = 15
+Δt = 0.1
+E0_thz = 0.00002 * 10
+E_dc = 0.00002 * 10
+tau_fs = 2500
 Tp = 2*nc*pi/ω
 eps = 0.5
 tau_thz = tau_fs + Tp / 2 - (pi / ω_thz)
 
-tmax = tau_fs + Tp + 2000
+tmax = tau_fs + Tp + 2500
 ts = 0: Δt: tmax
 
 # Et_fs_envelop(t) = E0 * exp(-(t - tau_fs - Tp/2)^2/(Tp/2)^2)^2
@@ -37,7 +37,7 @@ Et_fs_envelop(t) = E0 * sin(ω*(t-tau_fs)/2/nc)^2 * ((t-tau_fs) > 0 && t-tau_fs 
 Et_fs_x(t) = 1 / sqrt(eps^2 + 1) * Et_fs_envelop(t) * cos(ω*(t-tau_fs) + 0.5pi)
 Et_fs_y(t) = eps / sqrt(eps^2 + 1) * Et_fs_envelop(t) * cos(ω*(t-tau_fs) + pi)
 Et_thz(t) = (E0_thz) * sin(ω_thz*(t-tau_thz)/2)^2 * sin(ω_thz*(t-tau_thz)) * (t-tau_thz > 0 && t-tau_thz <(2*pi/ω_thz))
-E_applied(t) = (Et_thz(t) + E_dc) * flap_top_windows_f(t, 0, tmax, 1/8)
+E_applied(t) = (Et_thz(t) + E_dc) * flap_top_windows_f(t, 0, tmax, 1/4)
 Et_x(t) = (Et_fs_x(t) + E_applied(t))
 Et_y(t) = Et_fs_y(t)
 F_total(t) = sqrt(Et_x(t) ^ 2 + Et_y(t) ^ 2) .+ 1e-50
@@ -119,9 +119,10 @@ plot(hhg_k_linspace[spectrum_range] ./ ω, norm.(Gw3)[spectrum_range], yscale=:l
 
 res = @. res1 + res2 + res3
 plot(norm.(res))
+plot([norm.(res1) norm.(res2) * 1e1 norm.(res3) * 1e4])
 # plot(hhg_k_linspace[spectrum_range] ./ ω, [norm.(Gw1)[spectrum_range] norm.(Gw2)[spectrum_range] norm.(Gw3)[spectrum_range]], yscale=:log10)
 
-plot(1:50, [-20 .* log10.(norm.(Gw1)[1] ./ norm.(Gw1)[1:50] .+ 1e-50)])
+# plot(1:50, [-20 .* log10.(norm.(Gw1)[1] ./ norm.(Gw1)[1:50] .+ 1e-50)])
 
 
 
