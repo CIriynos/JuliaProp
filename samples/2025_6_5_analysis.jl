@@ -69,8 +69,8 @@ for nc in nc_range
         # a1 .-= a1[1]
         # a1 = norm.(L1[k]) .- norm.(L1[k])[1]
         a2 = L2[k] .- L2[k][1]
-        cp_data[k] = ((maximum(norm.(L1[k])) - minimum(norm.(L1[k]))) / (maximum(norm.(L1[k])) + minimum(norm.(L1[k]))))
-        a1 .*= cp_data[k] .^ 1.1
+        cp_data[k] = ((maximum(norm.(L1[k]).^2) - minimum(norm.(L1[k]).^2)) / (maximum(norm.(L1[k]).^2) + minimum(norm.(L1[k]).^2)))
+        # a1 .*= cp_data[k] .^ 1.1
 
         interp_cub_1 = cubic_spline_interpolation(range(tau_list[2], tau_list[tasks_num-1], tasks_num-2), a1[2: (tasks_num-1)])
         interp_cub_2 = cubic_spline_interpolation(range(tau_list[2], tau_list[tasks_num-1], tasks_num-2), a2[2: (tasks_num-1)])
@@ -139,7 +139,7 @@ tickfontsize=10,
 legendfontsize=10,)
 
 # 1
-phi_cep_id = 5
+phi_cep_id = 6
 rg1 = (0+phi_cep_id): len2 * 4: length(L1)
 d1 = spec_data[start_id: id, rg1]
 mm = maximum(spec_data[start_id: id, rg1])
@@ -149,16 +149,16 @@ cubic_itp_1 = cubic_spline_interpolation((ys, xs), d1)
 xi = first(nc_range): 0.05: last(nc_range)
 yi = start_id: 0.1: id
 z1 = cubic_itp_1(yi, xi)
-least_display_limit = -30
+least_display_limit = -12
 fig1 = heatmap(xi, yi .* hhg_delta_k ./ (ω_fs / 375), max.(z1 .- mm, least_display_limit),
     clim=(least_display_limit, 0), xlabel="Nc", ylabel="frequency (THz)",
-    linewidth=0.4, size=(350, 250), cmap=:jet1)
+    linewidth=0.4, cmap=cgrad(:roma, rev=true))
 
 tmp = yi .* hhg_delta_k ./ (ω_fs / 375)
-plot!(fig1, ncs, min.(delta_ω_s, maximum(tmp)), linestyle=:dash, color=:green,
-    xlims = (1, 10), ylims = (minimum(tmp), maximum(tmp)), leg=false, size=(350, 250))
+plot!(fig1, ncs, min.(delta_ω_s, maximum(tmp)), linestyle=:dash, color=:green2, lw=1.2,
+    xlims = (1, 10), ylims = (minimum(tmp), maximum(tmp)), leg=false)
 
-foo = max.(z1 .- mm, -15) .>= -3.0
+foo = max.(z1 .- mm, -12) .>= -3.0
 # bar = ones(Int64, size(foo)[2]) .* size(foo)[1]
 bar = zeros(Int64, size(foo)[2])
 for i = 1: size(foo)[2]
@@ -168,28 +168,41 @@ for i = 1: size(foo)[2]
         end
     end
 end
-plot!(fig1, xi, bar .* hhg_delta_k ./ (ω_fs / 375) ./ 7, linestyle=:dash, color=:blue,
-    xlims = (1, 10), ylims = (minimum(tmp), maximum(tmp)), leg=false, size=(350, 250), right_margin = 8 * Plots.mm)
+plot!(fig1, xi, bar .* hhg_delta_k ./ (ω_fs / 375) ./ 7, linestyle=:dash, color=:blue1, lw=1.2,
+    xlims = (1, 10), ylims = (minimum(tmp), maximum(tmp)), leg=false, size=(320, 250), right_margin = 5 * Plots.mm)
 fig1
 
+# 1.5
+itp_22 = cubic_spline_interpolation(1:10, cp_data[rg1] .+ [zeros(1:9); 0.05])
+fig11 = plot(1:0.1:10, itp_22(1:0.1:10), size=(180, 250), label="", xlabel="Nc", ylabel="Contrast",
+    xticks=2:2:10)
+scatter!(fig11, cp_data[rg1] .+ [zeros(1:9); 0.05], xticks=2:2:10, markersize=3.5, label="")
 
-# # 2
-# given_nc = 4
-# d2 = spec_data[start_id: id, (1+len2*(2 * (given_nc - 1))): (1+len2*(2 * (given_nc - 1))+16)]
-# xs = 1: len2
-# ys = start_id: id
-# cubic_itp_2 = cubic_spline_interpolation((ys, xs), d2)
-# xi = 1: 0.05: len2
-# yi = start_id: 0.1: id
-# z2 = cubic_itp_2(yi, xi)
-# println("max z2 = $(maximum(z2))")
-# contourf(range(0, 360, length(xi)), yi .* hhg_delta_k ./ (ω_fs / 375), max.(z2, -15),
-#     levels=30, clim=(-15, 0), xlabel="Φ_CEP (degree)", ylabel="frequency (THz)")
+
+# 2
+given_nc = 17
+rg22 = (1+len2*(2 * (given_nc - 1))): (1+len2*(2 * (given_nc - 1))+16 - 8)
+d2 = spec_data[start_id: id, (1+len2*(2 * (given_nc - 1))): (1+len2*(2 * (given_nc - 1))+16 - 8)]
+xs = 1: 17 - 8
+ys = start_id: id
+cubic_itp_2 = cubic_spline_interpolation((ys, xs), d2)
+xi = 1: 0.05: len2
+yi = start_id: 0.1: id
+z2 = cubic_itp_2(yi, xi)
+println("max z2 = $(maximum(z2))")
+contourf(range(0, 360, length(xi)), yi .* hhg_delta_k ./ (ω_fs / 375), max.(z2, -15),
+    levels=30, clim=(-15, 0), xlabel="Φ_CEP (degree)", ylabel="frequency (THz)", xticks=0:60:360)
+
+itp_22 = cubic_spline_interpolation(0: 0.125pi: pi, cp_data[rg22])
+fig22 = plot(0: 0.01: pi, itp_22(0: 0.01: pi), size=(180, 250), label="", xlabel="CEP", ylabel="Contrast", 
+    xticks=(0:0.5pi:pi, ["0", "π/2", "π"]))
+scatter!(fig22, 0: 0.125pi: pi, cp_data[rg22], label="", markersize=3.5)
+
 
 
 
 # # 3
-# given_nc = 4
+# given_nc = 6
 # d3 = ag_data[start_id:id, (1+17*(2 * (given_nc - 1))): (1+17*(2 * (given_nc - 1))+16)]
 # xs = 1: 17
 # ys = start_id: id
