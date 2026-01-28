@@ -1,3 +1,8 @@
 *.h5
-/.CondaPkg
-/.vscode
+.vscode/
+*.pyc
+*.exe
+*.dll
+*.so
+build/
+.CondaPkg/

@@ -221,7 +221,7 @@ end
 
 function plot_fs_thz_figure(Ex_fs, Ey_fs, E_thz, ts; thz_ratio = 500)
     etp = plot(ts, [Ex_fs.(ts) Ey_fs.(ts) (E_thz.(ts)) .* thz_ratio],
-    labels = ["E_fs_x" "E_fs_y" "E_thz"],
+    labels = ["E_fs_x" "E_fs_y" "E_thz × $thz_ratio"],
     xlabel="Time t",
     ylabel="E (a.u.)",
     title="fs Laser & THz Field Visualization (τ3)",
@@ -237,7 +237,7 @@ end
 
 function get_hhg_spectrum_xy(hhg_integral_t, Et_data_x, Et_data_y, pulse_start, pulse_end, ω0, ts, delta_t; max_display_rate=15, min_log_limit=1e-7, max_log_limit=1e3)
     
-    hhg_xy_t = -hhg_integral_t #.- (Et_data_x .+ im .* Et_data_y)
+    hhg_xy_t = -hhg_integral_t #.+ (Et_data_x .+ im .* Et_data_y)
 
     start_id = Int64(floor(pulse_start ÷ delta_t)) + 1
     end_id = Int64(floor((pulse_end ÷ delta_t))) + 1
@@ -284,4 +284,29 @@ function create_tdata(tmax, tmin, Δt, Ex_f, Ex_y, Ex_z; appendix_steps::Int64 =
     At_data_y = -get_integral(Et_data_y, Δt)
     At_data_z = -get_integral(Et_data_z, Δt)
     return [At_data_x, At_data_y, At_data_z], [Et_data_x, Et_data_y, Et_data_z], ts, steps
+end
+
+
+#####################################
+
+function fft_phy(ft_data, delta_t)
+    N = length(ft_data)
+    # windows_data = chebwin(N, at=100)
+    windows_data = hanning(N)
+    gk_data = fft(ft_data .* windows_data) .* (delta_t / sqrt(2 * pi))
+    ks = fftfreq(N, 1 / delta_t) * (2 * pi)
+    delta_k = ks[2] - ks[1]
+    return gk_data, ks, delta_k
+end
+
+function get_hg_spectrum(ts, accel_data, max_k)
+    delta_t = ts[2] - ts[1]
+    N = length(accel_data)
+    accel_fft_data, ks, delta_k = fft_phy(accel_data, delta_t)
+    # pos_fft_data, _, _ = fft_phy(pos_data, delta_t)
+
+    hg1 = (1.0 ./ ks) .* abs.(accel_fft_data) .^ 2
+    # hg2 = pow.(ks, 3) .* pow.(abs.(pos_fft_data), 2)
+    max_id = Int64(floor(max_k / delta_k) + 1)
+    return hg1[1: max_id], ks[1: max_id]
 end

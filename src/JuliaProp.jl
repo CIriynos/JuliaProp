@@ -11,6 +11,7 @@ using SphericalHarmonics
 using HDF5
 using FFTW
 using Statistics
+using DSP
 
 export Grid1D, GridSH
 export xyz_to_sphere, sphere_to_xyz, CG_coefficient, spherical_bessel_func
@@ -65,6 +66,7 @@ export tdse_elli_sh_mainloop_record_xy_hhg_long_prop
 
 export window_operator_method_sh
 
+
 export TSURF_MODE_PL, TSURF_MODE_ELLI
 export WOM_MODE_PL, WOM_MODE_ELLI
 export tsurf_sh, tsurf_sh_vector
@@ -83,6 +85,7 @@ export fixed_r, fixed_theta, fixed_phi
 export tsurf_combine_lm_vec
 export plot_line_order
 
+# prefabricated.jl
 export coulomb_potiential_zero_fixed
 export coulomb_potiential_zero_fixed_plus
 export coulomb_potiential_helium_zero_fixed_plus
@@ -91,6 +94,7 @@ export coulomb_potiential_zero_fixed_windows
 export absorb_boundary_r
 export create_linspace
 
+# prefabricated.jl
 export get_hhg_spectrum_xy
 export flap_top_windows_f
 export light_pulse
@@ -104,6 +108,8 @@ export get_exactly_coincided_delay
 export plot_fs_thz_figure
 export get_hhg_spectrum_xy
 export create_tdata
+export get_hg_spectrum
+export fft_phy
 
 # ctmc.jl
 export create_ctmc_rt
@@ -139,9 +145,6 @@ include("prefabricated.jl")
 
 # ctmc.jl
 include("ctmc.jl")
-
-
-greet() = println("helloworld.")
 
 
 end # module JuliaProp

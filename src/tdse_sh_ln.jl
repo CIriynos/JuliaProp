@@ -3,6 +3,12 @@
 # ---------------------------
 c_expr(l, m) = sqrt(((l + 1) ^ 2 - m ^ 2) / ((2 * l + 1) * (2 * l + 3)))
 
+
+@doc raw"""
+    calc_ground_state_population(crt_shwave::shwave_t, init_shwave::shwave_t, shgrid::GridSH) -> ComplexF64
+
+Calculate the ground state population 
+"""
 function calc_ground_state_population(crt_shwave::shwave_t, init_shwave::shwave_t, shgrid::GridSH)
     # P1s(t) = |Σ ϕ*00(rs,0)ϕ00(rs,t)∆r|^2, formula in book
     return (dot(init_shwave[1], crt_shwave[1])) ^ 2
@@ -360,19 +366,19 @@ function tdseln_sh_mainloop_record_optimized_hhg(crt_shwave, pw::physics_world_s
 
             integral_buffer[l + 1] = 0      # clear it first
             # if id1 != -1    # if id1 (l - 1, m) is in bound, then add 
-            #     @fastmath integral_buffer[l + 1] += dot(crt_shwave[id], crt_shwave[id1] .* dU_data) * pw.delta_r * c_expr(l - 1, m)
+            #     @fastmath integral_buffer[l + 1] += dot(crt_shwave[id], crt_shwave[id1] .* dU_data) * c_expr(l - 1, m)
             # end
             # if id2 != -1    # if id2 (l + 1, m) is in bound, then add
-            #     @fastmath integral_buffer[l + 1] += dot(crt_shwave[id], crt_shwave[id2] .* dU_data) * pw.delta_r * c_expr(l, m)
+            #     @fastmath integral_buffer[l + 1] += dot(crt_shwave[id], crt_shwave[id2] .* dU_data) * c_expr(l, m)
             # end
             if id1 != -1
                 for k = 1: pw.Nr
-                    integral_buffer[l + 1] += conj(crt_shwave[id][k]) * crt_shwave[id1][k] * dU_data[k] * pw.delta_r * c_expr(l - 1, m)
+                    integral_buffer[l + 1] += conj(crt_shwave[id][k]) * crt_shwave[id1][k] * dU_data[k] * c_expr(l - 1, m)
                 end
             end
             if id2 != -1
                 for k = 1: pw.Nr
-                    integral_buffer[l + 1] += conj(crt_shwave[id][k]) * crt_shwave[id2][k] * dU_data[k] * pw.delta_r * c_expr(l, m)
+                    integral_buffer[l + 1] += conj(crt_shwave[id][k]) * crt_shwave[id2][k] * dU_data[k] * c_expr(l, m)
                 end
             end
         end
@@ -491,19 +497,19 @@ function tdseln_sh_mainloop_length_gauge_hhg(crt_shwave, pw::physics_world_sh_t,
 
             integral_buffer[l + 1] = 0      # clear it first
             # if id1 != -1    
-            #     @fastmath integral_buffer[l + 1] += dot(crt_shwave[id], crt_shwave[id1] .* dU_data) * pw.delta_r * c_expr(l - 1, m)
+            #     @fastmath integral_buffer[l + 1] += dot(crt_shwave[id], crt_shwave[id1] .* dU_data) * c_expr(l - 1, m)
             # end
             # if id2 != -1
-            #     @fastmath integral_buffer[l + 1] += dot(crt_shwave[id], crt_shwave[id2] .* dU_data) * pw.delta_r * c_expr(l, m)
+            #     @fastmath integral_buffer[l + 1] += dot(crt_shwave[id], crt_shwave[id2] .* dU_data) * c_expr(l, m)
             # end
             if id1 != -1    # if id1 (l - 1, m) is in bound, then add 
                 for k = 1: pw.Nr
-                    integral_buffer[l + 1] += conj(crt_shwave[id][k]) * crt_shwave[id1][k] * dU_data[k] * c_expr(l - 1, m) * pw.delta_r
+                    integral_buffer[l + 1] += conj(crt_shwave[id][k]) * crt_shwave[id1][k] * dU_data[k] * c_expr(l - 1, m)
                 end
             end
             if id2 != -1    # if id2 (l + 1, m) is in bound, then add
                 for k = 1: pw.Nr
-                    integral_buffer[l + 1] += conj(crt_shwave[id][k]) * crt_shwave[id2][k] * dU_data[k] * c_expr(l, m) * pw.delta_r
+                    integral_buffer[l + 1] += conj(crt_shwave[id][k]) * crt_shwave[id2][k] * dU_data[k] * c_expr(l, m)
                 end
             end
         end

@@ -444,22 +444,22 @@ function tdse_elli_sh_mainloop_record_xy_hhg_optimized(crt_shwave, pw::physics_w
             integral_buffer_2[id] = 0      # clear it first
             if id1 != -1    # if id1 (l - 1, m - 1) is in bound, then add 
                 for k = 1: pw.Nr
-                    integral_buffer_1[id] += conj(crt_shwave[id][k]) * crt_shwave[id1][k] * dU_data[k] * c1 * pw.delta_r
+                    integral_buffer_1[id] += conj(crt_shwave[id][k]) * crt_shwave[id1][k] * dU_data[k] * c1 #* pw.delta_r
                 end
             end
             if id2 != -1    # if id2 (l + 1, m - 1) is in bound, then add
                 for k = 1: pw.Nr
-                    integral_buffer_1[id] += conj(crt_shwave[id][k]) * crt_shwave[id2][k] * dU_data[k] * c2 * pw.delta_r
+                    integral_buffer_1[id] += conj(crt_shwave[id][k]) * crt_shwave[id2][k] * dU_data[k] * c2 #* pw.delta_r
                 end
             end
             if id3 != -1    # if id3 (l - 1, m + 1) is in bound, then add
                 for k = 1: pw.Nr
-                    integral_buffer_2[id] += conj(crt_shwave[id][k]) * crt_shwave[id3][k] * dU_data[k] * c3 * pw.delta_r
+                    integral_buffer_2[id] += conj(crt_shwave[id][k]) * crt_shwave[id3][k] * dU_data[k] * c3 #* pw.delta_r
                 end
             end
             if id4 != -1    # if id4 (l + 1, m + 1) is in bound, then add
                 for k = 1: pw.Nr
-                    integral_buffer_2[id] += conj(crt_shwave[id][k]) * crt_shwave[id4][k] * dU_data[k] * c4 * pw.delta_r
+                    integral_buffer_2[id] += conj(crt_shwave[id][k]) * crt_shwave[id4][k] * dU_data[k] * c4 #* pw.delta_r
                 end
             end
 
@@ -470,12 +470,12 @@ function tdse_elli_sh_mainloop_record_xy_hhg_optimized(crt_shwave, pw::physics_w
             integral_buffer_3[id] = 0      # clear it first
             if id5 != -1    # if id5 (l - 1, m) is in bound, then add
                 for k = 1: pw.Nr
-                    integral_buffer_3[id] += conj(crt_shwave[id][k]) * crt_shwave[id5][k] * dU_data[k] * c_expr(l - 1, m) * pw.delta_r
+                    integral_buffer_3[id] += conj(crt_shwave[id][k]) * crt_shwave[id5][k] * dU_data[k] * c_expr(l - 1, m) #* pw.delta_r
                 end
             end
             if id6 != -1    # if id6 (l + 1, m) is in bound, then add
                 for k = 1: pw.Nr
-                    integral_buffer_3[id] += conj(crt_shwave[id][k]) * crt_shwave[id6][k] * dU_data[k] * c_expr(l, m) * pw.delta_r
+                    integral_buffer_3[id] += conj(crt_shwave[id][k]) * crt_shwave[id6][k] * dU_data[k] * c_expr(l, m) #* pw.delta_r
                 end
             end
         end
@@ -618,12 +618,12 @@ function tdse_elli_sh_mainloop_record_xy_hhg_long_prop(crt_shwave, pw::physics_w
             integral_buffer[id] = 0      # clear it first
             if id1 != -1    # if id1 (l - 1, m) is in bound, then add 
                 for k = 1: pw.Nr
-                    integral_buffer[id] += conj(crt_shwave[id][k]) * crt_shwave[id1][k] * dU_data[k] * c1 * pw.delta_r
+                    integral_buffer[id] += conj(crt_shwave[id][k]) * crt_shwave[id1][k] * dU_data[k] * c1 #* pw.delta_r
                 end
             end
             if id2 != -1    # if id2 (l + 1, m) is in bound, then add
                 for k = 1: pw.Nr
-                    integral_buffer[id] += conj(crt_shwave[id][k]) * crt_shwave[id2][k] * dU_data[k] * c2 * pw.delta_r
+                    integral_buffer[id] += conj(crt_shwave[id][k]) * crt_shwave[id2][k] * dU_data[k] * c2 #* pw.delta_r
                 end
             end
         end
