@@ -12,14 +12,15 @@ using FFTW
 
 
 # Basic Parameters
-Nr =            5000           # number of radial grid points
-Δr =            0.2             # radial grid step size
-l_num =         50              # number of angular momentum components
-Δt =            0.05            # time step size
-Z =             1.0             # nuclear charge
-po_func(r) =    -1 / r          # potential function
+Nr =            5000 * 1            # number of radial grid points
+Δr =            0.2 / 1             # radial grid step size
+l_num =         50                  # number of angular momentum components
+Δt =            0.05 / 1            # time step size
+Z =             1.0                 # nuclear charge
+po_func(r) =    -1 / r              # potential function
 rmax =          Nr * Δr     
 absorb_func     = absorb_boundary_r(rmax, rmax * 0.8)  # create absorbing boundary function
+Ri_tsurf        = rmax * 0.7        # radius for t-surf method
 
 
 # Create Physical World & Runtime
@@ -36,7 +37,7 @@ en = get_energy_sh(init_wave_list[1], rt, pw.shgrid)    # get energy of the init
 E_fs =          0.1                 # peak electric field of the fs pulse
 E_thz =         0.00005 * 0         # peak electric field of the THz pulse
 E_dc =          0.00005 * 0         # static electric field
-ω_fs =          0.057               # angular frequency of the fs pulse
+ω_fs =          0.057 / 1           # angular frequency of the fs pulse
 ω_thz =         ω_fs / 30           # angular frequency of the THz pulse
 nc =            6                   # number of optical cycles in the fs pulse
 tau_fs =        0                   # delay of the fs pulse
@@ -55,26 +56,47 @@ plot_fs_thz_figure(Ex_fs, Ey_fs, E_applied, ts, thz_ratio=100)                  
 
 ###########################
 
-# # Main Propagation Loop of TDSE with HHG Recording
-# hhg_integral_t, phi_record, dphi_record = tdseln_sh_mainloop_record_optimized_hhg(crt_shwave, pw, rt, At_datas[1], steps, Ri_tsurf);
+# bound_state_num = 30
+# example_name = "2026_3_24_test_itp"
+# # example_name = "2026_3_24_test_itp_softcore"
+# eigen_states = Vector{shwave_t}(undef, bound_state_num)
+
+# for i in 1: bound_state_num
+#     eigen_states[i] = retrieve_obj(example_name, "energy_state_$i")
+#     println("Energy of the $i-th state: ", get_energy_sh(eigen_states[i], rt, pw.shgrid))
+# end
+
+# hhg_integral_t, hhg_integral_t_free, hhg_integral_t_bound = tdseln_sh_mainloop_length_gauge_hhg_analysis(crt_shwave, pw, rt, Et_datas[1], steps, Ri_tsurf, eigen_states)
+
+# hhg_integral_t = tdseln_sh_mainloop_length_gauge_hhg(crt_shwave, pw, rt, Et_datas[1], steps)
+
+hhg_integral_t, _, _ = tdseln_sh_mainloop_record_optimized_hhg(crt_shwave, pw, rt, At_datas[1], steps, Ri_tsurf)
 
 
 # # Store Data Manually
-# example_name = "harmonic_generation"
+# example_name = "2026_3_17_hg"
 # h5open("./data/$example_name.h5", "w") do file
 #     write(file, "crt_shwave", hcat(crt_shwave...))
 #     write(file, "hhg_integral_t", hhg_integral_t)
+#     write(file, "hhg_integral_t_free", hhg_integral_t_free)
+#     write(file, "hhg_integral_t_bound", hhg_integral_t_bound)
 # end
 
-###########################
+# ###########################
 
-# Retrieve Data
-example_name = "harmonic_generation"
-hhg_integral_t = retrieve_mat(example_name, "hhg_integral_t")
+# # Retrieve Data
+# example_name = "2026_3_17_hg"
+# hhg_integral_t = retrieve_mat(example_name, "hhg_integral_t")
+# hhg_integral_t_free = retrieve_mat(example_name, "hhg_integral_t_free")
+# hhg_integral_t_bound = retrieve_mat(example_name, "hhg_integral_t_bound")
 
-# get harmonic spectrum, including data, and k axis (frequency axis)
-hg1, ks = get_hg_spectrum(ts, -hhg_integral_t - Et_datas[1], ω_fs * 65)
+# # get harmonic spectrum, including data, and k axis (frequency axis)
+# hg1, ks = get_hg_spectrum(ts, hhg_integral_t, ω_fs * 65)
+# hg1_free, _ = get_hg_spectrum(ts, hhg_integral_t_free, ω_fs * 65)
+# hg1_bound, _ = get_hg_spectrum(ts, hhg_integral_t_bound, ω_fs * 65)
 
-plot(ks ./ ω_fs, hg1 .* ks .* 3e3, yscale=:log10, yaxis=[1e-4, 1e-2, 1e0, 1e2, 1e4], ylimit=(1e-4, 1e4))
+# plot(ks ./ ω_fs, [hg1, hg1_free, hg1_bound], yscale=:log10, yaxis=[1e-4, 1e-2, 1e0, 1e2, 1e4], ylimit=(1e-15, 1e4))
 
-# The figure should be as the same as P74 Fig.9 (a)
+
+hg1, ks = get_hg_spectrum(ts, hhg_integral_t, ω_fs * 65)
+plot(ks ./ ω_fs, [hg1], yscale=:log10, yaxis=[1e-4, 1e-2, 1e0, 1e2, 1e4], ylimit=(1e-15, 1e4))

@@ -1,4 +1,4 @@
-
+﻿
 # ---------------------------
 #   fd_elli functions below
 # ---------------------------
@@ -33,7 +33,7 @@ d̃_expr(l, m) = d_expr(l, -m)
     return a, b, c
 end
 # a, b, c = get_R_lm(1, -1, 0.1, 0.01, 1, 0.0, false)
-# adjoint([a b; c a]) ≈ inv([a b; c a])
+# adjoint([a b; c a]) �?inv([a b; c a])
 
 function apply_Rlm_elli(vec1, vec2, rgrid, delta_t, At_abs, η, l, m, tilde_flag)
     a::Float64 = 0
@@ -65,7 +65,7 @@ function apply_Ylm_block_elli(rt::tdse_sh_rt, vec1, vec2, tmpvec1, tmpvec2, id, 
         mul!(vec2, rt.Ylm_tilde_pos[id], tmpvec2)
         trimat_elimination(tmpvec2, rt.Ylm_tilde_neg[id], vec2, rt.A_add_list_scalar[id], rt.B_add_list[id])
         
-        apply_pure_lmat(adjoint(rt.B_tilde_elli), tmpvec1, tmpvec2, vec1, vec2)  # B̃†
+        apply_pure_lmat(adjoint(rt.B_tilde_elli), tmpvec1, tmpvec2, vec1, vec2)  # B̃�?
     else
         apply_pure_lmat(rt.B_elli, vec1, vec2, tmpvec1, tmpvec2)  # B
         # inv(Y+lm) Y_lm
@@ -74,7 +74,7 @@ function apply_Ylm_block_elli(rt::tdse_sh_rt, vec1, vec2, tmpvec1, tmpvec2, id, 
         mul!(vec2, rt.Ylm_pos[id], tmpvec2)
         trimat_elimination(tmpvec2, rt.Ylm_neg[id], vec2, rt.A_add_list_scalar[id], rt.B_add_list[id])
         
-        apply_pure_lmat(adjoint(rt.B_elli), tmpvec1, tmpvec2, vec1, vec2)  # B†
+        apply_pure_lmat(adjoint(rt.B_elli), tmpvec1, tmpvec2, vec1, vec2)  # B�?
     end    
 end
 
@@ -632,4 +632,360 @@ function tdse_elli_sh_mainloop_record_xy_hhg_long_prop(crt_shwave, pw::physics_w
         end
     end
     return hhg_integral_t, phi_record, dphi_record
+end
+
+
+
+
+
+
+function tdse_elli_sh_mainloop_hhg_analysis(crt_shwave, pw::physics_world_sh_t, rt::tdse_sh_rt, Ax_data, Ay_data, steps, Ri_tsurf, bound_states=nothing; start_rcd_step::Int64 = 1, end_rcd_step::Int64 = 1000000)
+    shgrid = pw.shgrid
+    delta_t = pw.delta_t
+    At_data_abs = norm.(Ax_data .+ im .* Ay_data)
+    At_data_eta = angle.(Ax_data .+ im .* Ay_data)
+    phi_record = [zeros(ComplexF64, steps) for i = 1:shgrid.l_num ^ 2]
+    dphi_record = [zeros(ComplexF64, steps) for i = 1:shgrid.l_num ^ 2]
+    R_id = grid_reduce(shgrid.rgrid, Ri_tsurf)
+
+    # hhg
+    dU_data = get_derivative_two_order(pw.po_data_r, pw.delta_r)
+    hhg_integral_t_1 = zeros(ComplexF64, steps)
+    hhg_integral_t_2 = zeros(ComplexF64, steps)
+    hhg_integral_t_3 = zeros(ComplexF64, steps)
+    integral_buffer_1 = zeros(ComplexF64, pw.l_num ^ 2)     # <lm|N+|l'm'>
+    integral_buffer_2 = zeros(ComplexF64, pw.l_num ^ 2)     # <lm|N-|l'm'>
+    integral_buffer_3 = zeros(ComplexF64, pw.l_num ^ 2)     # <lm|cos(theta)|l'm'>
+
+    use_bound_analysis = !(bound_states === nothing || isempty(bound_states))
+    hhg_integral_t_1_free = zeros(ComplexF64, steps)
+    hhg_integral_t_2_free = zeros(ComplexF64, steps)
+    hhg_integral_t_3_free = zeros(ComplexF64, steps)
+    hhg_integral_t_1_bound = zeros(ComplexF64, steps)
+    hhg_integral_t_2_bound = zeros(ComplexF64, steps)
+    hhg_integral_t_3_bound = zeros(ComplexF64, steps)
+    integral_buffer_1_free = zeros(ComplexF64, pw.l_num ^ 2)
+    integral_buffer_2_free = zeros(ComplexF64, pw.l_num ^ 2)
+    integral_buffer_3_free = zeros(ComplexF64, pw.l_num ^ 2)
+    integral_buffer_1_bound = zeros(ComplexF64, pw.l_num ^ 2)
+    integral_buffer_2_bound = zeros(ComplexF64, pw.l_num ^ 2)
+    integral_buffer_3_bound = zeros(ComplexF64, pw.l_num ^ 2)
+
+    # optimization
+    TDSE_ELLI_OPTIMIZE_THRESHOLD = 1e-15
+    TDSE_ELLI_MIN_LM = 3
+    visiting_ids = sort([rt.par_strategy[1]; rt.par_strategy[2]; rt.par_strategy[3]])
+    optimized_par_strategy = deepcopy(rt.par_strategy)
+    par_lens::Vector{Int64} = [0, 0, 0]
+    ids_mask = zeros(Int64, shgrid.l_num ^ 2)   # 1 => selected.
+    actual_par_strategy::Vector{Vector{Int64}} = [[0], [0], [0]]
+    iter_strategy::Vector{Int64} = [0]
+
+    # precompute hhg coupling ids / coefficients
+    hhg_id1 = fill(-1, shgrid.l_num ^ 2)
+    hhg_id2 = fill(-1, shgrid.l_num ^ 2)
+    hhg_id3 = fill(-1, shgrid.l_num ^ 2)
+    hhg_id4 = fill(-1, shgrid.l_num ^ 2)
+    hhg_id5 = fill(-1, shgrid.l_num ^ 2)
+    hhg_id6 = fill(-1, shgrid.l_num ^ 2)
+    hhg_c1 = zeros(Float64, shgrid.l_num ^ 2)
+    hhg_c2 = zeros(Float64, shgrid.l_num ^ 2)
+    hhg_c3 = zeros(Float64, shgrid.l_num ^ 2)
+    hhg_c4 = zeros(Float64, shgrid.l_num ^ 2)
+    hhg_c5 = zeros(Float64, shgrid.l_num ^ 2)
+    hhg_c6 = zeros(Float64, shgrid.l_num ^ 2)
+    for id in visiting_ids
+        l = rt.lmap[id]
+        m = rt.mmap[id]
+        hhg_id1[id] = get_index_from_lm(l - 1, m - 1, shgrid.l_num)
+        hhg_id2[id] = get_index_from_lm(l + 1, m - 1, shgrid.l_num)
+        hhg_id3[id] = get_index_from_lm(l - 1, m + 1, shgrid.l_num)
+        hhg_id4[id] = get_index_from_lm(l + 1, m + 1, shgrid.l_num)
+        hhg_id5[id] = get_index_from_lm(l - 1, m, shgrid.l_num)
+        hhg_id6[id] = get_index_from_lm(l + 1, m, shgrid.l_num)
+
+        hhg_c1[id] = -sqrt((l + m - 1) * (l + m) / ((2 * l - 1) * (2 * l + 1)))
+        hhg_c2[id] = sqrt((l - m + 2) * (l - m + 1) / ((2 * l + 1) * (2 * l + 3)))
+        hhg_c3[id] = sqrt((l - m - 1) * (l - m) / ((2 * l - 1) * (2 * l + 1)))
+        hhg_c4[id] = -sqrt((l + m + 2) * (l + m + 1) / ((2 * l + 1) * (2 * l + 3)))
+        hhg_c5[id] = (hhg_id5[id] == -1) ? 0.0 : c_expr(l - 1, m)
+        hhg_c6[id] = (hhg_id6[id] == -1) ? 0.0 : c_expr(l, m)
+    end
+
+    # bound / free decomposition buffers
+    wave_bound = use_bound_analysis ? [zeros(ComplexF64, pw.Nr) for _ = 1:shgrid.l_num ^ 2] : Vector{Vector{ComplexF64}}()
+    bound_norms = use_bound_analysis ? zeros(Float64, length(bound_states)) : zeros(Float64, 0)
+    bound_coeffs = use_bound_analysis ? zeros(ComplexF64, length(bound_states)) : zeros(ComplexF64, 0)
+    if use_bound_analysis
+        for sid in eachindex(bound_states)
+            state_norm = 0.0
+            for id in visiting_ids
+                state_norm += real(dot(bound_states[sid][id], bound_states[sid][id]))
+            end
+            bound_norms[sid] = max(state_norm, eps(Float64))
+        end
+    end
+
+    # Start Mainloop
+    println("[TDSE] Start TDSE-SH for elliptical polarized laser. It may cost a plenty of time.")
+    for i in 1:steps
+        # We do not need to get optimized_count every time, just sometimes.
+        if (i - 1) % 20 == 0
+            # we only select the valuable ids for calculating.
+            ids_mask .= 0   # clear first
+            par_lens .= 0
+
+            Threads.@threads for id in visiting_ids
+                l = rt.lmap[id]
+                m = rt.mmap[id]
+                tmp::Float64 = 0.0
+                for k = 1:pw.Nr
+                    tmp += real(conj(crt_shwave[id][k]) * crt_shwave[id][k])
+                end
+
+                if tmp > TDSE_ELLI_OPTIMIZE_THRESHOLD
+                    ids_mask[id] = 1    # this id should be count in.
+                end
+                if l < TDSE_ELLI_MIN_LM && abs(m) < TDSE_ELLI_MIN_LM
+                    ids_mask[id] = 1    # always count in them.
+                end
+            end
+
+            # filtering
+            for (j, line) in enumerate(rt.par_strategy)
+                for id in line
+                    if ids_mask[id] == 1
+                        par_lens[j] += 1
+                        optimized_par_strategy[j][par_lens[j]] = id
+                    end
+                end
+            end
+
+            actual_par_strategy = [optimized_par_strategy[1][1:par_lens[1]], optimized_par_strategy[2][1:par_lens[2]],
+                optimized_par_strategy[3][1:par_lens[3]]]
+            iter_strategy = [optimized_par_strategy[1][1:par_lens[1]]; optimized_par_strategy[2][1:par_lens[2]];
+                optimized_par_strategy[3][1:par_lens[3]]]
+        end
+
+        fdsh_elli_one_step_parallelized(crt_shwave, rt, shgrid, delta_t, At_data_abs[i], At_data_eta[i], actual_par_strategy)
+
+        # record RI
+        for id = 1:shgrid.l_num ^ 2
+            phi_record[id][i] = crt_shwave[id][R_id]
+            dphi_record[id][i] = four_order_difference(crt_shwave[id], R_id, shgrid.rgrid.delta)
+        end
+
+        # Printing Logging message
+        if (i - 1) % 200 == 0
+            en = get_energy_sh(crt_shwave, rt, shgrid)
+            println("[TDSE] Running TDSE-SH-elliptical. step $(i-1), energy = $en")
+            println("  |->  par_lens = $(par_lens[1]), $(par_lens[2]), $(par_lens[3])")
+        end
+
+        if i < start_rcd_step || i > end_rcd_step
+            continue
+        end
+
+        # HHG Part
+        if use_bound_analysis
+            for sid in eachindex(bound_states)
+                overlap = 0.0 + 0.0im
+                for id in visiting_ids
+                    overlap += dot(bound_states[sid][id], crt_shwave[id])
+                end
+                bound_coeffs[sid] = overlap / bound_norms[sid]
+            end
+
+            Threads.@threads for id in visiting_ids
+                fill!(wave_bound[id], 0.0 + 0.0im)
+                for sid in eachindex(bound_states)
+                    coeff = bound_coeffs[sid]
+                    abs2(coeff) < 1e-30 && continue
+                    bs_piece = bound_states[sid][id]
+                    @inbounds for k = 1:pw.Nr
+                        wave_bound[id][k] += coeff * bs_piece[k]
+                    end
+                end
+            end
+
+            Threads.@threads for id in iter_strategy
+                psi = crt_shwave[id]
+                psi_bound = wave_bound[id]
+                total_1 = 0.0 + 0.0im
+                total_2 = 0.0 + 0.0im
+                total_3 = 0.0 + 0.0im
+                free_1 = 0.0 + 0.0im
+                free_2 = 0.0 + 0.0im
+                free_3 = 0.0 + 0.0im
+                bound_1 = 0.0 + 0.0im
+                bound_2 = 0.0 + 0.0im
+                bound_3 = 0.0 + 0.0im
+
+                id1 = hhg_id1[id]
+                if id1 != -1
+                    cc = hhg_c1[id]
+                    psi_2 = crt_shwave[id1]
+                    psi_2_bound = wave_bound[id1]
+                    @inbounds for k = 1:pw.Nr
+                        tmp = dU_data[k] * cc
+                        total_1 += conj(psi[k]) * psi_2[k] * tmp
+                        bound_1 += conj(psi_bound[k]) * psi_2_bound[k] * tmp
+                        free_1 += conj(psi[k] - psi_bound[k]) * (psi_2[k] - psi_2_bound[k]) * tmp
+                    end
+                end
+
+                id2 = hhg_id2[id]
+                if id2 != -1
+                    cc = hhg_c2[id]
+                    psi_2 = crt_shwave[id2]
+                    psi_2_bound = wave_bound[id2]
+                    @inbounds for k = 1:pw.Nr
+                        tmp = dU_data[k] * cc
+                        total_1 += conj(psi[k]) * psi_2[k] * tmp
+                        bound_1 += conj(psi_bound[k]) * psi_2_bound[k] * tmp
+                        free_1 += conj(psi[k] - psi_bound[k]) * (psi_2[k] - psi_2_bound[k]) * tmp
+                    end
+                end
+
+                id3 = hhg_id3[id]
+                if id3 != -1
+                    cc = hhg_c3[id]
+                    psi_2 = crt_shwave[id3]
+                    psi_2_bound = wave_bound[id3]
+                    @inbounds for k = 1:pw.Nr
+                        tmp = dU_data[k] * cc
+                        total_2 += conj(psi[k]) * psi_2[k] * tmp
+                        bound_2 += conj(psi_bound[k]) * psi_2_bound[k] * tmp
+                        free_2 += conj(psi[k] - psi_bound[k]) * (psi_2[k] - psi_2_bound[k]) * tmp
+                    end
+                end
+
+                id4 = hhg_id4[id]
+                if id4 != -1
+                    cc = hhg_c4[id]
+                    psi_2 = crt_shwave[id4]
+                    psi_2_bound = wave_bound[id4]
+                    @inbounds for k = 1:pw.Nr
+                        tmp = dU_data[k] * cc
+                        total_2 += conj(psi[k]) * psi_2[k] * tmp
+                        bound_2 += conj(psi_bound[k]) * psi_2_bound[k] * tmp
+                        free_2 += conj(psi[k] - psi_bound[k]) * (psi_2[k] - psi_2_bound[k]) * tmp
+                    end
+                end
+
+                id5 = hhg_id5[id]
+                if id5 != -1
+                    cc = hhg_c5[id]
+                    psi_2 = crt_shwave[id5]
+                    psi_2_bound = wave_bound[id5]
+                    @inbounds for k = 1:pw.Nr
+                        tmp = dU_data[k] * cc
+                        total_3 += conj(psi[k]) * psi_2[k] * tmp
+                        bound_3 += conj(psi_bound[k]) * psi_2_bound[k] * tmp
+                        free_3 += conj(psi[k] - psi_bound[k]) * (psi_2[k] - psi_2_bound[k]) * tmp
+                    end
+                end
+
+                id6 = hhg_id6[id]
+                if id6 != -1
+                    cc = hhg_c6[id]
+                    psi_2 = crt_shwave[id6]
+                    psi_2_bound = wave_bound[id6]
+                    @inbounds for k = 1:pw.Nr
+                        tmp = dU_data[k] * cc
+                        total_3 += conj(psi[k]) * psi_2[k] * tmp
+                        bound_3 += conj(psi_bound[k]) * psi_2_bound[k] * tmp
+                        free_3 += conj(psi[k] - psi_bound[k]) * (psi_2[k] - psi_2_bound[k]) * tmp
+                    end
+                end
+
+                integral_buffer_1[id] = total_1
+                integral_buffer_2[id] = total_2
+                integral_buffer_3[id] = total_3
+                integral_buffer_1_free[id] = free_1
+                integral_buffer_2_free[id] = free_2
+                integral_buffer_3_free[id] = free_3
+                integral_buffer_1_bound[id] = bound_1
+                integral_buffer_2_bound[id] = bound_2
+                integral_buffer_3_bound[id] = bound_3
+            end
+        else
+            Threads.@threads for id in iter_strategy
+                integral_buffer_1[id] = 0.0 + 0.0im
+                integral_buffer_2[id] = 0.0 + 0.0im
+                integral_buffer_3[id] = 0.0 + 0.0im
+
+                id1 = hhg_id1[id]
+                if id1 != -1
+                    cc = hhg_c1[id]
+                    @inbounds for k = 1:pw.Nr
+                        integral_buffer_1[id] += conj(crt_shwave[id][k]) * crt_shwave[id1][k] * dU_data[k] * cc
+                    end
+                end
+
+                id2 = hhg_id2[id]
+                if id2 != -1
+                    cc = hhg_c2[id]
+                    @inbounds for k = 1:pw.Nr
+                        integral_buffer_1[id] += conj(crt_shwave[id][k]) * crt_shwave[id2][k] * dU_data[k] * cc
+                    end
+                end
+
+                id3 = hhg_id3[id]
+                if id3 != -1
+                    cc = hhg_c3[id]
+                    @inbounds for k = 1:pw.Nr
+                        integral_buffer_2[id] += conj(crt_shwave[id][k]) * crt_shwave[id3][k] * dU_data[k] * cc
+                    end
+                end
+
+                id4 = hhg_id4[id]
+                if id4 != -1
+                    cc = hhg_c4[id]
+                    @inbounds for k = 1:pw.Nr
+                        integral_buffer_2[id] += conj(crt_shwave[id][k]) * crt_shwave[id4][k] * dU_data[k] * cc
+                    end
+                end
+
+                id5 = hhg_id5[id]
+                if id5 != -1
+                    cc = hhg_c5[id]
+                    @inbounds for k = 1:pw.Nr
+                        integral_buffer_3[id] += conj(crt_shwave[id][k]) * crt_shwave[id5][k] * dU_data[k] * cc
+                    end
+                end
+
+                id6 = hhg_id6[id]
+                if id6 != -1
+                    cc = hhg_c6[id]
+                    @inbounds for k = 1:pw.Nr
+                        integral_buffer_3[id] += conj(crt_shwave[id][k]) * crt_shwave[id6][k] * dU_data[k] * cc
+                    end
+                end
+            end
+        end
+
+        for id in iter_strategy
+            hhg_integral_t_1[i] += integral_buffer_1[id]
+            hhg_integral_t_2[i] += integral_buffer_2[id]
+            hhg_integral_t_3[i] += integral_buffer_3[id]
+            if use_bound_analysis
+                hhg_integral_t_1_free[i] += integral_buffer_1_free[id]
+                hhg_integral_t_2_free[i] += integral_buffer_2_free[id]
+                hhg_integral_t_3_free[i] += integral_buffer_3_free[id]
+                hhg_integral_t_1_bound[i] += integral_buffer_1_bound[id]
+                hhg_integral_t_2_bound[i] += integral_buffer_2_bound[id]
+                hhg_integral_t_3_bound[i] += integral_buffer_3_bound[id]
+            end
+        end
+    end
+
+    if use_bound_analysis
+        return hhg_integral_t_1, hhg_integral_t_2, hhg_integral_t_3,
+               hhg_integral_t_1_free, hhg_integral_t_2_free, hhg_integral_t_3_free,
+               hhg_integral_t_1_bound, hhg_integral_t_2_bound, hhg_integral_t_3_bound,
+               phi_record, dphi_record
+    end
+
+    return hhg_integral_t_1, hhg_integral_t_2, hhg_integral_t_3, phi_record, dphi_record
 end
