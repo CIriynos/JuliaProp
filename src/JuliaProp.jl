@@ -17,7 +17,7 @@ export Grid1D, GridSH
 export xyz_to_sphere, sphere_to_xyz, CG_coefficient, spherical_bessel_func
 export get_SH_integral
 export get_linspace, grid_index, grid_reduce
-export wave_t, shwave_t, create_empty_shwave, copy_shwave
+export wave_t, shwave_t, compact_bound_state_t, create_empty_shwave, copy_shwave
 export trimat_elimination
 export pentamat_t, create_empty_pentamat, create_pentamat, create_identity_pentamat, create_diag_pentamat, pentamat_to_mat, penta_mul, pentamat_elimination
 export four_order_difference, two_order_difference
@@ -26,7 +26,7 @@ export get_m_from_mm, create_lmmap, get_index_from_lm
 export save_object, open_object, save_shwave, open_shwave
 export computeYlm
 export numerical_integral
-export store_mat, store_obj, retrieve_mat, retrieve_obj
+export store_mat, store_obj, retrieve_mat, retrieve_obj, retrieve_compact_bound_state, retrieve_compact_bound_states
 export get_smoothness_1, get_smoothness_2
 export get_task_id_from_cmd_args
 
@@ -35,6 +35,8 @@ export create_tdse_rt_1d
 export gauss_package_1d
 export get_energy_1d, get_energy_1d_laser
 export itp_fd1d
+export itp_fdsh_special
+export itp_fdsh_single
 export tdse_fd1d_mainloop
 export tdse_fd1d_mainloop_penta
 export tdse_laser_fd1d_mainloop_penta
@@ -50,14 +52,17 @@ export gram_schmidt_sh_so
 export itp_fdsh
 export create_physics_world_sh
 export create_tdse_rt_sh
+export get_k_occupation_list
 
 export tdseln_sh_mainloop
 export tdseln_sh_mainloop_record
 export tdseln_sh_mainloop_record_optimized
 export tdseln_sh_mainloop_record_optimized_hhg
+export tdseln_sh_mainloop_velocity_gauge_hhg_analysis
 export tdseln_sh_mainloop_length_gauge
 export tdseln_sh_mainloop_length_gauge_hhg
 export tdseln_sh_mainloop_length_gauge_hhg_analysis
+export tdseln_sh_mainloop_length_gauge_hhg_analysis_dipole
 export tdse_elli_sh_mainloop_record
 export tdse_elli_sh_mainloop_record_xy
 export tdse_elli_sh_mainloop_record_xy_hhg

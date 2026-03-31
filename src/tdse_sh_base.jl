@@ -200,10 +200,60 @@ function gram_schmidt_sh_so(wave_list, occ_list)
     end
 end
 
+function itp_fdsh_single(pw::physics_world_sh_t, rt::tdse_sh_rt, init_shwave, id; err = 1e-8, log_info=true)
+    energy_diff = 10000.0     # A big enough Float64
+    last_energy = 10000.0
+
+    loop_times = 0
+    while energy_diff >= err
+        fdsh_no_laser_one_step_so_itp(init_shwave, rt, id)
+        normalize!(init_shwave[id])
+
+        crt_energy = get_energy_sh_so(init_shwave, rt, id)
+        energy_diff = abs(crt_energy - last_energy)
+        last_energy = crt_energy
+        
+        if loop_times % 10 == true && log_info == true
+            println("[ITP]: $energy_diff")
+        end
+        loop_times += 1
+    end
+end
+
+
 
 function itp_fdsh(pw::physics_world_sh_t, rt::tdse_sh_rt; k = 1, err = 1e-8)
     ori_wave_list = [create_empty_shwave_array_fixed(pw.shgrid) for i = 1: k]
     occ_list = get_k_occupation_list(k, pw.l_num)
+    energy_diff = 10000.0     # A big enough Float64
+    last_energy = 10000.0
+
+    rs = get_linspace(pw.shgrid.rgrid)
+    for i = 1: k
+        @. ori_wave_list[i][occ_list[i]] = rs * exp(-rs * i)
+    end
+
+    loop_times = 0
+    while energy_diff >= err
+        for i in eachindex(ori_wave_list)
+            fdsh_no_laser_one_step_so_itp(ori_wave_list[i], rt, occ_list[i])
+            normalize!(ori_wave_list[i][occ_list[i]])
+        end
+        gram_schmidt_sh_so(ori_wave_list, occ_list)
+        if loop_times % 10 == true
+            crt_energy = get_energy_sh_so(ori_wave_list[k], rt, occ_list[k])
+            energy_diff = abs(crt_energy - last_energy)
+            last_energy = crt_energy
+            println("[ITP]: $energy_diff")
+        end
+        loop_times += 1
+    end
+    return ori_wave_list
+end
+
+function itp_fdsh_special(pw::physics_world_sh_t, rt::tdse_sh_rt; k = 1, err = 1e-8)
+    ori_wave_list = [create_empty_shwave_array_fixed(pw.shgrid) for i = 1: k]
+    occ_list = [get_index_from_lm(i - 1, 0, pw.l_num) for i = 1: k]
     energy_diff = 10000.0     # A big enough Float64
     last_energy = 10000.0
 

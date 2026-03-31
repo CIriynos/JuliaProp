@@ -3,6 +3,44 @@
 # ---------------------------
 c_expr(l, m) = sqrt(((l + 1) ^ 2 - m ^ 2) / ((2 * l + 1) * (2 * l + 3)))
 
+function build_z_operator_bundle(m::Int64, l_num::Int64)
+    bundle_size = l_num - abs(m)
+    z_op = zeros(Float64, bundle_size, bundle_size)
+    for j = 1:bundle_size
+        l = abs(m) + j - 1
+        if j > 1
+            z_op[j, j - 1] = c_expr(l - 1, m)
+        end
+        if j < bundle_size
+            z_op[j, j + 1] = c_expr(l, m)
+        end
+    end
+    return z_op
+end
+
+function gauge_transform_v2l_linear_bundle!(bundle_wave_l, crt_shwave, bundle_ids::Vector{Int64},
+                                            z_eigvecs, z_eigvals, A::Float64, r_values::Vector{Float64},
+                                            coeff_v, coeff_eig)
+    bundle_size = length(bundle_ids)
+    @inbounds for j = 1:bundle_size
+        id = bundle_ids[j]
+        coeff_v[j, :] .= crt_shwave[id]
+    end
+
+    mul!(coeff_eig, adjoint(z_eigvecs), coeff_v)
+    @inbounds for p = 1:bundle_size
+        lam = z_eigvals[p]
+        for k = 1:length(r_values)
+            coeff_eig[p, k] *= exp(im * A * lam * r_values[k])
+        end
+    end
+    mul!(coeff_v, z_eigvecs, coeff_eig)
+
+    @inbounds for j = 1:bundle_size
+        bundle_wave_l[j] .= coeff_v[j, :]
+    end
+end
+
 
 @doc raw"""
     calc_ground_state_population(crt_shwave::shwave_t, init_shwave::shwave_t, shgrid::GridSH) -> ComplexF64
@@ -392,6 +430,251 @@ end
 
 
 
+function _prepare_compact_bound_projection(bound_states, head_ptr::Int64, bundle_size::Int64, Nr::Int64)
+    compact_bundle_pos = zeros(Int64, length(bound_states))
+    bound_norms = zeros(Float64, length(bound_states))
+    for sid in eachindex(bound_states)
+        state = bound_states[sid]
+        if length(state.radial) != Nr
+            throw(ArgumentError("bound state $sid has radial length $(length(state.radial)), expected $Nr"))
+        end
+        pos = state.id - head_ptr + 1
+        if 1 <= pos <= bundle_size
+            compact_bundle_pos[sid] = pos
+            bound_norms[sid] = max(real(dot(state.radial, state.radial)), eps(Float64))
+        else
+            compact_bundle_pos[sid] = 0
+            bound_norms[sid] = 1.0
+        end
+    end
+    return compact_bundle_pos, bound_norms
+end
+
+
+function tdseln_sh_mainloop_velocity_gauge_hhg_analysis(crt_shwave, pw::physics_world_sh_t, rt::tdse_sh_rt, At_data, steps::Int64, Ri_tsurf::Float64, bound_states; m::Int64 = 0, start_rcd_step::Int64 = 1, end_rcd_step::Int64 = 1000000, gauge_transform_for_decomposition::Bool = true)
+    # hhg
+    dU_data = get_derivative_two_order(pw.po_data_r, pw.delta_r)
+    hhg_integral_t = zeros(ComplexF64, steps)
+    hhg_integral_t_free = zeros(ComplexF64, steps)
+    hhg_integral_t_bound = zeros(ComplexF64, steps)
+
+    # wave decomposition buffers (m-bundle)
+    head_ptr = get_index_from_lm(abs(m), m, pw.shgrid.l_num)
+    bundle_size = pw.shgrid.l_num - abs(m)
+    bundle_ids = [head_ptr + j - 1 for j = 1:bundle_size]
+    bundle_wave_bound = [zeros(ComplexF64, pw.Nr) for _ = 1:bundle_size]
+    bundle_wave_free = [zeros(ComplexF64, pw.Nr) for _ = 1:bundle_size]
+    bundle_wave_length = [zeros(ComplexF64, pw.Nr) for _ = 1:bundle_size]
+    use_compact_states = !isempty(bound_states) && (bound_states[1] isa compact_bound_state_t)
+    compact_bundle_pos = zeros(Int64, length(bound_states))
+    bound_norms = zeros(Float64, length(bound_states))
+    bound_coeffs = zeros(ComplexF64, length(bound_states))
+
+    # precompute m-bundle couplings for hhg integral
+    id_left = zeros(Int64, bundle_size)
+    id_right = zeros(Int64, bundle_size)
+    c_left = zeros(Float64, bundle_size)
+    c_right = zeros(Float64, bundle_size)
+    for j = 1:bundle_size
+        l = abs(m) + j - 1
+        id_left[j] = get_index_from_lm(l - 1, m, pw.shgrid.l_num)
+        id_right[j] = get_index_from_lm(l + 1, m, pw.shgrid.l_num)
+        c_left[j] = (id_left[j] == -1) ? 0.0 : c_expr(l - 1, m)
+        c_right[j] = (id_right[j] == -1) ? 0.0 : c_expr(l, m)
+    end
+
+    # gauge-transform buffers (V->L)
+    r_values = get_linspace(pw.shgrid.rgrid)
+    z_op = build_z_operator_bundle(m, pw.shgrid.l_num)
+    z_eig = eigen(Hermitian(z_op))
+    z_eigvecs = z_eig.vectors
+    z_eigvals = z_eig.values
+    coeff_v = zeros(ComplexF64, bundle_size, pw.Nr)
+    coeff_eig = zeros(ComplexF64, bundle_size, pw.Nr)
+
+    if use_compact_states
+        compact_bundle_pos, bound_norms = _prepare_compact_bound_projection(bound_states, head_ptr, bundle_size, pw.Nr)
+    else
+        # precompute bound-state norms on propagated m-bundle
+        for sid in eachindex(bound_states)
+            state_norm = 0.0
+            for j = 1:bundle_size
+                id = bundle_ids[j]
+                state_norm += real(dot(bound_states[sid][id], bound_states[sid][id]))
+            end
+            bound_norms[sid] = max(state_norm, eps(Float64))
+        end
+    end
+
+    # optimization
+    TDSE_LN_OPTIMIZE_THRESHOLD = 1e-15
+    ids_mask = zeros(Int64, pw.shgrid.l_num ^ 2)   # 1 => selected.
+    optimized_count::Int64 = 0
+
+    for i in 1:steps
+        # We do not need to get optimized_count every time, just sometimes.
+        if (i - 1) % 20 == 0
+            optimized_count = 0
+            ids_mask .= 0
+
+            Threads.@threads for j = 1:bundle_size
+                id = head_ptr + j - 1
+                tmp::Float64 = real(dot(crt_shwave[id], crt_shwave[id]))
+                if tmp > TDSE_LN_OPTIMIZE_THRESHOLD
+                    ids_mask[id] = 1
+                end
+                if id == head_ptr || id == head_ptr + 1
+                    ids_mask[id] = 1
+                end
+            end
+
+            for j = 1:bundle_size
+                id = head_ptr + j - 1
+                if ids_mask[id] == 0
+                    optimized_count += 1
+                end
+            end
+
+            optimized_count = max(0, optimized_count - 1)
+        end
+
+        At = At_data[i]
+        At_next = At_data[min(i + 1, steps)]
+        fdshpl_one_step(crt_shwave, rt, pw.shgrid, pw.delta_t, At, At_next, m; optimizing_count=optimized_count)
+
+        if i < start_rcd_step || i > end_rcd_step
+            continue
+        end
+
+        active_size = bundle_size - optimized_count
+
+        # V->L gauge transform for decomposition if requested.
+        if gauge_transform_for_decomposition
+            gauge_transform_v2l_linear_bundle!(bundle_wave_length, crt_shwave, bundle_ids,
+                                               z_eigvecs, z_eigvals, At, r_values,
+                                               coeff_v, coeff_eig)
+        end
+
+        # Project out bound states on m-bundle in selected gauge.
+        if use_compact_states
+            for sid in eachindex(bound_states)
+                j = compact_bundle_pos[sid]
+                if j == 0
+                    bound_coeffs[sid] = 0.0 + 0.0im
+                    continue
+                end
+                psi_piece = gauge_transform_for_decomposition ? bundle_wave_length[j] : crt_shwave[bundle_ids[j]]
+                bound_coeffs[sid] = dot(bound_states[sid].radial, psi_piece) / bound_norms[sid]
+            end
+
+            Threads.@threads for j = 1:bundle_size
+                fill!(bundle_wave_bound[j], 0.0 + 0.0im)
+            end
+            for sid in eachindex(bound_states)
+                coeff = bound_coeffs[sid]
+                abs2(coeff) < 1e-30 && continue
+                j = compact_bundle_pos[sid]
+                j == 0 && continue
+                bs_piece = bound_states[sid].radial
+                piece = bundle_wave_bound[j]
+                @inbounds for k = 1:pw.Nr
+                    piece[k] += coeff * bs_piece[k]
+                end
+            end
+            Threads.@threads for j = 1:bundle_size
+                psi_piece = gauge_transform_for_decomposition ? bundle_wave_length[j] : crt_shwave[bundle_ids[j]]
+                @inbounds for k = 1:pw.Nr
+                    bundle_wave_free[j][k] = psi_piece[k] - bundle_wave_bound[j][k]
+                end
+            end
+        else
+            for sid in eachindex(bound_states)
+                overlap = 0.0 + 0.0im
+                for j = 1:bundle_size
+                    id = bundle_ids[j]
+                    psi_piece = gauge_transform_for_decomposition ? bundle_wave_length[j] : crt_shwave[id]
+                    overlap += dot(bound_states[sid][id], psi_piece)
+                end
+                bound_coeffs[sid] = overlap / bound_norms[sid]
+            end
+
+            Threads.@threads for j = 1:bundle_size
+                id = bundle_ids[j]
+                psi_piece = gauge_transform_for_decomposition ? bundle_wave_length[j] : crt_shwave[id]
+                fill!(bundle_wave_bound[j], 0.0 + 0.0im)
+                for sid in eachindex(bound_states)
+                    coeff = bound_coeffs[sid]
+                    abs2(coeff) < 1e-30 && continue
+                    bs_piece = bound_states[sid][id]
+                    @inbounds for k = 1:pw.Nr
+                        bundle_wave_bound[j][k] += coeff * bs_piece[k]
+                    end
+                end
+                @inbounds for k = 1:pw.Nr
+                    bundle_wave_free[j][k] = psi_piece[k] - bundle_wave_bound[j][k]
+                end
+            end
+        end
+
+        # Evaluate total / free / bound HHG in one pass.
+        total_val = 0.0 + 0.0im
+        free_val = 0.0 + 0.0im
+        bound_val = 0.0 + 0.0im
+        for j = 1:active_size
+            id = bundle_ids[j]
+            crt_piece = gauge_transform_for_decomposition ? bundle_wave_length[j] : crt_shwave[id]
+            free_piece = bundle_wave_free[j]
+            bound_piece = bundle_wave_bound[j]
+
+            if id_left[j] != -1
+                cc = c_left[j]
+                left_idx = j - 1
+                crt_piece_left = gauge_transform_for_decomposition ? bundle_wave_length[left_idx] : crt_shwave[id_left[j]]
+                free_piece_left = bundle_wave_free[left_idx]
+                bound_piece_left = bundle_wave_bound[left_idx]
+                @inbounds for k = 1:pw.Nr
+                    tmp = dU_data[k] * cc
+                    total_val += conj(crt_piece[k]) * crt_piece_left[k] * tmp
+                    free_val += conj(free_piece[k]) * free_piece_left[k] * tmp
+                    bound_val += conj(bound_piece[k]) * bound_piece_left[k] * tmp
+                end
+            end
+
+            if id_right[j] != -1
+                cc = c_right[j]
+                right_idx = j + 1
+                crt_piece_right = gauge_transform_for_decomposition ? bundle_wave_length[right_idx] : crt_shwave[id_right[j]]
+                free_piece_right = bundle_wave_free[right_idx]
+                bound_piece_right = bundle_wave_bound[right_idx]
+                @inbounds for k = 1:pw.Nr
+                    tmp = dU_data[k] * cc
+                    total_val += conj(crt_piece[k]) * crt_piece_right[k] * tmp
+                    free_val += conj(free_piece[k]) * free_piece_right[k] * tmp
+                    bound_val += conj(bound_piece[k]) * bound_piece_right[k] * tmp
+                end
+            end
+        end
+        hhg_integral_t[i] = total_val
+        hhg_integral_t_free[i] = free_val
+        hhg_integral_t_bound[i] = bound_val
+
+        if (i - 1) % 200 == 0
+            en = get_energy_sh_mbunch(crt_shwave, rt, pw.shgrid, m)
+            norm_value = sum(map(rvec->dot(rvec, rvec), crt_shwave))
+            bound_norm_value = sum(norm(bound_coeffs) .^ 2)
+            free_norm_value = sum(map(rvec->dot(rvec, rvec), bundle_wave_free))
+            norm_value = round(norm_value, digits=6)
+            bound_norm_value = round(bound_norm_value, digits=6)
+            free_norm_value = round(free_norm_value, digits=6)
+            println("[TDSE] Runing TDSE-SH-linear (velocity gauge). step $(i-1) energy = $en, norm_value = $norm_value, bound_norm=$bound_norm_value, free_norm=$free_norm_value")
+            println("     | block_size = $(bundle_size - optimized_count) ")
+        end
+    end
+    return hhg_integral_t, hhg_integral_t_free, hhg_integral_t_bound
+end
+
+
+
 function tdseln_sh_mainloop_length_gauge(crt_shwave, pw::physics_world_sh_t, rt::tdse_sh_rt, Et_data, steps::Int64; m::Int64 = 0)
     init_shwave = copy(crt_shwave)
     norm_list = Float64[]
@@ -523,158 +806,6 @@ function tdseln_sh_mainloop_length_gauge_hhg(crt_shwave, pw::physics_world_sh_t,
 end
 
 
-# Bad performance due to the dot function
-
-# function tdseln_sh_mainloop_length_gauge_hhg_analysis(crt_shwave, pw::physics_world_sh_t, rt::tdse_sh_rt, Et_data, steps::Int64, Ri_tsurf::Float64, bound_states; m::Int64 = 0, start_rcd_step::Int64 = 1, end_rcd_step::Int64 = 1000000)
-#     # hhg
-#     dU_data = get_derivative_two_order(pw.po_data_r, pw.delta_r)
-#     hhg_integral_t = zeros(ComplexF64, steps)
-#     hhg_integral_t_free = zeros(ComplexF64, steps)
-#     hhg_integral_t_bound = zeros(ComplexF64, steps)
-#     integral_buffer = zeros(ComplexF64, pw.l_num)
-#     integral_buffer_free = zeros(ComplexF64, pw.l_num)
-#     integral_buffer_bound = zeros(ComplexF64, pw.l_num)
-
-#     # wave decomposition buffers (only m-bundle is required)
-#     bundle_wave_bound = [zeros(ComplexF64, pw.Nr) for _ = 1:pw.l_num]
-#     bundle_wave_free = [zeros(ComplexF64, pw.Nr) for _ = 1:pw.l_num]
-#     bound_coeffs = zeros(ComplexF64, length(bound_states))
-
-#     # optimization
-#     TDSE_LN_OPTIMIZE_THRESHOLD = 1e-15
-#     head_ptr = get_index_from_lm(abs(m), m, pw.shgrid.l_num)
-#     bundle_size = pw.shgrid.l_num - abs(m)
-#     ids_mask = zeros(Int64, pw.shgrid.l_num ^ 2)   # 1 => selected.
-#     optimized_count::Int64 = 0
-
-#     # precompute m-bundle ids and couplings for hhg integral
-#     bundle_ids = [head_ptr + j - 1 for j = 1:bundle_size]
-#     id_left = zeros(Int64, bundle_size)
-#     id_right = zeros(Int64, bundle_size)
-#     c_left = zeros(Float64, bundle_size)
-#     c_right = zeros(Float64, bundle_size)
-#     for j = 1:bundle_size
-#         l = abs(m) + j - 1
-#         id_left[j] = get_index_from_lm(l - 1, m, pw.shgrid.l_num)
-#         id_right[j] = get_index_from_lm(l + 1, m, pw.shgrid.l_num)
-#         c_left[j] = (id_left[j] == -1) ? 0.0 : c_expr(l - 1, m)
-#         c_right[j] = (id_right[j] == -1) ? 0.0 : c_expr(l, m)
-#     end
-
-#     # # precompute bound-state norms only on the propagated m-bundle
-#     # for sid in eachindex(bound_states)
-#     #     state_norm = 0.0
-#     #     for j = 1:bundle_size
-#     #         id = bundle_ids[j]
-#     #         state_norm += real(dot(bound_states[sid][id], bound_states[sid][id]))
-#     #     end
-#     #     bound_norms[sid] = max(state_norm, eps(Float64))
-#     # end
-
-#     for i = 1:steps
-#         # We do not need to get optimized_count every time, just sometimes.
-#         if (i - 1) % 20 == 0
-#             optimized_count = 0
-#             ids_mask .= 0
-
-#             Threads.@threads for j = 1:bundle_size
-#                 id = head_ptr + j - 1
-#                 tmp::Float64 = real(dot(crt_shwave[id], crt_shwave[id]))
-#                 if tmp > TDSE_LN_OPTIMIZE_THRESHOLD
-#                     ids_mask[id] = 1
-#                 end
-#                 if id == head_ptr || id == head_ptr + 1
-#                     ids_mask[id] = 1
-#                 end
-#             end
-
-#             for j = 1:bundle_size
-#                 id = head_ptr + j - 1
-#                 if ids_mask[id] == 0
-#                     optimized_count += 1
-#                 end
-#             end
-
-#             optimized_count = max(0, optimized_count - 1)
-#         end
-
-#         fdshpl_length_gauge_one_step(crt_shwave, rt, pw.shgrid, pw.delta_t, Et_data[i], m; optimizing_count=optimized_count)
-
-#         if (i - 1) % 200 == 0
-#             en = get_energy_sh_mbunch(crt_shwave, rt, pw.shgrid, m)
-#             norm_value = sum(map(rvec->dot(rvec, rvec), crt_shwave))
-#             println("[TDSE] Runing TDSE-SH-linear. step $(i-1) energy = $en, norm_value = $norm_value")
-#             println("     | block_size = $(bundle_size - optimized_count) ")
-#         end
-
-#         if i < start_rcd_step || i > end_rcd_step
-#             continue
-#         end
-
-#         active_size = bundle_size - optimized_count
-
-#         # Project out bound states on m-bundle: wave_bound = sum_n |n><n|psi>, wave_free = psi - wave_bound
-#         # Threads.@threads for sid = eachindex(bound_states)
-#         #     overlap = 0.0 + 0.0im
-#         #     for j = 1:bundle_size
-#         #         id = bundle_ids[j]
-#         #         overlap += dot(bound_states[sid][id], crt_shwave[id])
-#         #     end
-#         #     bound_coeffs[sid] = overlap
-#         # end
-
-#         # Threads.@threads for j = 1:bundle_size
-#         #     id = bundle_ids[j]
-#         #     fill!(bundle_wave_bound[j], 0.0 + 0.0im)
-#         #     for sid = eachindex(bound_states)
-#         #         coeff = bound_coeffs[sid]
-#         #         abs2(coeff) < 1e-30 && continue
-#         #         bs_piece = bound_states[sid][id]
-#         #         @inbounds for k = 1: pw.Nr
-#         #             bundle_wave_bound[j][k] += coeff * bs_piece[k]
-#         #         end
-#         #     end
-#         #     crt_piece = crt_shwave[id]
-#         #     @inbounds for k = 1:pw.Nr
-#         #         bundle_wave_free[j][k] = crt_piece[k] - bundle_wave_bound[j][k]
-#         #     end
-#         # end
-
-#         # HHG Part
-#         Threads.@threads for j = 1: bundle_size - optimized_count
-#             l = abs(m) + j - 1
-#             id = head_ptr + j - 1
-#             id1 = get_index_from_lm(l - 1, m, pw.shgrid.l_num)
-#             id2 = get_index_from_lm(l + 1, m, pw.shgrid.l_num)
-
-#             integral_buffer[l + 1] = 0      # clear it first
-#             integral_buffer_free[l + 1] = 0
-#             integral_buffer_bound[l + 1] = 0
-#             if id1 != -1
-#                 @fastmath integral_buffer[l + 1] += dot(crt_shwave[id], crt_shwave[id1] .* dU_data) * c_expr(l - 1, m)
-#                 @fastmath integral_buffer_bound[l + 1] += dot(bundle_wave_bound[id], bundle_wave_bound[id1] .* dU_data) * c_expr(l - 1, m)
-#                 @fastmath integral_buffer_free[l + 1] += dot(bundle_wave_free[id], bundle_wave_free[id1] .* dU_data) * c_expr(l - 1, m)
-#             end
-#             if id2 != -1
-#                 @fastmath integral_buffer[l + 1] += dot(crt_shwave[id], crt_shwave[id2] .* dU_data) * c_expr(l, m)
-#                 @fastmath integral_buffer_bound[l + 1] += dot(bundle_wave_bound[id], bundle_wave_bound[id2] .* dU_data) * c_expr(l, m)
-#                 @fastmath integral_buffer_free[l + 1] += dot(bundle_wave_free[id], bundle_wave_free[id2] .* dU_data) * c_expr(l, m)
-#             end
-#         end
-
-#         for j = 1: bundle_size - optimized_count
-#             l = abs(m) + j - 1
-#             hhg_integral_t[i] += integral_buffer[l + 1]
-#             hhg_integral_t_free[i] += integral_buffer_free[l + 1]
-#             hhg_integral_t_bound[i] += integral_buffer_bound[l + 1]
-#         end
-#     end
-
-#     return hhg_integral_t, hhg_integral_t_free, hhg_integral_t_bound
-# end
-
-
-
 function tdseln_sh_mainloop_length_gauge_hhg_analysis(crt_shwave, pw::physics_world_sh_t, rt::tdse_sh_rt, Et_data, steps::Int64, Ri_tsurf::Float64, bound_states; m::Int64 = 0, start_rcd_step::Int64 = 1, end_rcd_step::Int64 = 1000000)
     # hhg
     dU_data = get_derivative_two_order(pw.po_data_r, pw.delta_r)
@@ -685,6 +816,8 @@ function tdseln_sh_mainloop_length_gauge_hhg_analysis(crt_shwave, pw::physics_wo
     # wave decomposition buffers (only m-bundle is required)
     bundle_wave_bound = [zeros(ComplexF64, pw.Nr) for _ = 1:pw.l_num]
     bundle_wave_free = [zeros(ComplexF64, pw.Nr) for _ = 1:pw.l_num]
+    use_compact_states = !isempty(bound_states) && (bound_states[1] isa compact_bound_state_t)
+    compact_bundle_pos = zeros(Int64, length(bound_states))
     bound_norms = zeros(Float64, length(bound_states))
     bound_coeffs = zeros(ComplexF64, length(bound_states))
 
@@ -709,14 +842,18 @@ function tdseln_sh_mainloop_length_gauge_hhg_analysis(crt_shwave, pw::physics_wo
         c_right[j] = (id_right[j] == -1) ? 0.0 : c_expr(l, m)
     end
 
-    # precompute bound-state norms only on the propagated m-bundle
-    for sid in eachindex(bound_states)
-        state_norm = 0.0
-        for j = 1:bundle_size
-            id = bundle_ids[j]
-            state_norm += real(dot(bound_states[sid][id], bound_states[sid][id]))
+    if use_compact_states
+        compact_bundle_pos, bound_norms = _prepare_compact_bound_projection(bound_states, head_ptr, bundle_size, pw.Nr)
+    else
+        # precompute bound-state norms only on the propagated m-bundle
+        for sid in eachindex(bound_states)
+            state_norm = 0.0
+            for j = 1:bundle_size
+                id = bundle_ids[j]
+                state_norm += real(dot(bound_states[sid][id], bound_states[sid][id]))
+            end
+            bound_norms[sid] = max(state_norm, eps(Float64))
         end
-        bound_norms[sid] = max(state_norm, eps(Float64))
     end
 
     for i = 1:steps
@@ -748,12 +885,12 @@ function tdseln_sh_mainloop_length_gauge_hhg_analysis(crt_shwave, pw::physics_wo
 
         fdshpl_length_gauge_one_step(crt_shwave, rt, pw.shgrid, pw.delta_t, Et_data[i], m; optimizing_count=optimized_count)
 
-        if (i - 1) % 200 == 0
-            en = get_energy_sh_mbunch(crt_shwave, rt, pw.shgrid, m)
-            norm_value = sum(map(rvec->dot(rvec, rvec), crt_shwave))
-            println("[TDSE] Runing TDSE-SH-linear. step $(i-1) energy = $en, norm_value = $norm_value")
-            println("     | block_size = $(bundle_size - optimized_count) ")
-        end
+        # if (i - 1) % 200 == 0
+        #     en = get_energy_sh_mbunch(crt_shwave, rt, pw.shgrid, m)
+        #     norm_value = sum(map(rvec->dot(rvec, rvec), crt_shwave))
+        #     println("[TDSE] Runing TDSE-SH-linear. step $(i-1) energy = $en, norm_value = $norm_value")
+        #     println("     | block_size = $(bundle_size - optimized_count) ")
+        # end
 
         if i < start_rcd_step || i > end_rcd_step
             continue
@@ -762,29 +899,62 @@ function tdseln_sh_mainloop_length_gauge_hhg_analysis(crt_shwave, pw::physics_wo
         active_size = bundle_size - optimized_count
 
         # Project out bound states on m-bundle: wave_bound = sum_n |n><n|psi>, wave_free = psi - wave_bound
-        for sid = eachindex(bound_states)
-            overlap = 0.0 + 0.0im
-            for j = 1:bundle_size
-                id = bundle_ids[j]
-                overlap += dot(bound_states[sid][id], crt_shwave[id])
+        if use_compact_states
+            for sid in eachindex(bound_states)
+                j = compact_bundle_pos[sid]
+                if j == 0
+                    bound_coeffs[sid] = 0.0 + 0.0im
+                    continue
+                end
+                bound_coeffs[sid] = dot(bound_states[sid].radial, crt_shwave[bundle_ids[j]]) / bound_norms[sid]
             end
-            bound_coeffs[sid] = overlap / bound_norms[sid]
-        end
 
-        Threads.@threads for j = 1:bundle_size
-            id = bundle_ids[j]
-            fill!(bundle_wave_bound[j], 0.0 + 0.0im)
-            for sid = eachindex(bound_states)
+            Threads.@threads for j = 1:bundle_size
+                fill!(bundle_wave_bound[j], 0.0 + 0.0im)
+            end
+            for sid in eachindex(bound_states)
                 coeff = bound_coeffs[sid]
                 abs2(coeff) < 1e-30 && continue
-                bs_piece = bound_states[sid][id]
+                j = compact_bundle_pos[sid]
+                j == 0 && continue
+                bs_piece = bound_states[sid].radial
+                piece = bundle_wave_bound[j]
                 @inbounds for k = 1: pw.Nr
-                    bundle_wave_bound[j][k] += coeff * bs_piece[k]
+                    piece[k] += coeff * bs_piece[k]
                 end
             end
-            crt_piece = crt_shwave[id]
-            @inbounds for k = 1:pw.Nr
-                bundle_wave_free[j][k] = crt_piece[k] - bundle_wave_bound[j][k]
+            Threads.@threads for j = 1:bundle_size
+                id = bundle_ids[j]
+                crt_piece = crt_shwave[id]
+                @inbounds for k = 1:pw.Nr
+                    bundle_wave_free[j][k] = crt_piece[k] - bundle_wave_bound[j][k]
+                end
+            end
+        else
+            for sid = eachindex(bound_states)
+                overlap = 0.0 + 0.0im
+                for j = 1:bundle_size
+                    id = bundle_ids[j]
+                    overlap += dot(bound_states[sid][id], crt_shwave[id])
+                end
+                bound_coeffs[sid] = overlap / bound_norms[sid]
+            end
+
+            Threads.@threads for j = 1:bundle_size
+                id = bundle_ids[j]
+                fill!(bundle_wave_bound[j], 0.0 + 0.0im)
+                for sid = eachindex(bound_states)
+                    coeff = bound_coeffs[sid]
+                    abs2(coeff) < 1e-30 && continue
+                    bs_piece = bound_states[sid][id]
+                    @inbounds for k = 1: pw.Nr
+                        bundle_wave_bound[j][k] += coeff * bs_piece[k]
+                    end
+                end
+                crt_piece = crt_shwave[id]
+                @inbounds for k = 1:pw.Nr
+                    bundle_wave_free[j][k] = crt_piece[k] - bundle_wave_bound[j][k]
+                end
             end
         end
 
@@ -829,6 +999,223 @@ function tdseln_sh_mainloop_length_gauge_hhg_analysis(crt_shwave, pw::physics_wo
         hhg_integral_t[i] = total_val
         hhg_integral_t_free[i] = free_val
         hhg_integral_t_bound[i] = bound_val
+
+        if (i - 1) % 200 == 0
+            en = get_energy_sh_mbunch(crt_shwave, rt, pw.shgrid, m)
+            norm_value = sum(map(rvec->dot(rvec, rvec), crt_shwave))
+            bound_norm_value = sum(norm(bound_coeffs) .^ 2)
+            free_norm_value = sum(map(rvec->dot(rvec, rvec), bundle_wave_free))
+            norm_value = round(norm_value, digits=6)
+            bound_norm_value = round(bound_norm_value, digits=6)
+            free_norm_value = round(free_norm_value, digits=6)
+            println("[TDSE] Runing TDSE-SH-linear (length gauge). step $(i-1) energy = $en, norm_value = $norm_value, bound_norm=$bound_norm_value, free_norm=$free_norm_value")
+            println("     | block_size = $(bundle_size - optimized_count) ")
+        end
     end
+
     return hhg_integral_t, hhg_integral_t_free, hhg_integral_t_bound
+end
+
+
+function tdseln_sh_mainloop_length_gauge_hhg_analysis_dipole(crt_shwave, pw::physics_world_sh_t, rt::tdse_sh_rt, Et_data, steps::Int64, Ri_tsurf::Float64, bound_states; m::Int64 = 0, start_rcd_step::Int64 = 1, end_rcd_step::Int64 = 1000000)
+    # dipole moment in z direction, z(t) = <Psi|z|Psi>, where z = r * cos(theta)
+    r_data = get_linspace(pw.shgrid.rgrid)
+    dipole_t = zeros(ComplexF64, steps)
+    dipole_t_free = zeros(ComplexF64, steps)
+    dipole_t_bound = zeros(ComplexF64, steps)
+
+    # wave decomposition buffers (only m-bundle is required)
+    bundle_wave_bound = [zeros(ComplexF64, pw.Nr) for _ = 1:pw.l_num]
+    bundle_wave_free = [zeros(ComplexF64, pw.Nr) for _ = 1:pw.l_num]
+    use_compact_states = !isempty(bound_states) && (bound_states[1] isa compact_bound_state_t)
+    compact_bundle_pos = zeros(Int64, length(bound_states))
+    bound_norms = zeros(Float64, length(bound_states))
+    bound_coeffs = zeros(ComplexF64, length(bound_states))
+
+    # optimization
+    TDSE_LN_OPTIMIZE_THRESHOLD = 1e-15
+    head_ptr = get_index_from_lm(abs(m), m, pw.shgrid.l_num)
+    bundle_size = pw.shgrid.l_num - abs(m)
+    ids_mask = zeros(Int64, pw.shgrid.l_num ^ 2)   # 1 => selected.
+    optimized_count::Int64 = 0
+
+    # precompute m-bundle ids and couplings for dipole integral
+    bundle_ids = [head_ptr + j - 1 for j = 1:bundle_size]
+    id_left = zeros(Int64, bundle_size)
+    id_right = zeros(Int64, bundle_size)
+    c_left = zeros(Float64, bundle_size)
+    c_right = zeros(Float64, bundle_size)
+    for j = 1:bundle_size
+        l = abs(m) + j - 1
+        id_left[j] = get_index_from_lm(l - 1, m, pw.shgrid.l_num)
+        id_right[j] = get_index_from_lm(l + 1, m, pw.shgrid.l_num)
+        c_left[j] = (id_left[j] == -1) ? 0.0 : c_expr(l - 1, m)
+        c_right[j] = (id_right[j] == -1) ? 0.0 : c_expr(l, m)
+    end
+
+    if use_compact_states
+        compact_bundle_pos, bound_norms = _prepare_compact_bound_projection(bound_states, head_ptr, bundle_size, pw.Nr)
+    else
+        # precompute bound-state norms only on the propagated m-bundle
+        for sid in eachindex(bound_states)
+            state_norm = 0.0
+            for j = 1:bundle_size
+                id = bundle_ids[j]
+                state_norm += real(dot(bound_states[sid][id], bound_states[sid][id]))
+            end
+            bound_norms[sid] = max(state_norm, eps(Float64))
+        end
+    end
+
+    for i = 1:steps
+        # We do not need to get optimized_count every time, just sometimes.
+        if (i - 1) % 20 == 0
+            optimized_count = 0
+            ids_mask .= 0
+
+            Threads.@threads for j = 1:bundle_size
+                id = head_ptr + j - 1
+                tmp::Float64 = real(dot(crt_shwave[id], crt_shwave[id]))
+                if tmp > TDSE_LN_OPTIMIZE_THRESHOLD
+                    ids_mask[id] = 1
+                end
+                if id == head_ptr || id == head_ptr + 1
+                    ids_mask[id] = 1
+                end
+            end
+
+            for j = 1:bundle_size
+                id = head_ptr + j - 1
+                if ids_mask[id] == 0
+                    optimized_count += 1
+                end
+            end
+
+            optimized_count = max(0, optimized_count - 1)
+        end
+
+        fdshpl_length_gauge_one_step(crt_shwave, rt, pw.shgrid, pw.delta_t, Et_data[i], m; optimizing_count=optimized_count)
+
+        if i < start_rcd_step || i > end_rcd_step
+            continue
+        end
+
+        active_size = bundle_size - optimized_count
+
+        # Project out bound states on m-bundle: wave_bound = sum_n |n><n|psi>, wave_free = psi - wave_bound
+        if use_compact_states
+            for sid in eachindex(bound_states)
+                j = compact_bundle_pos[sid]
+                if j == 0
+                    bound_coeffs[sid] = 0.0 + 0.0im
+                    continue
+                end
+                bound_coeffs[sid] = dot(bound_states[sid].radial, crt_shwave[bundle_ids[j]]) / bound_norms[sid]
+            end
+
+            Threads.@threads for j = 1:bundle_size
+                fill!(bundle_wave_bound[j], 0.0 + 0.0im)
+            end
+            for sid in eachindex(bound_states)
+                coeff = bound_coeffs[sid]
+                abs2(coeff) < 1e-30 && continue
+                j = compact_bundle_pos[sid]
+                j == 0 && continue
+                bs_piece = bound_states[sid].radial
+                piece = bundle_wave_bound[j]
+                @inbounds for k = 1: pw.Nr
+                    piece[k] += coeff * bs_piece[k]
+                end
+            end
+            Threads.@threads for j = 1:bundle_size
+                id = bundle_ids[j]
+                crt_piece = crt_shwave[id]
+                @inbounds for k = 1:pw.Nr
+                    bundle_wave_free[j][k] = crt_piece[k] - bundle_wave_bound[j][k]
+                end
+            end
+        else
+            for sid = eachindex(bound_states)
+                overlap = 0.0 + 0.0im
+                for j = 1:bundle_size
+                    id = bundle_ids[j]
+                    overlap += dot(bound_states[sid][id], crt_shwave[id])
+                end
+                bound_coeffs[sid] = overlap / bound_norms[sid]
+            end
+
+            Threads.@threads for j = 1:bundle_size
+                id = bundle_ids[j]
+                fill!(bundle_wave_bound[j], 0.0 + 0.0im)
+                for sid = eachindex(bound_states)
+                    coeff = bound_coeffs[sid]
+                    abs2(coeff) < 1e-30 && continue
+                    bs_piece = bound_states[sid][id]
+                    @inbounds for k = 1: pw.Nr
+                        bundle_wave_bound[j][k] += coeff * bs_piece[k]
+                    end
+                end
+                crt_piece = crt_shwave[id]
+                @inbounds for k = 1:pw.Nr
+                    bundle_wave_free[j][k] = crt_piece[k] - bundle_wave_bound[j][k]
+                end
+            end
+        end
+
+        # Evaluate total / free / bound dipole z(t) in one pass
+        total_val = 0.0 + 0.0im
+        free_val = 0.0 + 0.0im
+        bound_val = 0.0 + 0.0im
+        for j = 1:active_size
+            id = bundle_ids[j]
+            crt_piece = crt_shwave[id]
+            free_piece = bundle_wave_free[j]
+            bound_piece = bundle_wave_bound[j]
+
+            if id_left[j] != -1
+                cc = c_left[j]
+                left_idx = j - 1
+                crt_piece_left = crt_shwave[id_left[j]]
+                free_piece_left = bundle_wave_free[left_idx]
+                bound_piece_left = bundle_wave_bound[left_idx]
+                @inbounds for k = 1:pw.Nr
+                    tmp = r_data[k] * cc
+                    total_val += conj(crt_piece[k]) * crt_piece_left[k] * tmp
+                    free_val += conj(free_piece[k]) * free_piece_left[k] * tmp
+                    bound_val += conj(bound_piece[k]) * bound_piece_left[k] * tmp
+                end
+            end
+
+            if id_right[j] != -1
+                cc = c_right[j]
+                right_idx = j + 1
+                crt_piece_right = crt_shwave[id_right[j]]
+                free_piece_right = bundle_wave_free[right_idx]
+                bound_piece_right = bundle_wave_bound[right_idx]
+                @inbounds for k = 1:pw.Nr
+                    tmp = r_data[k] * cc
+                    total_val += conj(crt_piece[k]) * crt_piece_right[k] * tmp
+                    free_val += conj(free_piece[k]) * free_piece_right[k] * tmp
+                    bound_val += conj(bound_piece[k]) * bound_piece_right[k] * tmp
+                end
+            end
+        end
+        dipole_t[i] = total_val
+        dipole_t_free[i] = free_val
+        dipole_t_bound[i] = bound_val
+
+        if (i - 1) % 200 == 0
+            en = get_energy_sh_mbunch(crt_shwave, rt, pw.shgrid, m)
+            norm_value = sum(map(rvec->dot(rvec, rvec), crt_shwave))
+            bound_norm_value = sum(norm(bound_coeffs) .^ 2)
+            free_norm_value = sum(map(rvec->dot(rvec, rvec), bundle_wave_free))
+            norm_value = round(norm_value, digits=6)
+            bound_norm_value = round(bound_norm_value, digits=6)
+            free_norm_value = round(free_norm_value, digits=6)
+            println("[TDSE] Runing TDSE-SH-linear (length gauge, dipole form). step $(i-1) energy = $en, norm_value = $norm_value, bound_norm=$bound_norm_value, free_norm=$free_norm_value")
+            println("     | block_size = $(bundle_size - optimized_count) ")
+        end
+    end
+
+    return dipole_t, dipole_t_free, dipole_t_bound
 end

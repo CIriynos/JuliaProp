@@ -56,6 +56,95 @@ function apply_pure_lmat(lmat, input1, input2, output1, output2)
     @. output2 = input1 * lmat[2, 1] + input2 * lmat[2, 2]
 end
 
+"""
+Build the angular operators X = sin(theta)cos(phi) and Y = sin(theta)sin(phi)
+on a selected SH subspace.
+"""
+function build_xy_operator_subspace(rt::tdse_sh_rt, shgrid, ids::Vector{Int64})
+    n = length(ids)
+    id_to_local = zeros(Int64, shgrid.l_num ^ 2)
+    for (local_id, id) in enumerate(ids)
+        id_to_local[id] = local_id
+    end
+
+    n_plus = zeros(ComplexF64, n, n)   # sin(theta) * exp(-im*phi)
+    n_minus = zeros(ComplexF64, n, n)  # sin(theta) * exp(+im*phi)
+
+    for (row, id) in enumerate(ids)
+        l = rt.lmap[id]
+        m = rt.mmap[id]
+
+        id1 = get_index_from_lm(l - 1, m - 1, shgrid.l_num)
+        id2 = get_index_from_lm(l + 1, m - 1, shgrid.l_num)
+        id3 = get_index_from_lm(l - 1, m + 1, shgrid.l_num)
+        id4 = get_index_from_lm(l + 1, m + 1, shgrid.l_num)
+
+        if id1 != -1
+            col = id_to_local[id1]
+            if col != 0
+                c1 = -sqrt((l + m - 1) * (l + m) / ((2 * l - 1) * (2 * l + 1)))
+                n_plus[row, col] += c1
+            end
+        end
+        if id2 != -1
+            col = id_to_local[id2]
+            if col != 0
+                c2 = sqrt((l - m + 2) * (l - m + 1) / ((2 * l + 1) * (2 * l + 3)))
+                n_plus[row, col] += c2
+            end
+        end
+        if id3 != -1
+            col = id_to_local[id3]
+            if col != 0
+                c3 = sqrt((l - m - 1) * (l - m) / ((2 * l - 1) * (2 * l + 1)))
+                n_minus[row, col] += c3
+            end
+        end
+        if id4 != -1
+            col = id_to_local[id4]
+            if col != 0
+                c4 = -sqrt((l + m + 2) * (l + m + 1) / ((2 * l + 1) * (2 * l + 3)))
+                n_minus[row, col] += c4
+            end
+        end
+    end
+
+    x_op = 0.5 .* (n_plus .+ n_minus)
+    y_op = (n_minus .- n_plus) ./ (2im)
+    return x_op, y_op
+end
+
+"""
+Velocity->length gauge transform on a selected SH subspace:
+psi_L(r) = exp(i * r * (A_x X + A_y Y)) * psi_V(r).
+"""
+function gauge_transform_v2l_elli_subspace!(wave_l, wave_v, ids::Vector{Int64}, x_op, y_op, Ax::Float64, Ay::Float64, r_values::Vector{Float64})
+    isempty(ids) && return
+
+    op = Ax .* x_op .+ Ay .* y_op
+    # Enforce Hermitian symmetry in the truncated subspace for a unitary map.
+    op = 0.5 .* (op .+ adjoint(op))
+    eig = eigen(Hermitian(op))
+
+    n = length(ids)
+    nr = length(r_values)
+    coeff_v = Matrix{ComplexF64}(undef, n, nr)
+    for (row, id) in enumerate(ids)
+        @views coeff_v[row, :] .= wave_v[id]
+    end
+
+    coeff_eig = adjoint(eig.vectors) * coeff_v
+    for p = 1:n
+        λ = eig.values[p]
+        @views coeff_eig[p, :] .*= exp.(im .* λ .* r_values)
+    end
+    coeff_l = eig.vectors * coeff_eig
+
+    for (row, id) in enumerate(ids)
+        @views wave_l[id] .= coeff_l[row, :]
+    end
+end
+
 function apply_Ylm_block_elli(rt::tdse_sh_rt, vec1, vec2, tmpvec1, tmpvec2, id, tilde_flag)
     if tilde_flag == true
         apply_pure_lmat(rt.B_tilde_elli, vec1, vec2, tmpvec1, tmpvec2)   # B̃
@@ -714,12 +803,45 @@ function tdse_elli_sh_mainloop_hhg_analysis(crt_shwave, pw::physics_world_sh_t, 
 
     # bound / free decomposition buffers
     wave_bound = use_bound_analysis ? [zeros(ComplexF64, pw.Nr) for _ = 1:shgrid.l_num ^ 2] : Vector{Vector{ComplexF64}}()
+    wave_length = use_bound_analysis ? [zeros(ComplexF64, pw.Nr) for _ = 1:shgrid.l_num ^ 2] : Vector{Vector{ComplexF64}}()
     bound_norms = use_bound_analysis ? zeros(Float64, length(bound_states)) : zeros(Float64, 0)
     bound_coeffs = use_bound_analysis ? zeros(ComplexF64, length(bound_states)) : zeros(ComplexF64, 0)
+
+    bound_proj_ids = Int64[]
+    eval_ids = Int64[]
+    gauge_ids = Int64[]
+    gauge_mask = falses(shgrid.l_num ^ 2)
+    x_op = zeros(ComplexF64, 0, 0)
+    y_op = zeros(ComplexF64, 0, 0)
+    r_values = get_linspace(shgrid.rgrid)
+
     if use_bound_analysis
+        # Keep only channels that actually carry bound-state weight.
+        bound_channel_weight = zeros(Float64, shgrid.l_num ^ 2)
+        for sid in eachindex(bound_states)
+            for id in visiting_ids
+                bound_channel_weight[id] += real(dot(bound_states[sid][id], bound_states[sid][id]))
+            end
+        end
+        max_ch = maximum(bound_channel_weight)
+        proj_threshold = max(max_ch * 1e-14, eps(Float64))
+        for id in visiting_ids
+            if bound_channel_weight[id] > proj_threshold
+                push!(bound_proj_ids, id)
+            end
+        end
+        if isempty(bound_proj_ids)
+            for id in visiting_ids
+                if rt.lmap[id] <= 4
+                    push!(bound_proj_ids, id)
+                end
+            end
+        end
+        sort!(bound_proj_ids)
+
         for sid in eachindex(bound_states)
             state_norm = 0.0
-            for id in visiting_ids
+            for id in bound_proj_ids
                 state_norm += real(dot(bound_states[sid][id], bound_states[sid][id]))
             end
             bound_norms[sid] = max(state_norm, eps(Float64))
@@ -765,6 +887,39 @@ function tdse_elli_sh_mainloop_hhg_analysis(crt_shwave, pw::physics_world_sh_t, 
                 optimized_par_strategy[3][1:par_lens[3]]]
             iter_strategy = [optimized_par_strategy[1][1:par_lens[1]]; optimized_par_strategy[2][1:par_lens[2]];
                 optimized_par_strategy[3][1:par_lens[3]]]
+
+            if use_bound_analysis
+                eval_id_set = Set{Int64}()
+                for id in iter_strategy
+                    push!(eval_id_set, id)
+                    id1 = hhg_id1[id]; id1 != -1 && push!(eval_id_set, id1)
+                    id2 = hhg_id2[id]; id2 != -1 && push!(eval_id_set, id2)
+                    id3 = hhg_id3[id]; id3 != -1 && push!(eval_id_set, id3)
+                    id4 = hhg_id4[id]; id4 != -1 && push!(eval_id_set, id4)
+                    id5 = hhg_id5[id]; id5 != -1 && push!(eval_id_set, id5)
+                    id6 = hhg_id6[id]; id6 != -1 && push!(eval_id_set, id6)
+                end
+                eval_ids = sort!(collect(eval_id_set))
+
+                # Gauge-transform only the channels needed by projection and HHG eval.
+                gauge_id_set = Set{Int64}(eval_ids)
+                for id in bound_proj_ids
+                    push!(gauge_id_set, id)
+                    id1 = hhg_id1[id]; id1 != -1 && push!(gauge_id_set, id1)
+                    id2 = hhg_id2[id]; id2 != -1 && push!(gauge_id_set, id2)
+                    id3 = hhg_id3[id]; id3 != -1 && push!(gauge_id_set, id3)
+                    id4 = hhg_id4[id]; id4 != -1 && push!(gauge_id_set, id4)
+                    id5 = hhg_id5[id]; id5 != -1 && push!(gauge_id_set, id5)
+                    id6 = hhg_id6[id]; id6 != -1 && push!(gauge_id_set, id6)
+                end
+                gauge_ids = sort!(collect(gauge_id_set))
+
+                fill!(gauge_mask, false)
+                for id in gauge_ids
+                    gauge_mask[id] = true
+                end
+                x_op, y_op = build_xy_operator_subspace(rt, shgrid, gauge_ids)
+            end
         end
 
         fdsh_elli_one_step_parallelized(crt_shwave, rt, shgrid, delta_t, At_data_abs[i], At_data_eta[i], actual_par_strategy)
@@ -788,15 +943,21 @@ function tdse_elli_sh_mainloop_hhg_analysis(crt_shwave, pw::physics_world_sh_t, 
 
         # HHG Part
         if use_bound_analysis
+            # V->L gauge transform before bound-state projection.
+            gauge_transform_v2l_elli_subspace!(wave_length, crt_shwave, gauge_ids, x_op, y_op, Float64(Ax_data[i]), Float64(Ay_data[i]), r_values)
+
+            # Length-gauge projection coefficients.
             for sid in eachindex(bound_states)
                 overlap = 0.0 + 0.0im
-                for id in visiting_ids
-                    overlap += dot(bound_states[sid][id], crt_shwave[id])
+                for id in bound_proj_ids
+                    overlap += dot(bound_states[sid][id], wave_length[id])
                 end
                 bound_coeffs[sid] = overlap / bound_norms[sid]
             end
 
-            Threads.@threads for id in visiting_ids
+            # Reconstruct projected bound wave (length gauge) on evaluation channels.
+            Threads.@threads for j in eachindex(eval_ids)
+                id = eval_ids[j]
                 fill!(wave_bound[id], 0.0 + 0.0im)
                 for sid in eachindex(bound_states)
                     coeff = bound_coeffs[sid]
@@ -809,7 +970,7 @@ function tdse_elli_sh_mainloop_hhg_analysis(crt_shwave, pw::physics_world_sh_t, 
             end
 
             Threads.@threads for id in iter_strategy
-                psi = crt_shwave[id]
+                psi = gauge_mask[id] ? wave_length[id] : crt_shwave[id]
                 psi_bound = wave_bound[id]
                 total_1 = 0.0 + 0.0im
                 total_2 = 0.0 + 0.0im
@@ -824,7 +985,7 @@ function tdse_elli_sh_mainloop_hhg_analysis(crt_shwave, pw::physics_world_sh_t, 
                 id1 = hhg_id1[id]
                 if id1 != -1
                     cc = hhg_c1[id]
-                    psi_2 = crt_shwave[id1]
+                    psi_2 = gauge_mask[id1] ? wave_length[id1] : crt_shwave[id1]
                     psi_2_bound = wave_bound[id1]
                     @inbounds for k = 1:pw.Nr
                         tmp = dU_data[k] * cc
@@ -837,7 +998,7 @@ function tdse_elli_sh_mainloop_hhg_analysis(crt_shwave, pw::physics_world_sh_t, 
                 id2 = hhg_id2[id]
                 if id2 != -1
                     cc = hhg_c2[id]
-                    psi_2 = crt_shwave[id2]
+                    psi_2 = gauge_mask[id2] ? wave_length[id2] : crt_shwave[id2]
                     psi_2_bound = wave_bound[id2]
                     @inbounds for k = 1:pw.Nr
                         tmp = dU_data[k] * cc
@@ -850,7 +1011,7 @@ function tdse_elli_sh_mainloop_hhg_analysis(crt_shwave, pw::physics_world_sh_t, 
                 id3 = hhg_id3[id]
                 if id3 != -1
                     cc = hhg_c3[id]
-                    psi_2 = crt_shwave[id3]
+                    psi_2 = gauge_mask[id3] ? wave_length[id3] : crt_shwave[id3]
                     psi_2_bound = wave_bound[id3]
                     @inbounds for k = 1:pw.Nr
                         tmp = dU_data[k] * cc
@@ -863,7 +1024,7 @@ function tdse_elli_sh_mainloop_hhg_analysis(crt_shwave, pw::physics_world_sh_t, 
                 id4 = hhg_id4[id]
                 if id4 != -1
                     cc = hhg_c4[id]
-                    psi_2 = crt_shwave[id4]
+                    psi_2 = gauge_mask[id4] ? wave_length[id4] : crt_shwave[id4]
                     psi_2_bound = wave_bound[id4]
                     @inbounds for k = 1:pw.Nr
                         tmp = dU_data[k] * cc
@@ -876,7 +1037,7 @@ function tdse_elli_sh_mainloop_hhg_analysis(crt_shwave, pw::physics_world_sh_t, 
                 id5 = hhg_id5[id]
                 if id5 != -1
                     cc = hhg_c5[id]
-                    psi_2 = crt_shwave[id5]
+                    psi_2 = gauge_mask[id5] ? wave_length[id5] : crt_shwave[id5]
                     psi_2_bound = wave_bound[id5]
                     @inbounds for k = 1:pw.Nr
                         tmp = dU_data[k] * cc
@@ -889,7 +1050,7 @@ function tdse_elli_sh_mainloop_hhg_analysis(crt_shwave, pw::physics_world_sh_t, 
                 id6 = hhg_id6[id]
                 if id6 != -1
                     cc = hhg_c6[id]
-                    psi_2 = crt_shwave[id6]
+                    psi_2 = gauge_mask[id6] ? wave_length[id6] : crt_shwave[id6]
                     psi_2_bound = wave_bound[id6]
                     @inbounds for k = 1:pw.Nr
                         tmp = dU_data[k] * cc
@@ -989,3 +1150,4 @@ function tdse_elli_sh_mainloop_hhg_analysis(crt_shwave, pw::physics_world_sh_t, 
 
     return hhg_integral_t_1, hhg_integral_t_2, hhg_integral_t_3, phi_record, dphi_record
 end
+

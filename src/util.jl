@@ -116,6 +116,11 @@ const shwave_t = Vector{Vector{ComplexF64}}
 
 const wave_t = Vector{ComplexF64}
 
+@kwdef struct compact_bound_state_t
+    id::Int64
+    radial::Vector{ComplexF64}
+end
+
 const MIN_ERROR = 1e-50
 
 function copy_shwave(to::shwave_t, from::shwave_t)
@@ -409,12 +414,185 @@ function retrieve_mat(example_name, var_name)
 end
 
 
-function retrieve_obj(example_name, var_name)
-    obj = h5open("./data/$example_name.h5", "r") do file
-        read(file, var_name)
+function _parse_energy_state_k(var_name::AbstractString)
+    if startswith(var_name, "energy_state_k_")
+        suffix = var_name[length("energy_state_k_")+1:end]
+        return tryparse(Int64, suffix)
+    elseif startswith(var_name, "energy_state_")
+        suffix = var_name[length("energy_state_")+1:end]
+        return tryparse(Int64, suffix)
+    else
+        return nothing
     end
-    var = [(obj[:, i]) for i = 1: size(obj)[2]]
-    return var
+end
+
+function _get_compact_state_id(k::Int64, l_num::Int64)
+    if k <= 0
+        throw(ArgumentError("k must be positive, got $k"))
+    end
+
+    count = 0
+    for n = 1:k
+        l_upper = min(n - 1, l_num - 1)
+        for l = 0:l_upper
+            for m = -l:l
+                count += 1
+                if count == k
+                    return get_index_from_lm(l, m, l_num)
+                end
+            end
+        end
+    end
+    throw(ArgumentError("failed to map compact bound-state index k=$k with l_num=$l_num"))
+end
+
+function _to_radial_component(data)
+    if ndims(data) == 1
+        return data
+    elseif ndims(data) == 2 && size(data, 2) == 1
+        return vec(data[:, 1])
+    else
+        throw(ArgumentError("compact bound state must be a vector or Nx1 matrix, got size=$(size(data))"))
+    end
+end
+
+function _compact_radial_from_full_state(data, var_name::AbstractString, l_num::Int64)
+    if ndims(data) != 2
+        throw(ArgumentError("full bound state must be a matrix, got size=$(size(data))"))
+    end
+
+    state_k = _parse_energy_state_k(var_name)
+    if state_k !== nothing
+        id = _get_compact_state_id(state_k, l_num)
+        if id > size(data, 2)
+            throw(ArgumentError("requested SH id=$id exceeds matrix width=$(size(data, 2))"))
+        end
+        return id, vec(data[:, id])
+    end
+
+    # Fallback: choose the dominant SH channel.
+    max_norm = -1.0
+    max_id = 1
+    for id = 1:size(data, 2)
+        ch_norm = real(dot(data[:, id], data[:, id]))
+        if ch_norm > max_norm
+            max_norm = ch_norm
+            max_id = id
+        end
+    end
+    return max_id, vec(data[:, max_id])
+end
+
+function retrieve_compact_bound_state(example_name, var_name, l_num::Int64)
+    data = nothing
+    actual_name = var_name
+
+    h5open("./data/$example_name.h5", "r") do file
+        if haskey(file, var_name)
+            data = read(file, var_name)
+            return
+        end
+
+        state_k = _parse_energy_state_k(var_name)
+        if state_k !== nothing
+            compact_name = "energy_state_k_$state_k"
+            if haskey(file, compact_name)
+                data = read(file, compact_name)
+                actual_name = compact_name
+                return
+            end
+        end
+
+        throw(KeyError("dataset '$var_name' not found in ./data/$example_name.h5"))
+    end
+
+    is_compact_data = ndims(data) == 1 || (ndims(data) == 2 && size(data, 2) == 1)
+    if is_compact_data
+        state_k = _parse_energy_state_k(actual_name)
+        state_k === nothing && throw(ArgumentError("cannot infer compact state index from '$actual_name'"))
+        id = _get_compact_state_id(state_k, l_num)
+        radial = ComplexF64.(_to_radial_component(data))
+        return compact_bound_state_t(id=id, radial=radial)
+    end
+
+    id, radial = _compact_radial_from_full_state(data, actual_name, l_num)
+    return compact_bound_state_t(id=id, radial=ComplexF64.(radial))
+end
+
+function retrieve_compact_bound_states(example_name, state_num::Int64, l_num::Int64; state_prefix::AbstractString = "energy_state_")
+    states = Vector{compact_bound_state_t}(undef, state_num)
+    h5open("./data/$example_name.h5", "r") do file
+        for i = 1:state_num
+            var_name = string(state_prefix, i)
+            data = nothing
+            actual_name = var_name
+            if haskey(file, var_name)
+                data = read(file, var_name)
+            else
+                compact_name = "energy_state_k_$i"
+                if haskey(file, compact_name)
+                    data = read(file, compact_name)
+                    actual_name = compact_name
+                else
+                    throw(KeyError("dataset '$var_name'/'$compact_name' not found in ./data/$example_name.h5"))
+                end
+            end
+
+            is_compact_data = ndims(data) == 1 || (ndims(data) == 2 && size(data, 2) == 1)
+            if is_compact_data
+                id = _get_compact_state_id(i, l_num)
+                radial = ComplexF64.(_to_radial_component(data))
+                states[i] = compact_bound_state_t(id=id, radial=radial)
+            else
+                id, radial = _compact_radial_from_full_state(data, actual_name, l_num)
+                states[i] = compact_bound_state_t(id=id, radial=ComplexF64.(radial))
+            end
+        end
+    end
+    return states
+end
+
+function retrieve_obj(example_name, var_name; shgrid::Union{GridSH, Nothing}=nothing)
+    obj = nothing
+    compact_k::Union{Int64, Nothing} = nothing
+
+    h5open("./data/$example_name.h5", "r") do file
+        if haskey(file, var_name)
+            obj = read(file, var_name)
+            if shgrid !== nothing
+                compact_k = _parse_energy_state_k(var_name)
+            end
+            return
+        end
+
+        if shgrid !== nothing
+            state_k = _parse_energy_state_k(var_name)
+            if state_k !== nothing
+                compact_name = "energy_state_k_$state_k"
+                if haskey(file, compact_name)
+                    obj = read(file, compact_name)
+                    compact_k = state_k
+                    return
+                end
+            end
+        end
+
+        throw(KeyError("dataset '$var_name' not found in ./data/$example_name.h5"))
+    end
+
+    is_compact_data = ndims(obj) == 1 || (ndims(obj) == 2 && size(obj, 2) == 1)
+    if compact_k !== nothing && is_compact_data
+        radial_component = _to_radial_component(obj)
+        state = create_empty_shwave(shgrid)
+        id = _get_compact_state_id(compact_k, shgrid.l_num)
+        state[id] .= radial_component
+        return state
+    end
+
+    if ndims(obj) == 2
+        return [(obj[:, i]) for i = 1:size(obj, 2)]
+    end
+    return obj
 end
 
 

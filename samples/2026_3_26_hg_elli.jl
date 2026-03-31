@@ -89,14 +89,14 @@ end
 # ###########################
 
 # Retrieve Data
-example_name = "2026_3_17_hg"
-hhg_integral_t = retrieve_mat(example_name, "hhg_integral_t_1")
-hhg_integral_t_free = retrieve_mat(example_name, "hhg_integral_t_1_free")
-hhg_integral_t_bound = retrieve_mat(example_name, "hhg_integral_t_1_bound")
+example_name = "2026_3_26_hg"
+hhg_integral_t = retrieve_mat(example_name, "hhg_integral_t_2")
+hhg_integral_t_free = retrieve_mat(example_name, "hhg_integral_t_2_free")
+hhg_integral_t_bound = retrieve_mat(example_name, "hhg_integral_t_2_bound")
 
 # get harmonic spectrum, including data, and k axis (frequency axis)
-hg1, ks = get_hg_spectrum(ts, hhg_integral_t, ω_fs * 65)
-hg1_free, _ = get_hg_spectrum(ts, hhg_integral_t_free, ω_fs * 65)
-hg1_bound, _ = get_hg_spectrum(ts, hhg_integral_t_bound, ω_fs * 65)
+hg1, ks = get_hg_spectrum(ts, hhg_integral_t, ω_fs * 20)
+hg1_free, _ = get_hg_spectrum(ts, hhg_integral_t_free, ω_fs * 20)
+hg1_bound, _ = get_hg_spectrum(ts, hhg_integral_t_bound, ω_fs * 20)
 
-plot(ks ./ ω_fs, [hg1, hg1_free, hg1_bound], yscale=:log10, yaxis=[1e-4, 1e-2, 1e0, 1e2, 1e4], ylimit=(1e-15, 1e4))
+plot(ks ./ ω_fs, [hg1, hg1_free, hg1_bound], yscale=:log10, yaxis=[1e-4, 1e-2, 1e0, 1e2, 1e4], ylimit=(1e-10, 1e4))
