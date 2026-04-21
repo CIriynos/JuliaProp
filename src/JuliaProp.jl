@@ -116,6 +116,7 @@ export plot_fs_thz_figure
 export get_hhg_spectrum_xy
 export create_tdata
 export get_hg_spectrum
+export get_hg_spectrum_from_dipole
 export fft_phy
 
 # ctmc.jl

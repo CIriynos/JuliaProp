@@ -75,8 +75,9 @@ function apply_pure_lmat_v2(lmat, input1, input2, output1, output2, adjoint_flag
     end
 end
 
+#  H_mix
 function apply_mix_v2(rt::tdse_sh_rt, crt_piece_1, crt_piece_2, tmp_piece_1, tmp_piece_2, id)
-    apply_pure_lmat_v2(rt.B_pl, crt_piece_1, crt_piece_2, tmp_piece_1, tmp_piece_2, false)
+    apply_pure_lmat_v2(rt.B_pl, crt_piece_1, crt_piece_2, tmp_piece_1, tmp_piece_2, false)  
 
     mul!(crt_piece_1, rt.Ylm_neg[id], tmp_piece_1)
     trimat_elimination(tmp_piece_1, rt.Ylm_pos[id], crt_piece_1, rt.A_add_list_scalar[id], rt.B_add_list[id])
@@ -120,7 +121,7 @@ function fdshpl_one_step(crt_shwave, rt, shgrid, delta_t, At, At_next, m; optimi
     #     apply_mix_v2(rt, crt_shwave[id], crt_shwave[id + 1], rt.tmp_shwave[id], rt.tmp_shwave[id + 1], id)
     # end
 
-    # apply Hat
+    # apply H_atom
     Threads.@threads for j = 1: bundle_size
         l = abs(m) + j - 1
         id = head_ptr + j - 1

@@ -1016,10 +1016,10 @@ function isurf_sh_vector(pw::physics_world_sh_t, rt::tdse_sh_rt, phi_record, dph
 
     tsurf_result_vec = deepcopy(a_tsurff_vec)
 
-    # add them together
-    for p in eachindex(k_space.k_collection)
-        a_tsurff_vec[p] += δa_vec[p]
-    end
+    # # add them together
+    # for p in eachindex(k_space.k_collection)
+    #     a_tsurff_vec[p] += δa_vec[p]
+    # end
 
     return a_tsurff_vec
 end

@@ -310,3 +310,14 @@ function get_hg_spectrum(ts, accel_data, max_k)
     max_id = Int64(floor(max_k / delta_k) + 1)
     return hg1[1: max_id], ks[1: max_id]
 end
+
+function get_hg_spectrum_from_dipole(ts, dipole_data, max_k)
+    delta_t = ts[2] - ts[1]
+    N = length(dipole_data)
+    dipole_fft_data, ks, delta_k = fft_phy(dipole_data, delta_t)
+
+    hg1 = (ks .^ 3) .* abs.(dipole_fft_data) .^ 2
+    hg1[1] = 0.0
+    max_id = Int64(floor(max_k / delta_k) + 1)
+    return hg1[1: max_id], ks[1: max_id]
+end
