@@ -269,20 +269,22 @@ function pre_judgement(
     dt = ts[2] - ts[1]
 
     for (it, t) in enumerate(ts)
+        t0 = 0.0
         @. p_curves_x = kappa_grid_x
         @. p_curves_y = kappa_grid_y
         @. p_curves_z = kappa_grid_z + eta_data[it]
         @. chi_curves = (kappa_grid_x ^ 2 + kappa_grid_y ^ 2 + kappa_grid_z ^ 2) * (t - t0) / 2 + kappa_grid_z * eta_1_data[it] + eta_2_data[it] / 2
         
-        p_abs::Float64 = 0.0
-        theta::Float64 = 0.0
-        phi::Float64 = 0.0
-        p_id::Int64 = 0
-        theta_id::Int64 = 0
-        for i in 1: N_kappa
-            if is_kappa_included[i] == 1
-                continue
-            end
+        Threads.@threads for i in 1: N_kappa
+        # for i in 1: N_kappa
+            p_abs::Float64 = 0.0
+            theta::Float64 = 0.0
+            phi::Float64 = 0.0
+            p_id::Int64 = 0
+            theta_id::Int64 = 0
+            # if is_kappa_included[i] == 1
+            #     continue
+            # end
             # interp to a certain position on (p_abs, θ, ϕ) grid (namely pgrid aforehead)
             p_abs, theta, phi = xyz_to_sphere(p_curves_x[i], p_curves_y[i], p_curves_z[i])
             p_id = floor(Int64, (p_abs - 0.0) / Δp) + 1
@@ -309,9 +311,20 @@ function pre_judgement(
     return is_kappa_included, coupling_amplitude
 end
 
-is_kappa_included, coupling_amplitude = pre_judgement(p_curves_x, p_curves_y, p_curves_z, kappa_grid_x, kappa_grid_y, kappa_grid_z, N_kappa, Δp, Δtheta, coarse_dipole_z_cb, Et_data, eta_data)
+is_kappa_included, coupling_amplitude = pre_judgement(p_curves_x, p_curves_y, p_curves_z, chi_curves, kappa_grid_x, kappa_grid_y, kappa_grid_z, N_kappa, Δp, Δtheta, coarse_dipole_z_cb, Et_data, eta_data)
 
 
+# get a 2D slice of coupling_amplitude in x-z plane (namely ky = 0 plane)
+coupling_amplitude_xz = zeros(ComplexF64, length(kappa_x_subgrid), length(kappa_z_subgrid))
+for i in 1: length(kappa_x_subgrid)
+    for j in 1: length(kappa_z_subgrid)
+        kappa_index = (i - 1) * length(kappa_y_subgrid) * length(kappa_z_subgrid) + (length(kappa_y_subgrid) ÷ 2) * length(kappa_z_subgrid) + j
+        coupling_amplitude_xz[i, j] = coupling_amplitude[kappa_index]
+    end
+end
+# contourf with no contour line
+contourf(kappa_x_subgrid, kappa_z_subgrid, norm.(coupling_amplitude_xz), xlabel="kappa_z", ylabel="kappa_x", title="Coupling Amplitude in kappa_x-kappa_z plane", colorbar_title="|Coupling Amplitude|", linewidth=0)
+sum(norm.(coupling_amplitude) * kappa_delta ^ 3)
 
 
 # on fixing !!

@@ -369,7 +369,10 @@ function create_tdse_rt_sh(pw::physics_world_sh_t; m_zero_flag::Bool = false)
     D2_boost[1, 1] = foo
     M2_boost[1, 1] = bar
     GC.gc(true)
-    ccall(:malloc_trim, Cint, (Csize_t,), 0)
+    if Sys.islinux()
+        # Safely trim the heap on Linux
+        ccall(:malloc_trim, Cint, (Csize_t,), 0)
+    end
 
     # D1  M1
     D1 = Tridiagonal(fill(-1, rgrid.count - 1), fill(0, rgrid.count), fill(1, rgrid.count - 1)) * (1.0 / (2.0 * rgrid.delta))
@@ -379,7 +382,9 @@ function create_tdse_rt_sh(pw::physics_world_sh_t; m_zero_flag::Bool = false)
     M1[1, 1] = (4.0 + (sqrt(3.0) - 2.0)) * (1 / 6)
     M1[rgrid.count, rgrid.count] = M1[1, 1]
     GC.gc(true)
-    ccall(:malloc_trim, Cint, (Csize_t,), 0)
+    if Sys.islinux()
+        ccall(:malloc_trim, Cint, (Csize_t,), 0)
+    end
 
     # W_pos/neg(boost)
     W_neg = [(M2 - (D2 + M2 * (V + V_apdix[j])) * (0.5im * delta_t)) for j in 1: shgrid.l_num]
@@ -392,7 +397,9 @@ function create_tdse_rt_sh(pw::physics_world_sh_t; m_zero_flag::Bool = false)
     W_neg_boost_im = [(M2_boost - (D2_boost + M2_boost * (V_pure + V_apdix[j])) * (0.5im * pw.itp_delta_t)) for j in 1: shgrid.l_num]
     W_pos_boost_im = [(M2_boost + (D2_boost + M2_boost * (V_pure + V_apdix[j])) * (0.5im * pw.itp_delta_t)) for j in 1: shgrid.l_num]
     GC.gc(true)
-    ccall(:malloc_trim, Cint, (Csize_t,), 0)
+    if Sys.islinux()
+        ccall(:malloc_trim, Cint, (Csize_t,), 0)
+    end
 
     # create runtime struct obj
     empty_trimat = Tridiagonal(zeros(rgrid.count - 1), zeros(rgrid.count), zeros(rgrid.count - 1))
@@ -405,7 +412,9 @@ function create_tdse_rt_sh(pw::physics_world_sh_t; m_zero_flag::Bool = false)
     A_add_list = [zeros(ComplexF64, rgrid.count) for i in range(1, l_num2)]
     B_add_list = [zeros(ComplexF64, rgrid.count) for i in range(1, l_num2)]
     GC.gc(true)
-    ccall(:malloc_trim, Cint, (Csize_t,), 0)
+    if Sys.islinux()
+        ccall(:malloc_trim, Cint, (Csize_t,), 0)
+    end
 
     B_pl = [1 1; -1 1] ./ sqrt(2)           # B_pl never changes. (in fdsh_pl)
     B_elli = zeros(ComplexF64, 2, 2)        # B_elli(tilde) will be updated in runtime. (for its η(t) dependency)
@@ -422,7 +431,9 @@ function create_tdse_rt_sh(pw::physics_world_sh_t; m_zero_flag::Bool = false)
     Hl_right_list_im = [(D2 + M2 * (V + V_apdix[j])) for j in 1: shgrid.l_num]
     Hl_right_list_im_boost = [(D2_boost + M2_boost * (V + V_apdix[j])) for j in 1: shgrid.l_num]
     GC.gc(true)
-    ccall(:malloc_trim, Cint, (Csize_t,), 0)
+    if Sys.islinux()
+        ccall(:malloc_trim, Cint, (Csize_t,), 0)
+    end
 
     par_strategy = create_par_strategy(l_num)
 
@@ -431,7 +442,9 @@ function create_tdse_rt_sh(pw::physics_world_sh_t; m_zero_flag::Bool = false)
     phi = create_empty_shwave(shgrid)
     phi_tmp = create_empty_shwave(shgrid)
     GC.gc(true)
-    ccall(:malloc_trim, Cint, (Csize_t,), 0)
+    if Sys.islinux()
+        ccall(:malloc_trim, Cint, (Csize_t,), 0)
+    end
 
     rt = tdse_sh_rt(lmap, mmap, par_strategy,
         D2, M2, D1, M1, D2_boost, M2_boost, M2_lu, M2_boost_lu,
@@ -446,7 +459,9 @@ function create_tdse_rt_sh(pw::physics_world_sh_t; m_zero_flag::Bool = false)
         A_add_list_scalar, A_add_list, B_add_list)
     
     GC.gc(true)
-    ccall(:malloc_trim, Cint, (Csize_t,), 0)    
+    if Sys.islinux()
+        ccall(:malloc_trim, Cint, (Csize_t,), 0)
+    end    
 
     return rt
 end
