@@ -108,6 +108,8 @@ create_empty_shwave_array(shgrid::GridSH) = [ones(ComplexF64, shgrid.rgrid.count
 
 create_empty_shwave_array_fixed(shgrid::GridSH) = [ones(ComplexF64, shgrid.rgrid.count) * 1e-50 for i in range(1, shgrid.l_num * shgrid.l_num)]
 
+create_empty_mzero_shwave(shgrid::GridSH) = [ones(ComplexF64, shgrid.rgrid.count) * 1e-50 for i in range(1, shgrid.l_num)]
+
 # modified here if evaluation is slow.
 # const create_empty_shwave::Function = create_empty_shwave_array_fixed
 const create_empty_shwave::Function = create_empty_shwave_array

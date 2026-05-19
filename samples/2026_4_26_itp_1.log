@@ -1,0 +1,37 @@
+  Activating project at `~/JuliaProp_github/JuliaProp`
+[ITP]: loop_times = 484
+Energy of the state with k=1: -0.4964336949923912
+[ITP]: loop_times = 3167
+Energy of the state with k=2: -0.1133886677324868
+[ITP]: loop_times = 7641
+Energy of the state with k=3: -0.034607349557600184
+[ITP]: loop_times = 31321
+Energy of the state with k=4: -0.003144495760459514
+[ITP]: loop_times = 2000
+(k = 1) Energy of the state with n=1, l=0, m=0: -0.4964336949924363
+ended procedure.
+finished memory clear.
+[ITP]: loop_times = 2000
+(k = 2) Energy of the state with n=2, l=0, m=0: -0.11122381015802701
+[ITP]: loop_times = 2000
+(k = 4) Energy of the state with n=2, l=1, m=0: -0.11338866773267796
+ended procedure.
+finished memory clear.
+[ITP]: loop_times = 2000
+(k = 6) Energy of the state with n=3, l=0, m=0: -0.030766627723450835
+[ITP]: loop_times = 2000
+(k = 8) Energy of the state with n=3, l=1, m=0: -0.032070134194331766
+[ITP]: loop_times = 2000
+(k = 12) Energy of the state with n=3, l=2, m=0: -0.03460734955805009
+ended procedure.
+finished memory clear.
+[ITP]: loop_times = 2000
+(k = 15) Energy of the state with n=4, l=0, m=0: -0.002676969103453033
+[ITP]: loop_times = 2000
+(k = 17) Energy of the state with n=4, l=1, m=0: -0.002711221797030169
+[ITP]: loop_times = 2000
+(k = 21) Energy of the state with n=4, l=2, m=0: -0.0028240636728738317
+[ITP]: loop_times = 2000
+(k = 27) Energy of the state with n=4, l=3, m=0: -0.0031444957639604177
+ended procedure.
+finished memory clear.

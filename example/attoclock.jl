@@ -12,7 +12,7 @@ using FFTW
 # Basic Parameters
 Nr =            5000            # number of radial grid points
 Δr =            0.2             # radial grid step size
-l_num =         25              # number of angular momentum components
+l_num =         50              # number of angular momentum components
 Δt =            0.05            # time step size
 Z =             1.0             # nuclear charge
 po_func =       coulomb_potiential_zero_fixed_plus(Rco=50.0) # potential function
@@ -56,20 +56,20 @@ k_space = create_k_space(ks, fixed_theta(pi/2), phi_linspace(Nk_phi))
 
 ###########################
 
-# # Main Propagation Loop of TDSE with t-surf Recording
-# phi_record, dphi_record = tdse_elli_sh_mainloop_record_xy_optimized(crt_shwave, pw, rt, At_data_x, At_data_y, steps, Ri_tsurf);
+# Main Propagation Loop of TDSE with t-surf Recording
+phi_record, dphi_record = tdse_elli_sh_mainloop_record_xy_optimized(crt_shwave, pw, rt, At_data_x, At_data_y, steps, Ri_tsurf);
 
-# # i-surf procedure
-# a_tsurff_vec = isurf_sh_vector(pw, rt, phi_record, dphi_record, crt_shwave, At_data_x, At_data_y, At_data_z, Ri_tsurf, ts, k_space, TSURF_MODE_ELLI);
+# i-surf procedure
+a_tsurff_vec = isurf_sh_vector(pw, rt, phi_record, dphi_record, crt_shwave, At_data_x, At_data_y, At_data_z, Ri_tsurf, ts, k_space, TSURF_MODE_ELLI);
 
-# # Store Data Manually
-# example_name = "attoclock"
-# h5open("./data/$example_name.h5", "w") do file
-#     write(file, "crt_shwave", hcat(crt_shwave...))
-#     write(file, "phi_record", hcat(phi_record...))
-#     write(file, "dphi_record", hcat(dphi_record...))
-#     write(file, "a_tsurff_vec", a_tsurff_vec)
-# end
+# Store Data Manually
+example_name = "attoclock"
+h5open("./data/$example_name.h5", "w") do file
+    write(file, "crt_shwave", hcat(crt_shwave...))
+    write(file, "phi_record", hcat(phi_record...))
+    write(file, "dphi_record", hcat(dphi_record...))
+    write(file, "a_tsurff_vec", a_tsurff_vec)
+end
 
 ########################
 

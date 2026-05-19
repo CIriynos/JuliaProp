@@ -200,12 +200,12 @@ function gram_schmidt_sh_so(wave_list, occ_list)
     end
 end
 
-function itp_fdsh_single(pw::physics_world_sh_t, rt::tdse_sh_rt, init_shwave, id; err = 1e-8, log_info=true)
+function itp_fdsh_single(pw::physics_world_sh_t, rt::tdse_sh_rt, init_shwave, id; err = 1e-8, log_info=true, mininum_loop_times = 100)
     energy_diff = 10000.0     # A big enough Float64
     last_energy = 10000.0
 
     loop_times = 0
-    while energy_diff >= err
+    while energy_diff >= err || loop_times < mininum_loop_times
         fdsh_no_laser_one_step_so_itp(init_shwave, rt, id)
         normalize!(init_shwave[id])
 
@@ -218,6 +218,8 @@ function itp_fdsh_single(pw::physics_world_sh_t, rt::tdse_sh_rt, init_shwave, id
         end
         loop_times += 1
     end
+
+    println("[ITP]: loop_times = $loop_times")
 end
 
 
@@ -280,8 +282,7 @@ function itp_fdsh_special(pw::physics_world_sh_t, rt::tdse_sh_rt; k = 1, err = 1
     return ori_wave_list
 end
 
-
-function create_physics_world_sh(Nr, l_num, delta_r, delta_t, po_func_r, Z; delta_t_im = delta_t, manually_converge_to_zero_flag::Bool = false, Rco::Float64 = 50.0)
+function create_physics_world_sh(Nr, l_num, delta_r, delta_t, po_func_r, Z; delta_t_im = delta_t)
     rgrid = Grid1D(count=Nr, delta=delta_r, shift=delta_r)
     shgrid = GridSH(rgrid=rgrid, l_num=l_num)
     lmap, mmap = create_lmmap(l_num)
@@ -294,7 +295,7 @@ function create_physics_world_sh(Nr, l_num, delta_r, delta_t, po_func_r, Z; delt
         Z=Z, po_data_r=deepcopy(po_data_r), po_data_r_im=deepcopy(po_data_r .+ po_data_r_imb), l_num=l_num, lmap=lmap, mmap=mmap)
 end
 
-function create_physics_world_sh(Nr, l_num, delta_r, delta_t, po_func_r, Z, imb_func; delta_t_im = delta_t, manually_converge_to_zero_flag::Bool = false, Rco::Float64 = 50.0)
+function create_physics_world_sh(Nr, l_num, delta_r, delta_t, po_func_r, Z, imb_func; delta_t_im = delta_t)
     rgrid = Grid1D(count=Nr, delta=delta_r, shift=delta_r)
     shgrid = GridSH(rgrid=rgrid, l_num=l_num)
     lmap, mmap = create_lmmap(l_num)
@@ -334,7 +335,7 @@ function create_par_strategy(l_num)
     return par_strategy
 end
 
-function create_tdse_rt_sh(pw::physics_world_sh_t)
+function create_tdse_rt_sh(pw::physics_world_sh_t; m_zero_flag::Bool = false)
     shgrid = pw.shgrid
     rgrid = pw.shgrid.rgrid
     delta_t = pw.delta_t
@@ -342,7 +343,11 @@ function create_tdse_rt_sh(pw::physics_world_sh_t)
 
     r_linspace = get_linspace(rgrid)
     lmap, mmap = create_lmmap(l_num)
-    l_num2 = shgrid.l_num ^ 2
+    if m_zero_flag == true
+        l_num2 = shgrid.l_num
+    else
+        l_num2 = shgrid.l_num ^ 2
+    end
 
     # mapping potiential to actual data (OPTIONAL: add absorbing boundary)
     V_pure = Diagonal(pw.po_data_r)
@@ -363,7 +368,8 @@ function create_tdse_rt_sh(pw::physics_world_sh_t)
     bar = -2.0 * (1.0 + rgrid.delta * rgrid.delta * foo / 12.0) 
     D2_boost[1, 1] = foo
     M2_boost[1, 1] = bar
-
+    GC.gc(true)
+    ccall(:malloc_trim, Cint, (Csize_t,), 0)
 
     # D1  M1
     D1 = Tridiagonal(fill(-1, rgrid.count - 1), fill(0, rgrid.count), fill(1, rgrid.count - 1)) * (1.0 / (2.0 * rgrid.delta))
@@ -372,7 +378,8 @@ function create_tdse_rt_sh(pw::physics_world_sh_t)
     M1 = Tridiagonal(fill(1, rgrid.count - 1), fill(4, rgrid.count), fill(1, rgrid.count - 1)) * (1 / 6)
     M1[1, 1] = (4.0 + (sqrt(3.0) - 2.0)) * (1 / 6)
     M1[rgrid.count, rgrid.count] = M1[1, 1]
-
+    GC.gc(true)
+    ccall(:malloc_trim, Cint, (Csize_t,), 0)
 
     # W_pos/neg(boost)
     W_neg = [(M2 - (D2 + M2 * (V + V_apdix[j])) * (0.5im * delta_t)) for j in 1: shgrid.l_num]
@@ -384,7 +391,8 @@ function create_tdse_rt_sh(pw::physics_world_sh_t)
     W_pos_im = [(M2 + (D2 + M2 * (V_pure + V_apdix[j])) * (0.5im * pw.itp_delta_t)) for j in 1: shgrid.l_num]
     W_neg_boost_im = [(M2_boost - (D2_boost + M2_boost * (V_pure + V_apdix[j])) * (0.5im * pw.itp_delta_t)) for j in 1: shgrid.l_num]
     W_pos_boost_im = [(M2_boost + (D2_boost + M2_boost * (V_pure + V_apdix[j])) * (0.5im * pw.itp_delta_t)) for j in 1: shgrid.l_num]
-
+    GC.gc(true)
+    ccall(:malloc_trim, Cint, (Csize_t,), 0)
 
     # create runtime struct obj
     empty_trimat = Tridiagonal(zeros(rgrid.count - 1), zeros(rgrid.count), zeros(rgrid.count - 1))
@@ -396,6 +404,8 @@ function create_tdse_rt_sh(pw::physics_world_sh_t)
     A_add_list_scalar = [zeros(Float64, rgrid.count) for i in range(1, l_num2)]
     A_add_list = [zeros(ComplexF64, rgrid.count) for i in range(1, l_num2)]
     B_add_list = [zeros(ComplexF64, rgrid.count) for i in range(1, l_num2)]
+    GC.gc(true)
+    ccall(:malloc_trim, Cint, (Csize_t,), 0)
 
     B_pl = [1 1; -1 1] ./ sqrt(2)           # B_pl never changes. (in fdsh_pl)
     B_elli = zeros(ComplexF64, 2, 2)        # B_elli(tilde) will be updated in runtime. (for its η(t) dependency)
@@ -411,6 +421,8 @@ function create_tdse_rt_sh(pw::physics_world_sh_t)
     Hl_right_list_boost = [(D2_boost + M2_boost * (V_pure + V_apdix[j])) for j in 1: shgrid.l_num]
     Hl_right_list_im = [(D2 + M2 * (V + V_apdix[j])) for j in 1: shgrid.l_num]
     Hl_right_list_im_boost = [(D2_boost + M2_boost * (V + V_apdix[j])) for j in 1: shgrid.l_num]
+    GC.gc(true)
+    ccall(:malloc_trim, Cint, (Csize_t,), 0)
 
     par_strategy = create_par_strategy(l_num)
 
@@ -418,6 +430,8 @@ function create_tdse_rt_sh(pw::physics_world_sh_t)
     Htmp_list = [deepcopy(empty_trimat_cplx) for i in range(1, l_num2)]
     phi = create_empty_shwave(shgrid)
     phi_tmp = create_empty_shwave(shgrid)
+    GC.gc(true)
+    ccall(:malloc_trim, Cint, (Csize_t,), 0)
 
     rt = tdse_sh_rt(lmap, mmap, par_strategy,
         D2, M2, D1, M1, D2_boost, M2_boost, M2_lu, M2_boost_lu,
@@ -430,6 +444,9 @@ function create_tdse_rt_sh(pw::physics_world_sh_t)
         Htmp_list, tmp_shwave, tmp_shwave1, tmp_shwave2,
         phi, phi_tmp,
         A_add_list_scalar, A_add_list, B_add_list)
+    
+    GC.gc(true)
+    ccall(:malloc_trim, Cint, (Csize_t,), 0)    
 
     return rt
 end

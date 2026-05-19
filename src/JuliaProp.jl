@@ -17,7 +17,7 @@ export Grid1D, GridSH
 export xyz_to_sphere, sphere_to_xyz, CG_coefficient, spherical_bessel_func
 export get_SH_integral
 export get_linspace, grid_index, grid_reduce
-export wave_t, shwave_t, compact_bound_state_t, create_empty_shwave, copy_shwave
+export wave_t, shwave_t, compact_bound_state_t, create_empty_shwave, copy_shwave, create_empty_mzero_shwave
 export trimat_elimination
 export pentamat_t, create_empty_pentamat, create_pentamat, create_identity_pentamat, create_diag_pentamat, pentamat_to_mat, penta_mul, pentamat_elimination
 export four_order_difference, two_order_difference
@@ -118,6 +118,8 @@ export create_tdata
 export get_hg_spectrum
 export get_hg_spectrum_from_dipole
 export fft_phy
+
+export @expo
 
 # ctmc.jl
 export create_ctmc_rt

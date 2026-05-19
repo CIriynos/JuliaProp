@@ -1218,5 +1218,9 @@ function tdseln_sh_mainloop_length_gauge_hhg_analysis_dipole(crt_shwave, pw::phy
         end
     end
 
-    return dipole_t, dipole_t_free, dipole_t_bound
+    norm_value = sum(map(rvec->dot(rvec, rvec), crt_shwave))
+    bound_norm_value = sum(norm(bound_coeffs) .^ 2)
+    free_norm_value = sum(map(rvec->dot(rvec, rvec), bundle_wave_free))
+
+    return dipole_t, dipole_t_free, dipole_t_bound, norm_value, bound_norm_value, free_norm_value
 end

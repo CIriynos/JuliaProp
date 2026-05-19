@@ -317,7 +317,36 @@ function get_hg_spectrum_from_dipole(ts, dipole_data, max_k)
     dipole_fft_data, ks, delta_k = fft_phy(dipole_data, delta_t)
 
     hg1 = (ks .^ 3) .* abs.(dipole_fft_data) .^ 2
+    hg1_phase = angle.(dipole_fft_data)
     hg1[1] = 0.0
     max_id = Int64(floor(max_k / delta_k) + 1)
-    return hg1[1: max_id], ks[1: max_id]
+    return hg1[1: max_id], hg1_phase[1: max_id], ks[1: max_id]
+end
+
+
+
+
+
+# 用户可以在 include 脚本之前，给这个字典填入要覆盖的值
+# 例如: JuliaProp.params[:a] = 999
+const params = Dict{Symbol, Any}()
+
+"""
+    @expo x = default
+
+如果 `JuliaProp.params` 字典中存在键 `:x`，则赋值为该值；
+否则使用默认值 `default`。
+"""
+macro expo(expr)
+    # 期望 expr 是 :(x = default) 形式
+    if expr.head == :(=)
+        var = expr.args[1]          # 变量名，例如 :a
+        default_val = expr.args[2]  # 默认值，例如 10
+        # 生成代码：x = get(JuliaProp.params, :x, default)
+        return esc(:(
+            $var = get(JuliaProp.params, $(QuoteNode(var)), $default_val)
+        ))
+    else
+        error("@expo 只能用于赋值语句，例如 @expo a = 10")
+    end
 end
