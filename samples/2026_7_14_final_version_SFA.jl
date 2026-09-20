@@ -26,43 +26,37 @@ Nr =            10000            # number of radial grid points
 l_num =         10               # number of angular momentum components
 Δt =            0.2            # time step size
 Z =             1.0             # nuclear charge
-po_func(r) =    -1 / r        # potential function
-# po_func(r) =    -1 / r * exp(- r * r / (5.0 ^ 2))   # a short-range potential function, which is used to test the ITP method for getting the initial wavefunction in a short-range potential
+po_func(r) =    -1 / r * exp(- r * r / (10.0 ^ 2))   # a short-range potential function, which is used to test the ITP method for getting the initial wavefunction in a short-range potential
 # po_func(r) =    -1 / r * exp(- r * r / (20.0 ^ 2))   # a short-range potential function, which is used to test the ITP method for getting the initial wavefunction in a short-range potential
 rmax =          Nr * Δr     
 absorb_func     = absorb_boundary_r(rmax, rmax * 0.8)  # create absorbing boundary function
 
 # define laser field
-# E_fs =          0.0534                # peak electric field of the fs pulse
-# ω_fs =          0.0228                # angular frequency of the fs pulse
-# nc =            4                     # number of optical cycles in the fs pulse
-E_fs =          0.04                    # peak electric field of the fs pulse
-ω_fs =          0.057 * 1               # angular frequency of the fs pulse
-nc =            6                       # number of optical cycles in the fs pulse
+@expo E_fs =          0.15                    # peak electric field of the fs pulse
+@expo ω_fs =          0.057 * 1               # angular frequency of the fs pulse
+@expo nc =            6                       # number of optical cycles in the fs pulse
 Ex_fs, Ey_fs, Ez_fs, tmax = light_pulse(ω_fs, E_fs, nc, 0, ellipticity=0.0, phase1=0.5pi)        # create the light pulse from the given parameters (+ ellipticity)
 E_field(t) = Ex_fs(t)
-# E_field(t) = E_fs
 Tp = 2 * nc * pi / ω_fs
 
 # create pw, rt, and pre-calculated 
-pw = create_physics_world_sh(Nr, l_num, Δr, Δt, po_func, Z, absorb_func);
-rt = create_tdse_rt_sh(pw, m_zero_flag=true);
-rs = get_linspace(pw.shgrid.rgrid)
+pw_ = create_physics_world_sh(Nr, l_num, Δr, Δt, po_func, Z, absorb_func);
+rt_ = create_tdse_rt_sh(pw_, m_zero_flag=true);
+rs = get_linspace(pw_.shgrid.rgrid)
 
 # get ek_list
-# max_k = 2
-max_k = 6
+max_k = 2
+# max_k = 6
 ek_list = []
-for k = 1: max_k
-    init_wave = create_empty_mzero_shwave(pw.shgrid)
-    rs = get_linspace(pw.shgrid.rgrid)
-    @. init_wave[k] = rs * exp(-rs * k)
-    itp_fdsh_single(pw, rt, init_wave, k, err=1e-15, log_info=false)
-    ek = get_energy_sh_so(init_wave, rt, k)
+for k_ = 1: max_k
+    init_wave = create_empty_mzero_shwave(pw_.shgrid)
+    @. init_wave[k_] = rs * exp(-rs * k_)
+    itp_fdsh_single(pw_, rt_, init_wave, k_, err=1e-15, log_info=false)
+    ek = get_energy_sh_so(init_wave, rt_, k_)
 
     # ek = -0.5 / (k ^ 2)
     push!(ek_list, ek)
-    println("Energy of the state with k=$k: ", ek)
+    println("Energy of the state with k_=$k_: ", ek)
 
     init_wave = nothing 
     GC.gc(true)
@@ -131,112 +125,12 @@ end
     return sqrt((2L + 1) / (4π)) * legendreP_l(L, clamp(costh, -1.0, 1.0))
 end
 
-function spherical_neumann_l(l::Int, x::Float64)
-    abs(x) < 1e-12 && return -Inf
-    return sqrt(pi / (2x)) * bessely(l + 0.5, x)
-end
-
-function build_radial_box_continuum(
-    L::Int,
-    rs::Vector{Float64},
-    Δr::Float64,
-    Vfunc;
-    pmax::Float64,
-)
-    # Use only r > 0 points. The r = 0 point is singular for L > 0.
-    idx = findall(r -> r > 1e-12, rs)
-    r = rs[idx]
-    N = length(r)
-
-    diag = zeros(Float64, N)
-    off  = fill(-1.0 / (2.0 * Δr^2), N - 1)
-
-    for i in 1:N
-        ri = r[i]
-        diag[i] =
-            1.0 / Δr^2 +
-            L * (L + 1) / (2.0 * ri^2) +
-            Vfunc(ri)
-    end
-
-    F = eigen(SymTridiagonal(diag, off))
-
-    E = F.values
-    U = F.vectors
-
-    # keep positive-energy states up to pmax
-    keep = findall(e -> e > 0.0 && sqrt(2.0 * e) <= pmax, E)
-
-    pvals = sqrt.(2.0 .* E[keep])
-    Upos = U[:, keep]
-
-    return idx, pvals, Upos
-end
-
-
-function local_delta_p(pvals::Vector{Float64})
-    N = length(pvals)
-    Δp = zeros(Float64, N)
-
-    if N == 1
-        Δp[1] = 1.0
-        return Δp
-    end
-
-    Δp[1] = pvals[2] - pvals[1]
-    Δp[N] = pvals[N] - pvals[N - 1]
-
-    for i in 2:(N - 1)
-        Δp[i] = 0.5 * (pvals[i + 1] - pvals[i - 1])
-    end
-
-    return Δp
-end
-
-function interp_real_linear(xgrid, ygrid, x)
-    if x <= xgrid[1]
-        return ygrid[1]
-    elseif x >= xgrid[end]
-        return ygrid[end]
-    end
-
-    k = searchsortedlast(xgrid, x)
-    k = min(k, length(xgrid) - 1)
-
-    t = (x - xgrid[k]) / (xgrid[k + 1] - xgrid[k])
-    return (1 - t) * ygrid[k] + t * ygrid[k + 1]
-end
-
-
-function interp_RL_threshold(pvals, RLvals, L::Int, p::Float64)
-    if p <= 0.0
-        return L == 0 ? RLvals[1] : 0.0 + 0.0im
-    end
-
-    if L == 0
-        return interp_real_linear(pvals, RLvals, p)
-    end
-
-    Fvals = RLvals ./ (pvals .^ L)
-
-    if p < pvals[1]
-        return (p^L) * Fvals[1]
-    elseif p > pvals[end]
-        # Safer than constant extrapolation.
-        return 0.0 + 0.0im
-    else
-        Fp = interp_real_linear(pvals, Fvals, p)
-        return (p^L) * Fp
-    end
-end
-
-
 
 # define the pgrid, and create RL_mat buffer for future use
-pgrid_pmax = 2.0 * 2.5
-Np = 1000 * 5 ÷ 2
+pgrid_pmax = 5.0
+Np = 2500 * 4
 Δp = pgrid_pmax / Np
-N_theta = 180
+N_theta = 180 * 1
 Δtheta = π / N_theta
 p_grid = [(i - 1 + 0.5) * Δp for i = 1: Np]                 # use mid point grid
 theta_grid = [(i - 1 + 0.5) * Δtheta for i = 1: N_theta]    # use mid point grid
@@ -250,56 +144,60 @@ spherical_besselj_table = [zeros(Float64, Nr) for i in 1: eigen_max_n + 1]
 
 ############################# (Pre-calculation part)
 
-println("RL_left/right calculation starts.")
-# calculate the RL_left and RL_right
-for (i, p) in enumerate(p_grid)
-    println("i = $i")
-    for l = 0: eigen_max_n
-        spherical_besselj_table[l + 1] .= spherical_besselj_l.(l, p .* rs)
-    end
-    for α in alpha_list[1:1]
-        l = eigen_states[α].l
-        for (j, r) in enumerate(rs)
-            RL_left[α][i] += r ^ 2 * eigen_states[α].data[j] * spherical_besselj_table[(l + 1) + 1][j] * sqrt(pw.shgrid.rgrid.delta) #* r_mask[α][j]
-        end
-        if l != 0
-            for (j, r) in enumerate(rs)
-                RL_right[α][i] += r ^ 2 * eigen_states[α].data[j] * spherical_besselj_table[(l - 1) + 1][j] * sqrt(pw.shgrid.rgrid.delta) #* r_mask[α][j]
-            end
-        end
+# println("RL_left/right calculation starts.")
+# # calculate the RL_left and RL_right
+# for (i, p) in enumerate(p_grid)
+#     if i % 100 == 0
+#         println("RL_left/right: i = $i / $(length(p_grid))")
+#     end
+#     for l = 0: eigen_max_n
+#         spherical_besselj_table[l + 1] .= spherical_besselj_l.(l, p .* rs)
+#     end
+#     for α in alpha_list
+#         l = eigen_states[α].l
+#         for (j, r) in enumerate(rs)
+#             RL_left[α][i] += r ^ 2 * eigen_states[α].data[j] * spherical_besselj_table[(l + 1) + 1][j] * sqrt(pw.shgrid.rgrid.delta) #* r_mask[α][j]
+#         end
+#         if l != 0
+#             for (j, r) in enumerate(rs)
+#                 RL_right[α][i] += r ^ 2 * eigen_states[α].data[j] * spherical_besselj_table[(l - 1) + 1][j] * sqrt(pw.shgrid.rgrid.delta) #* r_mask[α][j]
+#             end
+#         end
 
-        for (j, r) in enumerate(rs)
-            RL_fix[α][i] += r * eigen_states[α].data[j] * spherical_besselj_table[l + 1][j] * sqrt(pw.shgrid.rgrid.delta) #* r_mask[α][j]
-        end
-    end
-end
+#         for (j, r) in enumerate(rs)
+#             RL_fix[α][i] += r * eigen_states[α].data[j] * spherical_besselj_table[l + 1][j] * sqrt(pw.shgrid.rgrid.delta) #* r_mask[α][j]
+#         end
+#     end
+# end
 
-println("RL_left/right calculation finished.")
+# println("RL_left/right calculation finished.")
 
-# pre-calculate d^z_{α1, α2} (m = 0)
-dipole_z_bb = zeros(ComplexF64, N_alpha, N_alpha)
-for α1 in alpha_list
-    for α2 in alpha_list
-        l1 = eigen_states[α1].l
-        l2 = eigen_states[α2].l
-        if abs(l1 - l2) != 1
-            continue
-        end
-        for (j, r) in enumerate(rs)
-            # dipole_z_bb[α1, α2] += eigen_states[α1].data[j] * r * eigen_states[α2].data[j]
-            dipole_z_bb[α1, α2] += conj(eigen_states[α1].data[j]) * r * eigen_states[α2].data[j]
-        end
-        if l1 - l2 == -1
-            dipole_z_bb[α1, α2] *= (l1 + 1) / sqrt((2 * l1 + 1) * (2 * l1 + 3))
-        elseif l1 - l2 == 1
-            dipole_z_bb[α1, α2] *= (l1) / sqrt((2 * l1 - 1) * (2 * l1 + 1))
-        end
-    end
-end
+# # pre-calculate d^z_{α1, α2} (m = 0)
+# dipole_z_bb = zeros(ComplexF64, N_alpha, N_alpha)
+# for α1 in alpha_list
+#     for α2 in alpha_list
+#         l1 = eigen_states[α1].l
+#         l2 = eigen_states[α2].l
+#         if abs(l1 - l2) != 1
+#             continue
+#         end
+#         for (j, r) in enumerate(rs)
+#             # dipole_z_bb[α1, α2] += eigen_states[α1].data[j] * r * eigen_states[α2].data[j]
+#             dipole_z_bb[α1, α2] += conj(eigen_states[α1].data[j]) * r * eigen_states[α2].data[j]
+#         end
+#         if l1 - l2 == -1
+#             dipole_z_bb[α1, α2] *= (l1 + 1) / sqrt((2 * l1 + 1) * (2 * l1 + 3))
+#         elseif l1 - l2 == 1
+#             dipole_z_bb[α1, α2] *= (l1) / sqrt((2 * l1 - 1) * (2 * l1 + 1))
+#         end
+#     end
+# end
+# println("dipole_z_bb calculation finished.")
 
-println("dipole_z_bb calculation finished.")
-
-# h5open("./data/2025_5_19.h5", "w") do h
+# # h5open("./data/2025_7_14.h5", "w") do h
+# # h5open("./data/2025_7_14_denser.h5", "w") do h
+# # h5open("./data/2025_7_14_denser_4times.h5", "w") do h
+# h5open("./data/2025_7_14_denser_4times_less_theta.h5", "w") do h
 #     _write_complex(h, "RL_left", hcat(RL_left...))
 #     _write_complex(h, "RL_right", hcat(RL_right...))
 #     _write_complex(h, "RL_fix", hcat(RL_fix...))
@@ -308,20 +206,26 @@ println("dipole_z_bb calculation finished.")
 
 #######################
 
-# # read the dipole results
-# RL_left = h5open("./data/2025_5_19.h5", "r") do h
-#     RL_left_mat = _read_complex(h, "RL_left")
-#     [RL_left_mat[:, i] for i in 1: size(RL_left_mat)[2]]
-# end
+# read the dipole results
+data_name = "2025_7_14_denser_4times_less_theta"
+RL_left = h5open("./data/$data_name.h5", "r") do h
+    RL_left_mat = _read_complex(h, "RL_left")
+    [RL_left_mat[:, i] for i in 1: size(RL_left_mat)[2]]
+end
 
-# RL_right = h5open("./data/2025_5_19.h5", "r") do h
-#     RL_right_mat = _read_complex(h, "RL_right")
-#     [RL_right_mat[:, i] for i in 1: size(RL_right_mat)[2]]
-# end
+RL_right = h5open("./data/$data_name.h5", "r") do h
+    RL_right_mat = _read_complex(h, "RL_right")
+    [RL_right_mat[:, i] for i in 1: size(RL_right_mat)[2]]
+end
 
-# dipole_z_bb = h5open("./data/2025_5_19.h5", "r") do h
-#     _read_complex(h, "dipole_z_bb")
-# end
+RL_fix = h5open("./data/$data_name.h5", "r") do h
+    RL_fix_mat = _read_complex(h, "RL_fix")
+    [RL_fix_mat[:, i] for i in 1: size(RL_fix_mat)[2]]
+end
+
+dipole_z_bb = h5open("./data/$data_name.h5", "r") do h
+    _read_complex(h, "dipole_z_bb")
+end
 
 # pre-calculate spherical harmonic functions
 for l = 0: eigen_max_n
@@ -341,7 +245,7 @@ for (i, p) in enumerate(coarse_p_grid)
         p_id = floor(Int64, (p - 0.0) / Δp) + 1
         theta_id = floor(Int64, (theta - 0.0) / Δtheta) + 1
         # for each \alpha, we get the d^z_{p_j(t), nl} -> dipole_z_cb
-        for α in alpha_list[1:1]
+        for α in alpha_list
             l = eigen_states[α].l
             C1 = (l + 1) / sqrt((2 * l + 1) * (2 * l + 3))
             dipole_z_cb = sqrt(2 / pi) * (C1 * (-im) ^ (l + 1) * Y_l0_buffer[(l + 1) + 1][theta_id] * RL_left[α][p_id])
@@ -362,65 +266,60 @@ end
 
 println("coarse_dipole_z_cb calculation finished.")
 
-α = 1
-destin_mat = copy(orth_part[α])
+# α = 1
+# destin_mat = copy(orth_part[α])
 
-res = 0.0
-for i in 1: length(p_grid), j in 1: length(theta_grid)
-    kappa_index = (i - 1) * length(theta_grid) + j
-    p = p_grid[i]
-    theta = theta_grid[j]
-    w = (2 * pi * p^2) * sin(theta) * Δp * Δtheta
-    res += norm.(orth_part[α][i, j]) .^ 2.0 * w
-end
-
-heatmap([coarse_theta_grid; π .+ coarse_theta_grid], coarse_p_grid,
-    ([norm.(destin_mat) norm.(destin_mat)[:, end:-1:1]]), projection=:polar, color=:cork)
-
-
-
-# coarse_dipole_z_cb_fixed = deepcopy(coarse_dipole_z_cb)
-
-# # correction of dipole_z_cb
-# for (i, p) in enumerate(coarse_p_grid)
-#     for (j, theta) in enumerate(coarse_theta_grid)
-#         p_id = floor(Int64, (p - 0.0) / Δp) + 1
-#         theta_id = floor(Int64, (theta - 0.0) / Δtheta) + 1
-#         for α in alpha_list
-#             for β in alpha_list
-#                 if dipole_z_bb[β, α] == 0
-#                     continue
-#                 end
-#                 l = eigen_states[β].l
-#                 dipole_z_cb_correction = sqrt(2 / pi) * (-im) ^ l * Y_l0_buffer[l + 1][theta_id] * RL_fix[β][p_id]
-#                 coarse_dipole_z_cb_fixed[α][i, j] -= dipole_z_cb_correction * dipole_z_bb[β, α]
-#                 # coarse_dipole_z_cb_fixed[α][i, j] = -dipole_z_cb_correction * dipole_z_bb[β, α]
-#             end
-#         end
-#         # @printf "Finish %d, %d\n" i j
-#     end
+# res = 0.0
+# for i in 1: length(p_grid), j in 1: length(theta_grid)
+#     kappa_index = (i - 1) * length(theta_grid) + j
+#     p = p_grid[i]
+#     theta = theta_grid[j]
+#     w = (2 * pi * p^2) * sin(theta) * Δp * Δtheta
+#     res += norm.(orth_part[α][i, j]) .^ 2.0 * w
 # end
 
+# heatmap([coarse_theta_grid; π .+ coarse_theta_grid], coarse_p_grid,
+#     ([norm.(destin_mat) norm.(destin_mat)[:, end:-1:1]]), projection=:polar, color=:cork)
 
-# display the coarse dipole matrix
-α = 1
-destin_mat = coarse_dipole_z_cb[α]
-heatmap([coarse_theta_grid; π .+ coarse_theta_grid], coarse_p_grid,
-    ([norm.(destin_mat) norm.(destin_mat)[:, end:-1:1]]), projection=:polar, color=:cork)
+coarse_dipole_z_cb_fixed = deepcopy(coarse_dipole_z_cb)
 
+# correction of dipole_z_cb
+for (i, p) in enumerate(coarse_p_grid)
+    for (j, theta) in enumerate(coarse_theta_grid)
+        p_id = floor(Int64, (p - 0.0) / Δp) + 1
+        theta_id = floor(Int64, (theta - 0.0) / Δtheta) + 1
+        for α in alpha_list
+            for β in alpha_list
+                if dipole_z_bb[β, α] == 0
+                    continue
+                end
+                l = eigen_states[β].l
+                dipole_z_cb_correction = sqrt(2 / pi) * (-im) ^ l * Y_l0_buffer[l + 1][theta_id] * RL_fix[β][p_id]
+                coarse_dipole_z_cb_fixed[α][i, j] -= dipole_z_cb_correction * dipole_z_bb[β, α]
+            end
+        end
+        # @printf "Finish %d, %d\n" i j
+    end
+end
 
+# # display the coarse dipole matrix
+# α = 2
+# destin_mat = coarse_dipole_z_cb[α]
+# heatmap([coarse_theta_grid; π .+ coarse_theta_grid], coarse_p_grid,
+#     ([norm.(destin_mat) norm.(destin_mat)[:, end:-1:1]]), projection=:polar, color=:cork)
 
-# check the dipole_z_bb matrix
-n_list = [e.n for e in eigen_states[alpha_list]]
-l_list = [e.l for e in eigen_states[alpha_list]]
-label_list = ["($(n_list[i]), $(l_list[i]))" for i in 1: length(n_list)]
-heatmap(label_list, label_list, norm.(dipole_z_bb[alpha_list, alpha_list]))
+    
+# # check the dipole_z_bb matrix
+# n_list = [e.n for e in eigen_states[alpha_list]]
+# l_list = [e.l for e in eigen_states[alpha_list]]
+# label_list = ["($(n_list[i]), $(l_list[i]))" for i in 1: length(n_list)]
+# heatmap(label_list, label_list, norm.(dipole_z_bb[alpha_list, alpha_list]))
 
 
 # create kappa grid (Spherical)
 # kappa_N_p = Np ÷ 2      # keep the same with the pgrid is OK.
 kappa_p_max = 2.0
-kappa_p_min = 0.1
+kappa_p_min = Δp
 kappa_delta_p = Δp
 kappa_N_p = floor(Int64, (kappa_p_max - kappa_p_min) / kappa_delta_p)
 kappa_N_theta = N_theta
@@ -434,12 +333,12 @@ kappa_grid_x = zeros(Float64, N_kappa)
 kappa_grid_y = zeros(Float64, N_kappa)
 kappa_grid_z = zeros(Float64, N_kappa)
 
-k = 1
+kkk = 1
 for κ_p in kappa_p_subgrid, κ_theta in kappa_theta_subgrid
-    kappa_grid_p[k] = κ_p
-    kappa_grid_theta[k] = κ_theta
-    kappa_grid_x[k], kappa_grid_y[k], kappa_grid_z[k] = sphere_to_xyz(κ_p, κ_theta, 0.0)
-    k += 1
+    kappa_grid_p[kkk] = κ_p
+    kappa_grid_theta[kkk] = κ_theta
+    kappa_grid_x[kkk], kappa_grid_y[kkk], kappa_grid_z[kkk] = sphere_to_xyz(κ_p, κ_theta, 0.0)
+    global kkk += 1
 end
 
 
@@ -459,73 +358,6 @@ p_curves_z = zeros(Float64, N_kappa)
 p_curves_p = zeros(Float64, N_kappa)
 p_curves_theta = zeros(Float64, N_kappa)
 chi_curves = zeros(Float64, N_kappa)
-
-########################################################
-
-# pre-judgement
-function pre_judgement(
-    p_curves_p, p_curves_theta, chi_curves,
-    kappa_grid_p, kappa_grid_theta, N_kappa,
-    Δp, Δtheta, coarse_dipole_z_cb,
-    Et_data, eta_data, eta_1_data, eta_2_data, 
-    eigen_states, N_theta, ts,
-    kappa_included_threshold = 1e-3
-)
-    coupling_amplitude = zeros(ComplexF64, N_kappa) 
-    dt = ts[2] - ts[1]
-
-    @time for (it, t) in enumerate(ts)
-        t0 = 0.0
-        # @. p_curves_x = kappa_grid_x
-        # @. p_curves_y = kappa_grid_y
-        # @. p_curves_z = kappa_grid_z + eta_data[it]
-        # @. chi_curves = (kappa_grid_x ^ 2 + kappa_grid_y ^ 2 + kappa_grid_z ^ 2) * (t - t0) / 2 + kappa_grid_z * eta_1_data[it] + eta_2_data[it] / 2
-        
-        @. p_curves_p = sqrt(kappa_grid_p ^ 2 + 2 * eta_data[it] * kappa_grid_p * cos(kappa_grid_theta) + eta_data[it] ^ 2)
-        @. p_curves_theta = acos((kappa_grid_p * cos(kappa_grid_theta) + eta_data[it]) / (p_curves_p + 1e-8))
-        @. chi_curves = (kappa_grid_p ^ 2) * (t - t0) / 2 + kappa_grid_p * cos(kappa_grid_theta) * eta_1_data[it] + eta_2_data[it] / 2  
-
-        Threads.@threads for i in 1: N_kappa
-            p_id::Int64 = 0
-            theta_id::Int64 = 0
-
-            # interp to a certain position on (p_abs, θ, ϕ) grid (namely pgrid aforehead)
-            p_id = floor(Int64, (p_curves_p[i] - 0.0) / Δp) + 1
-            theta_id = floor(Int64, (p_curves_theta[i] - 0.0) / Δtheta) + 1
-
-            if theta_id == N_theta + 1
-                theta_id = N_theta
-            end
-
-            α = 1       # let alpha = 1 (because it has the largest dipole-coupling area in p space)
-            amp = abs(Et_data[it] * coarse_dipole_z_cb[α][p_id, theta_id])
-            coupling_amplitude[i] += dt * im * Et_data[it] * coarse_dipole_z_cb[α][p_id, theta_id] * exp(im * eigen_states[α].Ip * t) * exp(im * chi_curves[i])
-        end
-
-        if it % 100 == 0
-            println("step $it")
-        end
-    end
-    return coupling_amplitude
-end
-
-# coupling_amplitude = pre_judgement(p_curves_p, p_curves_theta, chi_curves,
-#     kappa_grid_p, kappa_grid_theta, N_kappa, Δp, Δtheta, coarse_dipole_z_cb, Et_data, eta_data, eta_1_data, eta_2_data, eigen_states, N_theta, ts[1: (length(ts) ÷ 4 * 4)])
-
-# # get a 2D slice of coupling_amplitude in x-z plane (ϕ = 0) (Spherical)
-# coupling_amplitude_xz = zeros(Float64, length(kappa_p_subgrid), length(kappa_theta_subgrid))
-# for i in 1: length(kappa_p_subgrid), j in 1: length(kappa_theta_subgrid)
-#     kappa_index = (i - 1) * length(kappa_theta_subgrid) + j
-#     coupling_amplitude_xz[i, j] = real(norm(coupling_amplitude[kappa_index]) ^ 2)
-# end
-
-# colormap = cgrad([:white, palette(:jet1, 6)...], rev = true)
-# display_data = clamp.(abs.(log10.(norm.(coupling_amplitude_xz) ./ maximum(norm.(coupling_amplitude_xz)))), 0, 3.0)
-# heatmap([kappa_theta_subgrid; π .+ kappa_theta_subgrid], kappa_p_subgrid, [display_data display_data[:, end:-1:1]], projection=:polar, color=colormap)
-
-# colormap_2 = cgrad(["#710000", "#C60001", "#FB0001", "#FE3A01", "#FF7A00", "#FEAB01", "#FEAB01", "#FEAB01", "#D5FF17", "#91FF60", "#4AFFAE", "#02FFFC", "#00A3FE", "#003DFF", "#2120FF", "#8C8CFE", :white], rev=true)
-# p1 = heatmap([kappa_theta_subgrid .+ π/2; kappa_theta_subgrid .+ 3π/2], kappa_p_subgrid[1: end ÷ 2], [coupling_amplitude_xz coupling_amplitude_xz[:, end:-1:1]][1: end ÷ 2, :], projection=:polar, color=colormap_2)
-
 
 
 #############################################################
@@ -581,7 +413,7 @@ function sfa_rhs(
         theta_id = floor(Int64, (bf.p_curves_theta[i] - 0.0) / bf.theta_delta) + 1
         @inbounds res_u[bf.N_alpha + i] = 0.0
         w = 2 * pi * bf.kappa_grid_p[i] ^ 2 * sin(bf.kappa_grid_theta[i]) * bf.kappa_delta_p * bf.kappa_delta_theta
-        for α in bf.alpha_list[1:1]
+        for α in bf.alpha_list
             @inbounds res_u[bf.N_alpha + i] += bf.coarse_dipole_z_cb[α][p_id, theta_id] * u[α] * exp(im * bf.eigen_states[α].Ip * t)
         end
         @inbounds res_u[bf.N_alpha + i] *= im * bf.Et_data[it] * exp(im * bf.chi_curves[i]) * sqrt(w)
@@ -594,7 +426,7 @@ function sfa_rhs(
 
     nt = Threads.nthreads()
     chunk_size = cld(bf.N_kappa, nt)
-    for α in bf.alpha_list[1:1]
+    for α in bf.alpha_list
         res_u[α] = 0.0
         Threads.@threads for j in 1: nt
             start_idx = (j - 1) * chunk_size + 1
@@ -656,48 +488,18 @@ u[1] = 1.0
 
 chunk_buffer = zeros(ComplexF64, N_kappa)
 chunk_sum_buffer = zeros(ComplexF64, N_kappa)
-
-##########################
-
 alpha_list_selected = alpha_list[1: end]
 
 sfa_buffer = sfa_buffer_t(N_alpha, alpha_list_selected,
     eigen_states, kappa_grid_p, kappa_grid_theta, N_kappa, kappa_delta_p, kappa_delta_theta,
-    Δp, Δtheta, Et_data, eta_data, eta_1_data, eta_2_data, coarse_dipole_z_cb, dipole_z_bb, p_curves_p, p_curves_theta,
+    Δp, Δtheta, Et_data, eta_data, eta_1_data, eta_2_data, coarse_dipole_z_cb_fixed, dipole_z_bb, p_curves_p, p_curves_theta,
     chi_curves, chunk_buffer, chunk_sum_buffer)
-
-# # RK4 propagation
-# mainloop_ts = 1: 2: (length(ts) - 2)
-# D_BB = zeros(Float64, length(mainloop_ts))
-# D_BC = zeros(Float64, length(mainloop_ts))
-# D_CC = zeros(Float64, length(mainloop_ts))
-# for (i, it) in enumerate(mainloop_ts)
-#     t = ts[it]
-
-#     rk4_one_step(Δt, u, u_buffer[1], u_buffer[2], u_buffer[3], u_buffer[4], u_buffer[5], t, it, sfa_buffer);
-    
-#     if it % 100 == 1
-#         println("it = $it")
-        
-#         # get population
-#         P_bound_sum = sum(norm.(u[1: N_alpha]) .^ 2)
-#         P_1s = norm.(u[1]) .^ 2
-#         P_2s = norm.(u[2]) .^ 2
-#         P_2p = norm.(u[3]) .^ 2
-#         P_free_sum = sum(norm.(u[N_alpha + 1: end]) .^ 2)
-#         P_total = P_bound_sum + P_free_sum
-
-#         @printf "Total = %0.4f, 1s = %0.4f, 2s = %0.4f, 2p = %0.4f, Free = %0.4f\n"  P_total  P_1s  P_2s  P_2p  P_free_sum
-#     end
-# end
-
 
 # RK4 propagation
 bf = sfa_buffer
 t0 = 0.0
 nt = Threads.nthreads()
 chunk_size = cld(bf.N_kappa, nt)
-
 mainloop_ts = 1: 2: (length(ts) - 2)
 
 D_BB = zeros(Float64, length(mainloop_ts))
@@ -774,19 +576,19 @@ for (i, it) in enumerate(mainloop_ts)
         end
     end
 
-    # absorption of bound states (only for test)
-    for α in bf.alpha_list
-        l = eigen_states[α].l
-        if l == 3
-            u[α] *= 0.95
-        elseif l == 4
-            u[α] *= 0.8
-        elseif l == 5
-            u[α] *= 0.5
-        elseif l == 6
-            u[α] *= 0.1
-        end
-    end
+    # # absorption of bound states (only for test)
+    # for α in bf.alpha_list
+    #     l = eigen_states[α].l
+    #     if l == 3
+    #         u[α] *= 0.95
+    #     elseif l == 4
+    #         u[α] *= 0.8
+    #     elseif l == 5
+    #         u[α] *= 0.5
+    #     elseif l == 6
+    #         u[α] *= 0.1
+    #     end
+    # end
 
     # D_BB
     for α in bf.alpha_list
@@ -875,71 +677,71 @@ for (i, it) in enumerate(mainloop_ts)
 
     if it % 100 == 1
         println("it = $it")
-
-        @printf "Total = %0.4f, 1s = %0.4f, 2s = %0.4f, 2p = %0.4f, Free = %0.4f\n"  P_total  P_1s  P_2s  P_2p  P_free_sum
+        @printf "Total = %0.4f, Free = %0.4f\n"  P_total[i] P_free_sum[i]
         @printf "D_BB = %+0.6e, D_BC = %+0.6e, D_CC = %+0.6e, D_total = %+0.6e\n" D_BB[i] D_BC[i] D_CC[i] D_total[i]
     end
 end
 
 
+# save everything
+example_name = "2026_7_14_$(E_fs)_$(ω_fs)_$(nc)_short_range_10"
+h5open("./data/$example_name.h5", "w") do h
+    write(h, "D_total", D_total)
+    write(h, "D_CC", D_CC)
+    write(h, "D_BB", D_BB)
+    write(h, "D_BC", D_BC)
+    write(h, "u", u)
+    write(h, "P_free_sum", P_free_sum)
+    write(h, "P_bound_sum", P_bound_sum)
+    write(h, "P_total", P_total)
+end
 
-# # save everything
-# example_name = "2026_5_19_$(E_fs)_$(ω_fs)_$(nc)_short_range"
-# h5open("./data/$example_name.h5", "w") do h
-#     write(h, "D_total", D_total)
-#     write(h, "D_CC", D_CC)
-#     write(h, "D_BB", D_BB)
-#     write(h, "D_BC", D_BC)
-# end
-
-# example_name = "2026_5_19_$(E_fs)_$(ω_fs)_$(nc)_short_range"
+# example_name = "2026_7_14_$(E_fs)_$(ω_fs)_$(nc)_short_range_10"
 # D_total = retrieve_mat(example_name, "D_total")
 # D_CC = retrieve_mat(example_name, "D_CC")
 # D_BB = retrieve_mat(example_name, "D_BB")
 # D_BC = retrieve_mat(example_name, "D_BC")
 
+# p1 = plot(ts[mainloop_ts], [D_total, D_BB, D_BC, D_CC], label=["D_total" "D_BB" "D_BC" "D_CC"])
 
-plot(ts[mainloop_ts], [D_total, D_BB, D_BC, D_CC], label=["D_total" "D_BB" "D_BC" "D_CC"])
+# p4 = plot(ts[mainloop_ts], P_free_sum, yscale=:log10, ylimits=(1e-8, 1e0))
+# plot(ts[mainloop_ts], P_free_sum, ylimits=(1e-8, 1e0))
 
 
-# get harmonic spectrum, including data, and k axis (frequency axis)
-# n_cut_off_estim = floor((-en + 3.17 * (E_fs ^ 2.0 / (4.0 * (ω_fs ^ 2.0)))) / ω_fs) * 1
-n_cut_off_estim = 20
+# # get harmonic spectrum, including data, and k axis (frequency axis)
+# # n_cut_off_estim = floor((-en + 3.17 * (E_fs ^ 2.0 / (4.0 * (ω_fs ^ 2.0)))) / ω_fs) * 1
+# n_cut_off_estim = 20
 
-hg1, ks = get_hg_spectrum(ts[mainloop_ts], D_total, ω_fs * (n_cut_off_estim + 20))
-hg1_free, _ = get_hg_spectrum(ts[mainloop_ts], D_CC, ω_fs * (n_cut_off_estim + 20))
-hg1_bound, _ = get_hg_spectrum(ts[mainloop_ts], D_BB, ω_fs * (n_cut_off_estim + 20))
-hg1_cross, _ = get_hg_spectrum(ts[mainloop_ts], D_BC, ω_fs * (n_cut_off_estim + 20))
+# hg1, ks = get_hg_spectrum(ts[mainloop_ts], D_total, ω_fs * (n_cut_off_estim + 20))
+# hg1_free, _ = get_hg_spectrum(ts[mainloop_ts], D_CC, ω_fs * (n_cut_off_estim + 20))
+# hg1_bound, _ = get_hg_spectrum(ts[mainloop_ts], D_BB, ω_fs * (n_cut_off_estim + 20))
+# hg1_cross, _ = get_hg_spectrum(ts[mainloop_ts], D_BC, ω_fs * (n_cut_off_estim + 20))
 
-# r
-p3 = plot(ks ./ ω_fs, [(ks .^ 3) .* hg1, (ks .^ 3) .* hg1_free, (ks .^ 3) .* hg1_bound, (ks .^ 3) .* hg1_cross],
-    yscale=:log10, xaxis=1:20, yaxis=[1e-4, 1e-2, 1e0, 1e2, 1e4], ylimit=(1e-8, 1e3),
-    label=["Total" "Free" "Bound" "Cross"], xlabel="Harmonic Order", ylabel="HG Intensity", title="HHG Spectrum (E0=$E_fs, ω=$ω_fs)")
+# # r
+# p3 = plot(ks ./ ω_fs, [(ks .^ 3) .* hg1, (ks .^ 3) .* hg1_free, (ks .^ 3) .* hg1_bound, (ks .^ 3) .* hg1_cross],
+#     yscale=:log10, xaxis=1:20, yaxis=[1e-4, 1e-2, 1e0, 1e2, 1e4], ylimit=(1e-8, 1e3),
+#     label=["Total" "Free" "Bound" "Cross"], xlabel="Harmonic Order", ylabel="HG Intensity", title="HHG Spectrum (E0=$E_fs, ω=$ω_fs)")
 
 
 #####################
 
-# u = h5open("./data/2025_5_19.h5", "r") do h
-#     _read_complex(h, "u")
+# # get a 2D slice of u_free in x-z plane (ϕ = 0) (Spherical)
+# u_free_xz = zeros(ComplexF64, length(kappa_p_subgrid), length(kappa_theta_subgrid))
+# for i in 1: length(kappa_p_subgrid), j in 1: length(kappa_theta_subgrid)
+#     kappa_index = (i - 1) * length(kappa_theta_subgrid) + j
+#     kappa_p = kappa_p_subgrid[i]
+#     kappa_theta = kappa_theta_subgrid[j]
+#     w = (2 * pi * kappa_p^2) * sin(kappa_theta) * kappa_delta_p * kappa_delta_theta
+#     u_free_xz[i, j] = norm.(u[N_alpha + kappa_index]) .^ 2.0 / w
 # end
+# # colormap = cgrad([:white, :black, :red, :blue, :white])
+# colormap = cgrad([:white, palette(:jet1, 6)...], rev = true)
+# display_data = clamp.(abs.(log10.(norm.(u_free_xz) ./ maximum(norm.(u_free_xz)))), 0, 3.0)
+# # display_data = (display_data ./ 5.0) .^ 0.5 * 5.0
+# heatmap([kappa_theta_subgrid; π .+ kappa_theta_subgrid], kappa_p_subgrid, [display_data display_data[:, end:-1:1]], projection=:polar, color=colormap)
 
-# get a 2D slice of u_free in x-z plane (ϕ = 0) (Spherical)
-u_free_xz = zeros(ComplexF64, length(kappa_p_subgrid), length(kappa_theta_subgrid))
-for i in 1: length(kappa_p_subgrid), j in 1: length(kappa_theta_subgrid)
-    kappa_index = (i - 1) * length(kappa_theta_subgrid) + j
-    kappa_p = kappa_p_subgrid[i]
-    kappa_theta = kappa_theta_subgrid[j]
-    w = (2 * pi * kappa_p^2) * sin(kappa_theta) * kappa_delta_p * kappa_delta_theta
-    u_free_xz[i, j] = norm.(u[N_alpha + kappa_index]) .^ 2.0 / w
-end
-# colormap = cgrad([:white, :black, :red, :blue, :white])
-colormap = cgrad([:white, palette(:jet1, 6)...], rev = true)
-display_data = clamp.(abs.(log10.(norm.(u_free_xz) ./ maximum(norm.(u_free_xz)))), 0, 3.0)
-# display_data = (display_data ./ 5.0) .^ 0.5 * 5.0
-heatmap([kappa_theta_subgrid; π .+ kappa_theta_subgrid], kappa_p_subgrid, [display_data display_data[:, end:-1:1]], projection=:polar, color=colormap)
-
-colormap_2 = cgrad(["#710000", "#C60001", "#FB0001", "#FE3A01", "#FF7A00", "#FEAB01", "#FEAB01", "#FEAB01", "#D5FF17", "#91FF60", "#4AFFAE", "#02FFFC", "#00A3FE", "#003DFF", "#2120FF", "#8C8CFE", :white], rev=true)
-p2 = heatmap([kappa_theta_subgrid .+ π/2; kappa_theta_subgrid .+ 3π/2], kappa_p_subgrid[1: end ÷ 2], [norm.(u_free_xz) norm.(u_free_xz)[:, end:-1:1]][1: end ÷ 2, :], projection=:polar, color=colormap_2)
+# colormap_2 = cgrad(["#710000", "#C60001", "#FB0001", "#FE3A01", "#FF7A00", "#FEAB01", "#FEAB01", "#FEAB01", "#D5FF17", "#91FF60", "#4AFFAE", "#02FFFC", "#00A3FE", "#003DFF", "#2120FF", "#8C8CFE", :white], rev=true)
+# p2 = heatmap([kappa_theta_subgrid .+ π/2; kappa_theta_subgrid .+ 3π/2], kappa_p_subgrid[1: end ÷ 2], [norm.(u_free_xz) norm.(u_free_xz)[:, end:-1:1]][1: end ÷ 2, :], projection=:polar, color=colormap_2)
 
 
 

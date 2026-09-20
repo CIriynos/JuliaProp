@@ -982,10 +982,14 @@ function isurf_sh(pw::physics_world_sh_t, rt::tdse_sh_rt, phi_record, dphi_recor
 end
 
 
-function isurf_sh_vector(pw::physics_world_sh_t, rt::tdse_sh_rt, phi_record, dphi_record, shwave_tau, At_data_x, At_data_y, At_data_z, Ri_tsurf, t_linspace, k_space::tsurf_k_space_t, tsurf_mode)
+function isurf_sh_vector(pw::physics_world_sh_t, rt::tdse_sh_rt, phi_record, dphi_record, shwave_tau, At_data_x, At_data_y, At_data_z, Ri_tsurf, t_linspace, k_space::tsurf_k_space_t, tsurf_mode; is_tsurf_added::Bool=true)
 
     tau_p = last(t_linspace)
-    a_tsurff_lm_vec = tsurf_sh_vector(pw, phi_record, dphi_record, At_data_x, At_data_y, At_data_z, Ri_tsurf, t_linspace, k_space.k_collection, tsurf_mode)
+    if is_tsurf_added == true
+        a_tsurff_lm_vec = tsurf_sh_vector(pw, phi_record, dphi_record, At_data_x, At_data_y, At_data_z, Ri_tsurf, t_linspace, k_space.k_collection, tsurf_mode)
+    else
+        a_tsurff_lm_vec = [zeros(ComplexF64, length(k_space.k_collection)) for i in 1: pw.l_num ^ 2]
+    end
     δa_lm = isurf_rest_part(shwave_tau, k_space.k_r_range, tau_p, Ri_tsurf, pw, rt)
     
     δa_vec = zeros(ComplexF64, length(k_space.k_collection))

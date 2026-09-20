@@ -12,28 +12,24 @@ function main()
 
     # Basic Parameters
     ratio = 1
-    # Nr =            20000 * ratio        # number of radial grid points
-    # Nr =            40000 * ratio        # number of radial grid points
     Nr =            20000 * ratio        # number of radial grid points
     Δr =            0.2 / ratio          # radial grid step size
-    # l_num =         200                  # number of angular momentum components
     l_num =         50                  # number of angular momentum components
     Δt =            0.05 / ratio         # time step size
     Z =             1.0                  # nuclear charge
-    # po_func(r) =    -1 / r             # potential function
-    po_func(r) =    -1 / r * exp(- r * r / (20.0 ^ 2))   # a short-range potential function, which is used to test the ITP method for getting the initial wavefunction in a short-range potential
+    po_func(r) =    -1 / r
+    # po_func(r) =    -1 / r * exp(- r * r / (5.0 ^ 2))   # a short-range potential function, which is used to test the ITP method for getting the initial wavefunction in a short-range potential
     rmax =          Nr * Δr     
     absorb_func     = absorb_boundary_r(rmax, rmax * 0.8)  # create absorbing boundary function
     Ri_tsurf        = rmax * 0.7        # radius for t-surf method
-
 
     # get the Ip of the system
     pw = create_physics_world_sh(Nr, l_num, Δr, Δt, po_func, Z, absorb_func);
     rt = create_tdse_rt_sh(pw, m_zero_flag=true);
     init_wave = create_empty_shwave(pw.shgrid)
 
-    # max_k = 20
-    max_k = 4
+    # max_k = 2
+    max_k = 5
 
     ek_list = []
     for k = 1: max_k
@@ -58,13 +54,8 @@ function main()
     GC.gc(true)
     ccall(:malloc_trim, Cint, (Csize_t,), 0)
 
-    # example_name = "2026_4_26_itp_large_r"
-    # example_name = "2026_4_26_itp_short_range_20"
-    # example_name = "2026_4_26_itp_short_range_20_test_small_l_num"
-    # example_name = "2026_4_26_itp_short_range_20_large_r"
-
-    # example_name = "2026_4_26_itp_short_range_20_large_r"
-    example_name = "2026_4_26_itp_short_range_special"
+    # example_name = "2026_6_15_itp_short_range_5"
+    example_name = "2026_6_15_itp"
 
     m_zero_flag = true
 
@@ -106,7 +97,6 @@ function main()
             println("finished memory clear.")
         end
     end
-
 end
 
 main()

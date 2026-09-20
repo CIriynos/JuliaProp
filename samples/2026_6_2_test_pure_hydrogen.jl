@@ -9,7 +9,11 @@ using FFTW
 using SparseArrays
 using SpecialFunctions
 using Printf
-const dot_t = Tuple{Float64, Float64, Float64}
+
+using Base.Threads: @threads, threadid, nthreads
+
+using SpecialFunctions
+using HypergeometricFunctions
 
 # store the dipole results
 _write_complex(h, name::String, x) = begin
@@ -20,64 +24,614 @@ end
 _read_complex(h, name::String) = read(h[name * "/real"]) .+ im .* read(h[name * "/imag"])
 
 
-# Basic Parameters
-Nr =            10000            # number of radial grid points
-Δr =            0.2             # radial grid step size
-l_num =         10               # number of angular momentum components
-Δt =            0.2            # time step size
-Z =             1.0             # nuclear charge
-po_func(r) =    -1 / r        # potential function
-# po_func(r) =    -1 / r * exp(- r * r / (5.0 ^ 2))   # a short-range potential function, which is used to test the ITP method for getting the initial wavefunction in a short-range potential
-# po_func(r) =    -1 / r * exp(- r * r / (20.0 ^ 2))   # a short-range potential function, which is used to test the ITP method for getting the initial wavefunction in a short-range potential
-rmax =          Nr * Δr     
-absorb_func     = absorb_boundary_r(rmax, rmax * 0.8)  # create absorbing boundary function
+# ------------------------------------------------------------
+# α = (n,l,m) -> linear index
+# This is exactly the mapping specified by the user.
+# ------------------------------------------------------------
 
-# define laser field
-# E_fs =          0.0534                # peak electric field of the fs pulse
-# ω_fs =          0.0228                # angular frequency of the fs pulse
-# nc =            4                     # number of optical cycles in the fs pulse
-E_fs =          0.04                    # peak electric field of the fs pulse
-ω_fs =          0.057 * 1               # angular frequency of the fs pulse
-nc =            6                       # number of optical cycles in the fs pulse
-Ex_fs, Ey_fs, Ez_fs, tmax = light_pulse(ω_fs, E_fs, nc, 0, ellipticity=0.0, phase1=0.5pi)        # create the light pulse from the given parameters (+ ellipticity)
-E_field(t) = Ex_fs(t)
-# E_field(t) = E_fs
-Tp = 2 * nc * pi / ω_fs
-
-# create pw, rt, and pre-calculated 
-pw = create_physics_world_sh(Nr, l_num, Δr, Δt, po_func, Z, absorb_func);
-rt = create_tdse_rt_sh(pw, m_zero_flag=true);
-rs = get_linspace(pw.shgrid.rgrid)
-
-# get ek_list
-# max_k = 2
-max_k = 6
-ek_list = []
-for k = 1: max_k
-    init_wave = create_empty_mzero_shwave(pw.shgrid)
-    rs = get_linspace(pw.shgrid.rgrid)
-    @. init_wave[k] = rs * exp(-rs * k)
-    itp_fdsh_single(pw, rt, init_wave, k, err=1e-15, log_info=false)
-    ek = get_energy_sh_so(init_wave, rt, k)
-
-    # ek = -0.5 / (k ^ 2)
-    push!(ek_list, ek)
-    println("Energy of the state with k=$k: ", ek)
-
-    init_wave = nothing 
-    GC.gc(true)
-    ccall(:malloc_trim, Cint, (Csize_t,), 0)
-end
-# ek_list = [ -0.4964336949923912, -0.1133886677324868, -0.034607349557600184, -0.00314449576064707]  # ek_list for -1 / r * exp(- r * r / (20.0 ^ 2))
-eigen_max_n = length(ek_list)
-N_alpha = eigen_max_n * (eigen_max_n + 1) * (2 * eigen_max_n + 1) ÷ 6
-alpha_list = Int64[]
-
-# mapping eigen label (n, l) with α (suitable for all eigenstates)
-function get_eigen_label(n, l, m=0)
+function get_eigen_label(n::Int, l::Int, m::Int)
     id = get_index_from_lm(l, m, n)
-    return id + (n - 1) * (n) * (2*n - 1) ÷ 6
+    id < 0 && error("Invalid quantum numbers: n=$n, l=$l, m=$m")
+    return id + (n - 1) * n * (2n - 1) ÷ 6
 end
+
+# ------------------------------------------------------------
+# Bound hydrogen radial function u_nl(r)=r R_nl(r)
+# normalized by ∫ |u_nl(r)|^2 dr = 1.
+# ------------------------------------------------------------
+
+function laguerreL(p::Int, a::Int, x::Float64)
+    p == 0 && return 1.0
+
+    L0 = 1.0
+    L1 = 1.0 + a - x
+    p == 1 && return L1
+
+    for q in 1:(p - 1)
+        L2 = ((2q + 1 + a - x) * L1 - (q + a) * L0) / (q + 1)
+        L0, L1 = L1, L2
+    end
+
+    return L1
+end
+
+function hydrogen_u(n::Int, l::Int, Z::Float64, r::Float64)
+    ρ = 2Z * r / n
+    p = n - l - 1
+
+    c = 2 * Z^(3/2) / n^2 *
+        exp(0.5 * (loggamma(n - l) - loggamma(n + l + 1)))
+
+    R = c * exp(-ρ / 2) * ρ^l * laguerreL(p, 2l + 1, ρ)
+
+    return r * R
+end
+
+# ------------------------------------------------------------
+# Spherical harmonics Y_lm(θ,φ).
+# ------------------------------------------------------------
+
+function assoc_legendre(l::Int, m::Int, x::Float64)
+    m < 0 && error("Use m >= 0 here.")
+    abs(m) > l && return 0.0
+
+    pmm = 1.0
+
+    if m > 0
+        s = sqrt(max(0.0, 1.0 - x^2))
+        fact = 1.0
+
+        for _ in 1:m
+            pmm *= -fact * s
+            fact += 2.0
+        end
+    end
+
+    l == m && return pmm
+
+    pmmp1 = x * (2m + 1) * pmm
+    l == m + 1 && return pmmp1
+
+    p0, p1 = pmm, pmmp1
+
+    for ll in (m + 2):l
+        p2 = ((2ll - 1) * x * p1 - (ll + m - 1) * p0) / (ll - m)
+        p0, p1 = p1, p2
+    end
+
+    return p1
+end
+
+function Ylm(l::Int, m::Int, θ::Float64, φ::Float64 = 0.0)
+    abs(m) > l && return 0.0 + 0.0im
+
+    if m < 0
+        s = isodd(-m) ? -1.0 : 1.0
+        return s * conj(Ylm(l, -m, θ, φ))
+    end
+
+    x = cos(θ)
+    P = assoc_legendre(l, m, x)
+
+    c = sqrt(
+        (2l + 1) / (4π) *
+        exp(loggamma(l - m + 1) - loggamma(l + m + 1))
+    )
+
+    return c * P * cis(m * φ)
+end
+
+# ------------------------------------------------------------
+# Angular matrix element:
+# <Y_l1,m1 | cosθ | Y_l2,m2>
+# ------------------------------------------------------------
+
+function z_ang(l1::Int, m1::Int, l2::Int, m2::Int)
+    m1 == m2 || return 0.0
+
+    m = m2
+
+    if l1 == l2 + 1
+        return sqrt(((l2 + 1)^2 - m^2) / ((2l2 + 1) * (2l2 + 3)))
+    elseif l1 == l2 - 1 && l2 > 0
+        return sqrt((l2^2 - m^2) / ((2l2 - 1) * (2l2 + 1)))
+    else
+        return 0.0
+    end
+end
+
+# ------------------------------------------------------------
+# Coulomb continuum radial wave.
+#
+# u_kl(r) = sqrt(2/pi) F_l(η,kr), η = -Z/k
+# where F_l is the regular Coulomb radial function.
+# ------------------------------------------------------------
+
+function coulomb_sigma(l::Int, η::Float64)
+    return imag(loggamma(complex(l + 1, η)))
+end
+
+function coulombF(l::Int, η::Float64, ρ::Float64)
+    ρ == 0.0 && return 0.0
+
+    C = 2.0^l *
+        exp(
+            -π * η / 2 +
+            real(loggamma(complex(l + 1, η))) -
+            loggamma(2l + 2)
+        )
+
+    # Denominator parameter must remain real/integer-like.
+    M = pFq((complex(l + 1, -η),), (2l + 2,), 2im * ρ)
+
+    return real(C * ρ^(l + 1) * exp(-1im * ρ) * M)
+end
+
+function continuum_u(l::Int, k::Float64, Z::Float64, r::Float64)
+    η = -Z / k
+    return sqrt(2 / π) * coulombF(l, η, k * r)
+end
+
+# ------------------------------------------------------------
+# Numerical integration helpers.
+# ------------------------------------------------------------
+
+function trap_weights(rgrid::Vector{Float64})
+    length(rgrid) >= 2 || error("rgrid must contain at least two points.")
+
+    dr = rgrid[2] - rgrid[1]
+    w = fill(dr, length(rgrid))
+
+    w[1] *= 0.5
+    w[end] *= 0.5
+
+    return w
+end
+
+function radial_int(w, rgrid, u1, u2)
+    s = 0.0
+
+    @inbounds for i in eachindex(rgrid)
+        s += w[i] * u1[i] * rgrid[i] * u2[i]
+    end
+
+    return s
+end
+
+function is_uniform_grid(x::AbstractVector{<:Real})
+    length(x) < 3 && return true
+
+    dx = x[2] - x[1]
+
+    return all(
+        abs((x[i + 1] - x[i]) - dx) <= 1e-10 * max(1.0, abs(dx))
+        for i in 1:(length(x) - 1)
+    )
+end
+
+# ------------------------------------------------------------
+# Fast column dot:
+#   sum_i A[i, ca] * B[i, cb]
+#
+# Used for:
+#   <uB_α | r | uB_β>  with B = weighted uB
+#   <uC_L | r | uB_α>  with B = weighted uB
+# ------------------------------------------------------------
+
+@inline function col_dot(
+    A::AbstractMatrix{Float64},
+    B::AbstractMatrix{Float64},
+    ca::Int,
+    cb::Int,
+    Nr::Int,
+)
+    s = 0.0
+
+    @inbounds @simd for i in 1:Nr
+        s += A[i, ca] * B[i, cb]
+    end
+
+    return s
+end
+
+
+# ------------------------------------------------------------
+# Fill one bound radial column.
+#
+# This avoids recalculating the n,l-dependent normalization
+# constant for every r point.
+# ------------------------------------------------------------
+
+function fill_hydrogen_u_col!(
+    dest::AbstractVector{Float64},
+    n::Int,
+    l::Int,
+    Z::Float64,
+    rgrid::AbstractVector{Float64},
+)
+    p = n - l - 1
+
+    c = 2 * Z^(3/2) / n^2 *
+        exp(0.5 * (loggamma(n - l) - loggamma(n + l + 1)))
+
+    @inbounds @simd for i in eachindex(rgrid)
+        r = rgrid[i]
+        ρ = 2Z * r / n
+        R = c * exp(-ρ / 2) * ρ^l * laguerreL(p, 2l + 1, ρ)
+        dest[i] = r * R
+    end
+
+    return nothing
+end
+
+
+# ------------------------------------------------------------
+# Fill all continuum radial columns for a fixed k:
+#
+#   uC[i, L+1] = sqrt(2/pi) F_L(η, k r_i)
+#
+# The expensive L,k-dependent constants are computed once per L,
+# not once per r point.
+# ------------------------------------------------------------
+
+function fill_continuum_u_cols!(
+    uC::Matrix{Float64},
+    phase::Vector{ComplexF64},
+    rgrid::AbstractVector{Float64},
+    k::Float64,
+    Z::Float64,
+    Lmax::Int,
+    logγ_den::Vector{Float64},
+    pow2L::Vector{Float64},
+)
+    η = -Z / k
+    c_norm = sqrt(2 / π)
+
+    @inbounds for L in 0:Lmax
+        col = L + 1
+
+        lg = loggamma(complex(L + 1, η))
+
+        C = pow2L[col] *
+            exp(-π * η / 2 + real(lg) - logγ_den[col])
+
+        scale = c_norm * C
+
+        # Same phase convention as the original code:
+        # phase[L+1] = (-i)^L exp(i σ_L) / k
+        phase[col] = (-1im)^L * exp(1im * imag(lg)) / k
+
+        a = (complex(L + 1, -η),)
+        b = (2L + 2,)
+
+        for i in eachindex(rgrid)
+            ρ = k * rgrid[i]
+
+            if ρ == 0.0
+                uC[i, col] = 0.0
+            else
+                M = pFq(a, b, 2im * ρ)
+                uC[i, col] = real(scale * ρ^(L + 1) * cis(-ρ) * M)
+            end
+        end
+    end
+
+    return nothing
+end
+
+
+# ------------------------------------------------------------
+# Precompute all needed spherical harmonics:
+#
+#   Ycache[L+1][ith, m+L+1] = Y_Lm(θ_ith, kφ)
+#
+# This removes repeated Ylm calls inside the k loop.
+# ------------------------------------------------------------
+
+function precompute_Ylm_cache(
+    Lmax::Int,
+    thetagrid::AbstractVector{Float64},
+    kφ::Float64,
+)
+    Nθ = length(thetagrid)
+    Ycache = Vector{Matrix{ComplexF64}}(undef, Lmax + 1)
+
+    @inbounds for L in 0:Lmax
+        Y = Matrix{ComplexF64}(undef, Nθ, 2L + 1)
+
+        for m in -L:L
+            mi = m + L + 1
+
+            for ith in 1:Nθ
+                Y[ith, mi] = Ylm(L, m, thetagrid[ith], kφ)
+            end
+        end
+
+        Ycache[L + 1] = Y
+    end
+
+    return Ycache
+end
+
+
+# ------------------------------------------------------------
+# Optimized main function.
+#
+# External interface and return format are unchanged:
+#
+#   hydrogen_dipole_matrices(
+#       nmax,
+#       kgrid,
+#       thetagrid;
+#       dr,
+#       rmax,
+#       Z = 1.0,
+#       kphi = 0.0,
+#   )
+#
+# returns:
+#
+#   (Dbb = Dbb, Dbc = Dbc, states = states, rgrid = rgrid)
+# ------------------------------------------------------------
+
+function hydrogen_dipole_matrices(
+    nmax::Int,
+    kgrid::AbstractVector{<:Real},
+    thetagrid::AbstractVector{<:Real};
+    dr::Real,
+    rmax::Real,
+    Z::Real = 1.0,
+    kphi::Real = 0.0,
+    only_m0_bound::Bool = false,
+)
+    nmax >= 1 || error("nmax must be >= 1.")
+    is_uniform_grid(kgrid) || error("kgrid must be equally spaced.")
+    is_uniform_grid(thetagrid) || error("thetagrid must be equally spaced.")
+
+    kvals = Float64.(kgrid)
+    θvals = Float64.(thetagrid)
+
+    all(k -> k > 0.0, kvals) || error("All k values must be positive.")
+
+    Zf = Float64(Z)
+    kφ = Float64(kphi)
+
+    rgrid = collect(0.0:Float64(dr):Float64(rmax))
+    w = trap_weights(rgrid)
+
+    Na = nmax * (nmax + 1) * (2nmax + 1) ÷ 6
+    Nr = length(rgrid)
+    Nk = length(kvals)
+    Nθ = length(θvals)
+
+    # --------------------------------------------------------
+    # State table.
+    # states[α] keeps the original return format.
+    # n_of[α], l_of[α], m_of[α] are faster hot-loop accessors.
+    # --------------------------------------------------------
+
+    states = Vector{Tuple{Int,Int,Int}}(undef, Na)
+
+    n_of = Vector{Int}(undef, Na)
+    l_of = Vector{Int}(undef, Na)
+    m_of = Vector{Int}(undef, Na)
+
+    @inbounds for n in 1:nmax, l in 0:(n - 1), m in -l:l
+        α = get_eigen_label(n, l, m)
+
+        states[α] = (n, l, m)
+        n_of[α] = n
+        l_of[α] = l
+        m_of[α] = m
+    end
+
+    # --------------------------------------------------------
+    # Bound radial functions.
+    #
+    # uB[i, α] = u_{nα,lα}(r_i)
+    # WUB[i, α] = w_i * r_i * uB[i, α]
+    #
+    # Then radial integrals are simple column dot products.
+    # --------------------------------------------------------
+
+    uB = Matrix{Float64}(undef, Nr, Na)
+
+    @inbounds for α in 1:Na
+        fill_hydrogen_u_col!(
+            view(uB, :, α),
+            n_of[α],
+            l_of[α],
+            Zf,
+            rgrid,
+        )
+    end
+
+    wr = Vector{Float64}(undef, Nr)
+
+    @inbounds @simd for i in 1:Nr
+        wr[i] = w[i] * rgrid[i]
+    end
+
+    WUB = Matrix{Float64}(undef, Nr, Na)
+
+    @inbounds for α in 1:Na
+        for i in 1:Nr
+            WUB[i, α] = wr[i] * uB[i, α]
+        end
+    end
+
+    # --------------------------------------------------------
+    # Precompute nonzero bound-bound angular couplings.
+    # --------------------------------------------------------
+
+    bb_pairs = Vector{Tuple{Int,Int,Float64}}()
+
+    @inbounds for α in 1:Na, β in 1:Na
+        A = z_ang(l_of[α], m_of[α], l_of[β], m_of[β])
+        A == 0.0 && continue
+        push!(bb_pairs, (α, β, A))
+    end
+
+    Dbb = zeros(ComplexF64, Na, Na)
+
+    @threads :static for p in eachindex(bb_pairs)
+        α, β, A = bb_pairs[p]
+        I = col_dot(uB, WUB, α, β, Nr)
+        Dbb[α, β] = A * I
+    end
+
+    # --------------------------------------------------------
+    # Bound-continuum part.
+    # --------------------------------------------------------
+
+    Dbc = [zeros(ComplexF64, Nk, Nθ) for _ in 1:Na]
+
+    # Since bound l <= nmax-1 and z couples l -> L=l±1,
+    # the largest needed continuum partial wave is Lmax=nmax.
+    Lmax = nmax
+
+    # Precompute angular factors for every allowed L,m,θ.
+    Ycache = precompute_Ylm_cache(Lmax, θvals, kφ)
+
+    # Precompute nonzero bound-continuum coupling channels:
+    #
+    #   α, L, m, A = <Y_Lm | cosθ | Y_lm>
+    #
+    # Each bound state has at most two L channels: l-1 and l+1.
+    bc_pairs = Vector{Tuple{Int,Int,Int,Float64}}()
+
+    @inbounds for α in 1:Na
+        l = l_of[α]
+        m = m_of[α]
+    
+        # Optional restriction:
+        # only compute bound-continuum matrix elements whose bound state has m = 0.
+        # Dbc[α] for m != 0 remains the zero matrix initialized above.
+        if only_m0_bound && m != 0
+            continue
+        end
+    
+        for L in (l - 1, l + 1)
+            (L < 0 || L > Lmax || abs(m) > L) && continue
+    
+            A = z_ang(L, m, l, m)
+            A == 0.0 && continue
+    
+            push!(bc_pairs, (α, L, m, A))
+        end
+    end
+
+    # Constants used in continuum normalization.
+    logγ_den = [loggamma(2L + 2) for L in 0:Lmax]
+    pow2L = [2.0^L for L in 0:Lmax]
+
+    # Thread-local scratch buffers.
+    # Each thread owns its own uC and phase arrays, so no race occurs.
+    caches = [
+        (
+            uC = Matrix{Float64}(undef, Nr, Lmax + 1),
+            phase = Vector{ComplexF64}(undef, Lmax + 1),
+        )
+        for _ in 1:nthreads()
+    ]
+
+    @threads :static for ik in 1:Nk
+        tid = threadid()
+        cache = caches[tid]
+
+        uC = cache.uC
+        phase = cache.phase
+
+        k = kvals[ik]
+
+        fill_continuum_u_cols!(
+            uC,
+            phase,
+            rgrid,
+            k,
+            Zf,
+            Lmax,
+            logγ_den,
+            pow2L,
+        )
+
+        @inbounds for q in eachindex(bc_pairs)
+            α, L, m, A = bc_pairs[q]
+
+            Lp1 = L + 1
+            I = col_dot(uC, WUB, Lp1, α, Nr)
+
+            pref = phase[Lp1] * A * I
+
+            Dα = Dbc[α]
+            Y = Ycache[Lp1]
+            mi = m + L + 1
+
+            @simd for ith in 1:Nθ
+                Dα[ik, ith] += pref * Y[ith, mi]
+            end
+        end
+    end
+
+    return (Dbb = Dbb, Dbc = Dbc, states = states, rgrid = rgrid)
+end
+
+
+nmax = 5
+
+p_max = 5.0
+p_min = 0.02
+Np = 1000 * 5 ÷ 2
+Δp = (p_max - p_min) / Np
+N_theta = 180
+Δtheta = π / N_theta
+p_grid = [p_min + (i - 1 + 0.5) * Δp for i = 1: Np]                 # use mid point grid
+theta_grid = [(i - 1 + 0.5) * Δtheta for i = 1: N_theta]
+
+# res = hydrogen_dipole_matrices(
+#     nmax,
+#     p_grid,
+#     theta_grid;
+#     dr = 0.02,
+#     rmax = 200.0,
+#     Z = 1.0,
+#     only_m0_bound = true,
+# )
+
+# dipole_z_bb = res.Dbb
+# dipole_z_cb = res.Dbc
+# states = res.states
+
+# example_name = "2026_6_2_precalc"
+# h5open("./data/$example_name.h5", "w") do file
+#     write(file, "dipole_z_cb", hcat(dipole_z_cb...))
+#     write(file, "dipole_z_bb", dipole_z_bb)
+# end
+
+example_name = "2026_6_2_precalc"
+dipole_z_cb_hcat = retrieve_mat(example_name, "dipole_z_cb")
+dipole_z_bb = retrieve_mat(example_name, "dipole_z_bb")
+dipole_z_cb = collect(eachslice(reshape(dipole_z_cb_hcat, size(dipole_z_cb_hcat,1), N_theta, :), dims=3))
+
+α = get_eigen_label(1, 0, 0)
+des = norm.(dipole_z_cb[α])
+heatmap([theta_grid; theta_grid .+ pi], p_grid[1: end ÷ 1], [des des[:, end:-1:1]][1: end ÷ 1, :], projection=:polar, color=:cork)
+
+
+# α = get_eigen_label(1, 0, 0)
+# pseudo_dipole_res = h5open("./data/2026_5_27_dipole_z_cb.h5", "r") do h
+#     _read_complex(h, "dipole_z_cb_$α")
+# end
+# des1 = norm.(dipole_z_cb[α])
+# des2 = norm.(pseudo_dipole_res)
+# plot(p_grid[1: end ÷ 4], [des1[1: end ÷ 4, end ÷ 1], des2[1: end ÷ 4, end ÷ 1]])
+
+
+
+
+##########################################
+
+n_upper_limit = nmax
 
 # calculate eigen_states for m = 0 special case
 struct eigen_state_t
@@ -87,345 +641,34 @@ struct eigen_state_t
     data::Vector{ComplexF64}
 end
 
-eigen_states = Vector{eigen_state_t}(undef, N_alpha)
-for (n, ek) in enumerate(ek_list)
-    pw = create_physics_world_sh(Nr, l_num, Δr, Δt, po_func, Z, absorb_func, delta_t_im = 2 / (-ek))
-    rt = create_tdse_rt_sh(pw, m_zero_flag=true);
-    for l in 0: min(n-1, l_num-1)
+eigen_states = Vector{eigen_state_t}(undef, get_eigen_label(n_upper_limit, n_upper_limit - 1, 0))
+alpha_list = Int64[]
+
+for n in 1: n_upper_limit
+    for l in 0: 0 + n - 1
         m = 0
-        id = get_index_from_lm(l, m, l_num)
-        init_wave = create_empty_shwave(pw.shgrid)
-        @. init_wave[id] = rs * exp(-rs * n)
-        itp_fdsh_single(pw, rt, init_wave, id, log_info=false, mininum_loop_times=2000)
-        en = get_energy_sh(init_wave, rt, pw.shgrid)
-        alpha = get_eigen_label(n, l, m)
-        eigen_states[alpha] = eigen_state_t(n, l, -en, copy(init_wave[id]))
-        push!(alpha_list, alpha)
-        println("Energy of the state with n=$n, l=$l, m=$m: ", en)
+        α = get_eigen_label(n, l, m)
+        Ip = 0.5 / n ^ 2
+        eigen_states[α] = eigen_state_t(n, l, Ip, ComplexF64[])
+        push!(alpha_list, α)
     end
 end
 
-
-# spherical bessel function j_l(x) & spherical harmonic function Y_l
-function spherical_besselj_l(l::Int, x::Float64)
-    l < 0 && return 0.0
-    if abs(x) < 1e-12
-        return l == 0 ? 1.0 : 0.0
-    end
-    return sqrt(pi / (2x)) * besselj(l + 0.5, x)
-end
-
-@inline function legendreP_l(l::Int, x::Float64)
-    l == 0 && return 1.0
-    l == 1 && return x
-    p0 = 1.0
-    p1 = x
-    @inbounds for n in 2:l
-        p = ((2n - 1) * x * p1 - (n - 1) * p0) / n
-        p0, p1 = p1, p
-    end
-    return p1
-end
-
-@inline function Y_L0(L::Int, costh::Float64)
-    return sqrt((2L + 1) / (4π)) * legendreP_l(L, clamp(costh, -1.0, 1.0))
-end
-
-function spherical_neumann_l(l::Int, x::Float64)
-    abs(x) < 1e-12 && return -Inf
-    return sqrt(pi / (2x)) * bessely(l + 0.5, x)
-end
-
-function build_radial_box_continuum(
-    L::Int,
-    rs::Vector{Float64},
-    Δr::Float64,
-    Vfunc;
-    pmax::Float64,
-)
-    # Use only r > 0 points. The r = 0 point is singular for L > 0.
-    idx = findall(r -> r > 1e-12, rs)
-    r = rs[idx]
-    N = length(r)
-
-    diag = zeros(Float64, N)
-    off  = fill(-1.0 / (2.0 * Δr^2), N - 1)
-
-    for i in 1:N
-        ri = r[i]
-        diag[i] =
-            1.0 / Δr^2 +
-            L * (L + 1) / (2.0 * ri^2) +
-            Vfunc(ri)
-    end
-
-    F = eigen(SymTridiagonal(diag, off))
-
-    E = F.values
-    U = F.vectors
-
-    # keep positive-energy states up to pmax
-    keep = findall(e -> e > 0.0 && sqrt(2.0 * e) <= pmax, E)
-
-    pvals = sqrt.(2.0 .* E[keep])
-    Upos = U[:, keep]
-
-    return idx, pvals, Upos
-end
-
-
-function local_delta_p(pvals::Vector{Float64})
-    N = length(pvals)
-    Δp = zeros(Float64, N)
-
-    if N == 1
-        Δp[1] = 1.0
-        return Δp
-    end
-
-    Δp[1] = pvals[2] - pvals[1]
-    Δp[N] = pvals[N] - pvals[N - 1]
-
-    for i in 2:(N - 1)
-        Δp[i] = 0.5 * (pvals[i + 1] - pvals[i - 1])
-    end
-
-    return Δp
-end
-
-function interp_real_linear(xgrid, ygrid, x)
-    if x <= xgrid[1]
-        return ygrid[1]
-    elseif x >= xgrid[end]
-        return ygrid[end]
-    end
-
-    k = searchsortedlast(xgrid, x)
-    k = min(k, length(xgrid) - 1)
-
-    t = (x - xgrid[k]) / (xgrid[k + 1] - xgrid[k])
-    return (1 - t) * ygrid[k] + t * ygrid[k + 1]
-end
-
-
-function interp_RL_threshold(pvals, RLvals, L::Int, p::Float64)
-    if p <= 0.0
-        return L == 0 ? RLvals[1] : 0.0 + 0.0im
-    end
-
-    if L == 0
-        return interp_real_linear(pvals, RLvals, p)
-    end
-
-    Fvals = RLvals ./ (pvals .^ L)
-
-    if p < pvals[1]
-        return (p^L) * Fvals[1]
-    elseif p > pvals[end]
-        # Safer than constant extrapolation.
-        return 0.0 + 0.0im
-    else
-        Fp = interp_real_linear(pvals, Fvals, p)
-        return (p^L) * Fp
-    end
-end
+N_alpha = length(eigen_states)
 
 
 
-# define the pgrid, and create RL_mat buffer for future use
-pgrid_pmax = 2.0 * 2.5
-Np = 1000 * 5 ÷ 2
-Δp = pgrid_pmax / Np
-N_theta = 180
-Δtheta = π / N_theta
-p_grid = [(i - 1 + 0.5) * Δp for i = 1: Np]                 # use mid point grid
-theta_grid = [(i - 1 + 0.5) * Δtheta for i = 1: N_theta]    # use mid point grid
-RL_left = [zeros(ComplexF64, Np) for i in 1: N_alpha]    # R_nl^{l+1}(p)
-RL_right = [zeros(ComplexF64, Np) for i in 1: N_alpha]   # R_nl^{l-1}(p)
-RL_fix = [zeros(ComplexF64, Np) for i in 1: N_alpha]   # R^fix_nl^{l}(p)
-Y_l0_buffer = [zeros(Float64, N_theta) for i in 1: eigen_max_n + 1]
-spherical_besselj_table = [zeros(Float64, Nr) for i in 1: eigen_max_n + 1]
-# RI = 20.0
-# r_mask = [rs .> RI for i in 1: N_alpha]
 
-############################# (Pre-calculation part)
-
-println("RL_left/right calculation starts.")
-# calculate the RL_left and RL_right
-for (i, p) in enumerate(p_grid)
-    println("i = $i")
-    for l = 0: eigen_max_n
-        spherical_besselj_table[l + 1] .= spherical_besselj_l.(l, p .* rs)
-    end
-    for α in alpha_list[1:1]
-        l = eigen_states[α].l
-        for (j, r) in enumerate(rs)
-            RL_left[α][i] += r ^ 2 * eigen_states[α].data[j] * spherical_besselj_table[(l + 1) + 1][j] * sqrt(pw.shgrid.rgrid.delta) #* r_mask[α][j]
-        end
-        if l != 0
-            for (j, r) in enumerate(rs)
-                RL_right[α][i] += r ^ 2 * eigen_states[α].data[j] * spherical_besselj_table[(l - 1) + 1][j] * sqrt(pw.shgrid.rgrid.delta) #* r_mask[α][j]
-            end
-        end
-
-        for (j, r) in enumerate(rs)
-            RL_fix[α][i] += r * eigen_states[α].data[j] * spherical_besselj_table[l + 1][j] * sqrt(pw.shgrid.rgrid.delta) #* r_mask[α][j]
-        end
-    end
-end
-
-println("RL_left/right calculation finished.")
-
-# pre-calculate d^z_{α1, α2} (m = 0)
-dipole_z_bb = zeros(ComplexF64, N_alpha, N_alpha)
-for α1 in alpha_list
-    for α2 in alpha_list
-        l1 = eigen_states[α1].l
-        l2 = eigen_states[α2].l
-        if abs(l1 - l2) != 1
-            continue
-        end
-        for (j, r) in enumerate(rs)
-            # dipole_z_bb[α1, α2] += eigen_states[α1].data[j] * r * eigen_states[α2].data[j]
-            dipole_z_bb[α1, α2] += conj(eigen_states[α1].data[j]) * r * eigen_states[α2].data[j]
-        end
-        if l1 - l2 == -1
-            dipole_z_bb[α1, α2] *= (l1 + 1) / sqrt((2 * l1 + 1) * (2 * l1 + 3))
-        elseif l1 - l2 == 1
-            dipole_z_bb[α1, α2] *= (l1) / sqrt((2 * l1 - 1) * (2 * l1 + 1))
-        end
-    end
-end
-
-println("dipole_z_bb calculation finished.")
-
-# h5open("./data/2025_5_19.h5", "w") do h
-#     _write_complex(h, "RL_left", hcat(RL_left...))
-#     _write_complex(h, "RL_right", hcat(RL_right...))
-#     _write_complex(h, "RL_fix", hcat(RL_fix...))
-#     _write_complex(h, "dipole_z_bb", dipole_z_bb)
-# end
-
-#######################
-
-# # read the dipole results
-# RL_left = h5open("./data/2025_5_19.h5", "r") do h
-#     RL_left_mat = _read_complex(h, "RL_left")
-#     [RL_left_mat[:, i] for i in 1: size(RL_left_mat)[2]]
-# end
-
-# RL_right = h5open("./data/2025_5_19.h5", "r") do h
-#     RL_right_mat = _read_complex(h, "RL_right")
-#     [RL_right_mat[:, i] for i in 1: size(RL_right_mat)[2]]
-# end
-
-# dipole_z_bb = h5open("./data/2025_5_19.h5", "r") do h
-#     _read_complex(h, "dipole_z_bb")
-# end
-
-# pre-calculate spherical harmonic functions
-for l = 0: eigen_max_n
-    for (j, theta) in enumerate(theta_grid)
-        Y_l0_buffer[l + 1][j] = Y_L0(l, cos(theta))
-    end
-end
-
-# calculate a coarse-grained d_dipole_cb_coarse
-coarse_step = 1
-coarse_p_grid = p_grid[1: coarse_step: end]
-coarse_theta_grid = theta_grid[1: coarse_step: end]
-coarse_dipole_z_cb = [zeros(ComplexF64, length(coarse_p_grid), length(coarse_theta_grid)) for i in 1: N_alpha]
-orth_part = [zeros(ComplexF64, length(coarse_p_grid), length(coarse_theta_grid)) for i in 1: N_alpha]
-for (i, p) in enumerate(coarse_p_grid)
-    for (j, theta) in enumerate(coarse_theta_grid)
-        p_id = floor(Int64, (p - 0.0) / Δp) + 1
-        theta_id = floor(Int64, (theta - 0.0) / Δtheta) + 1
-        # for each \alpha, we get the d^z_{p_j(t), nl} -> dipole_z_cb
-        for α in alpha_list[1:1]
-            l = eigen_states[α].l
-            C1 = (l + 1) / sqrt((2 * l + 1) * (2 * l + 3))
-            dipole_z_cb = sqrt(2 / pi) * (C1 * (-im) ^ (l + 1) * Y_l0_buffer[(l + 1) + 1][theta_id] * RL_left[α][p_id])
-            if l != 0
-                C2 = (l) / sqrt((2 * l - 1) * (2 * l + 1))
-                dipole_z_cb += sqrt(2 / pi) * (C2 * (-im) ^ (l - 1) * Y_l0_buffer[(l - 1) + 1][theta_id] * RL_right[α][p_id])
-            end
-            coarse_dipole_z_cb[α][i, j] = dipole_z_cb
-        end
-
-        # we check the orthogonality of <p|α>
-        for α in alpha_list
-            l = eigen_states[α].l
-            orth_part[α][i, j] = sqrt(2 / pi) * (-im) ^ l * Y_l0_buffer[l + 1][theta_id] * RL_fix[α][p_id]
-        end
-    end
-end
-
-println("coarse_dipole_z_cb calculation finished.")
-
-α = 1
-destin_mat = copy(orth_part[α])
-
-res = 0.0
-for i in 1: length(p_grid), j in 1: length(theta_grid)
-    kappa_index = (i - 1) * length(theta_grid) + j
-    p = p_grid[i]
-    theta = theta_grid[j]
-    w = (2 * pi * p^2) * sin(theta) * Δp * Δtheta
-    res += norm.(orth_part[α][i, j]) .^ 2.0 * w
-end
-
-heatmap([coarse_theta_grid; π .+ coarse_theta_grid], coarse_p_grid,
-    ([norm.(destin_mat) norm.(destin_mat)[:, end:-1:1]]), projection=:polar, color=:cork)
-
-
-
-# coarse_dipole_z_cb_fixed = deepcopy(coarse_dipole_z_cb)
-
-# # correction of dipole_z_cb
-# for (i, p) in enumerate(coarse_p_grid)
-#     for (j, theta) in enumerate(coarse_theta_grid)
-#         p_id = floor(Int64, (p - 0.0) / Δp) + 1
-#         theta_id = floor(Int64, (theta - 0.0) / Δtheta) + 1
-#         for α in alpha_list
-#             for β in alpha_list
-#                 if dipole_z_bb[β, α] == 0
-#                     continue
-#                 end
-#                 l = eigen_states[β].l
-#                 dipole_z_cb_correction = sqrt(2 / pi) * (-im) ^ l * Y_l0_buffer[l + 1][theta_id] * RL_fix[β][p_id]
-#                 coarse_dipole_z_cb_fixed[α][i, j] -= dipole_z_cb_correction * dipole_z_bb[β, α]
-#                 # coarse_dipole_z_cb_fixed[α][i, j] = -dipole_z_cb_correction * dipole_z_bb[β, α]
-#             end
-#         end
-#         # @printf "Finish %d, %d\n" i j
-#     end
-# end
-
-
-# display the coarse dipole matrix
-α = 1
-destin_mat = coarse_dipole_z_cb[α]
-heatmap([coarse_theta_grid; π .+ coarse_theta_grid], coarse_p_grid,
-    ([norm.(destin_mat) norm.(destin_mat)[:, end:-1:1]]), projection=:polar, color=:cork)
-
-
-
-# check the dipole_z_bb matrix
-n_list = [e.n for e in eigen_states[alpha_list]]
-l_list = [e.l for e in eigen_states[alpha_list]]
-label_list = ["($(n_list[i]), $(l_list[i]))" for i in 1: length(n_list)]
-heatmap(label_list, label_list, norm.(dipole_z_bb[alpha_list, alpha_list]))
+##############################################################
 
 
 # create kappa grid (Spherical)
-# kappa_N_p = Np ÷ 2      # keep the same with the pgrid is OK.
 kappa_p_max = 2.0
-kappa_p_min = 0.1
 kappa_delta_p = Δp
-kappa_N_p = floor(Int64, (kappa_p_max - kappa_p_min) / kappa_delta_p)
+kappa_N_p = floor(Int64, kappa_p_max / kappa_delta_p)
 kappa_N_theta = N_theta
 kappa_delta_theta = π / kappa_N_theta
-kappa_p_subgrid = [kappa_p_min + (i - 0.5) * kappa_delta_p for i in 1: kappa_N_p]
+kappa_p_subgrid = [(i - 0.5) * kappa_delta_p for i in 1: kappa_N_p]
 kappa_theta_subgrid = [(q - 0.5) * kappa_delta_theta for q in 1: kappa_N_theta]
 N_kappa = length(kappa_p_subgrid) * length(kappa_theta_subgrid)
 kappa_grid_p = zeros(Float64, N_kappa)
@@ -442,8 +685,17 @@ for κ_p in kappa_p_subgrid, κ_theta in kappa_theta_subgrid
     k += 1
 end
 
+# define laser field
+@expo E_fs =          0.02              # peak electric field of the fs pulse
+@expo ω_fs =          0.057 * 1.0        # angular frequency of the fs pulse
+@expo nc =            6                 # number of optical cycles in the fs pulse
+Ex_fs, Ey_fs, Ez_fs, tmax = light_pulse(ω_fs, E_fs, nc, 0, ellipticity=0.0, phase1=0.5pi)        # create the light pulse from the given parameters (+ ellipticity)
+E_field(t) = Ex_fs(t)
+Tp = 2 * nc * pi / ω_fs
+
 
 # create time grid and auxiliaries for characteristic curves
+Δt = 0.2
 Nt = Int64(floor(Tp / Δt))
 ts = [i * Δt for i in range(0, Nt - 1)]
 Et_data = E_field.(ts)
@@ -460,7 +712,7 @@ p_curves_p = zeros(Float64, N_kappa)
 p_curves_theta = zeros(Float64, N_kappa)
 chi_curves = zeros(Float64, N_kappa)
 
-########################################################
+
 
 # pre-judgement
 function pre_judgement(
@@ -510,7 +762,7 @@ function pre_judgement(
 end
 
 # coupling_amplitude = pre_judgement(p_curves_p, p_curves_theta, chi_curves,
-#     kappa_grid_p, kappa_grid_theta, N_kappa, Δp, Δtheta, coarse_dipole_z_cb, Et_data, eta_data, eta_1_data, eta_2_data, eigen_states, N_theta, ts[1: (length(ts) ÷ 4 * 4)])
+#     kappa_grid_p, kappa_grid_theta, N_kappa, Δp, Δtheta, dipole_z_cb, Et_data, eta_data, eta_1_data, eta_2_data, eigen_states, N_theta, ts[1: (length(ts))])
 
 # # get a 2D slice of coupling_amplitude in x-z plane (ϕ = 0) (Spherical)
 # coupling_amplitude_xz = zeros(Float64, length(kappa_p_subgrid), length(kappa_theta_subgrid))
@@ -521,10 +773,11 @@ end
 
 # colormap = cgrad([:white, palette(:jet1, 6)...], rev = true)
 # display_data = clamp.(abs.(log10.(norm.(coupling_amplitude_xz) ./ maximum(norm.(coupling_amplitude_xz)))), 0, 3.0)
-# heatmap([kappa_theta_subgrid; π .+ kappa_theta_subgrid], kappa_p_subgrid, [display_data display_data[:, end:-1:1]], projection=:polar, color=colormap)
+# p1_heat = heatmap([kappa_theta_subgrid; π .+ kappa_theta_subgrid], kappa_p_subgrid, [display_data display_data[:, end:-1:1]], projection=:polar, color=colormap)
 
 # colormap_2 = cgrad(["#710000", "#C60001", "#FB0001", "#FE3A01", "#FF7A00", "#FEAB01", "#FEAB01", "#FEAB01", "#D5FF17", "#91FF60", "#4AFFAE", "#02FFFC", "#00A3FE", "#003DFF", "#2120FF", "#8C8CFE", :white], rev=true)
 # p1 = heatmap([kappa_theta_subgrid .+ π/2; kappa_theta_subgrid .+ 3π/2], kappa_p_subgrid[1: end ÷ 2], [coupling_amplitude_xz coupling_amplitude_xz[:, end:-1:1]][1: end ÷ 2, :], projection=:polar, color=colormap_2)
+
 
 
 
@@ -579,12 +832,12 @@ function sfa_rhs(
     Threads.@threads for i in 1: bf.N_kappa
         p_id = floor(Int64, (bf.p_curves_p[i] - 0.0) / bf.p_grid_delta) + 1
         theta_id = floor(Int64, (bf.p_curves_theta[i] - 0.0) / bf.theta_delta) + 1
-        @inbounds res_u[bf.N_alpha + i] = 0.0
+        res_u[bf.N_alpha + i] = 0.0
         w = 2 * pi * bf.kappa_grid_p[i] ^ 2 * sin(bf.kappa_grid_theta[i]) * bf.kappa_delta_p * bf.kappa_delta_theta
-        for α in bf.alpha_list[1:1]
-            @inbounds res_u[bf.N_alpha + i] += bf.coarse_dipole_z_cb[α][p_id, theta_id] * u[α] * exp(im * bf.eigen_states[α].Ip * t)
+        for α in bf.alpha_list
+            res_u[bf.N_alpha + i] += bf.coarse_dipole_z_cb[α][p_id, theta_id] * u[α] * exp(im * bf.eigen_states[α].Ip * t)
         end
-        @inbounds res_u[bf.N_alpha + i] *= im * bf.Et_data[it] * exp(im * bf.chi_curves[i]) * sqrt(w)
+        res_u[bf.N_alpha + i] *= im * bf.Et_data[it] * exp(im * bf.chi_curves[i]) * sqrt(w)
     end
     # end
 
@@ -594,7 +847,7 @@ function sfa_rhs(
 
     nt = Threads.nthreads()
     chunk_size = cld(bf.N_kappa, nt)
-    for α in bf.alpha_list[1:1]
+    for α in bf.alpha_list
         res_u[α] = 0.0
         Threads.@threads for j in 1: nt
             start_idx = (j - 1) * chunk_size + 1
@@ -612,7 +865,7 @@ function sfa_rhs(
     
     for α in bf.alpha_list
         for β in bf.alpha_list
-            @inbounds res_u[α] += im * bf.Et_data[it] * bf.dipole_z_bb[α, β] * exp(im * (bf.eigen_states[β].Ip - bf.eigen_states[α].Ip) * t) * u[β]
+            res_u[α] += im * bf.Et_data[it] * bf.dipole_z_bb[α, β] * exp(im * (bf.eigen_states[β].Ip - bf.eigen_states[α].Ip) * t) * u[β]
         end
     end
 end
@@ -663,33 +916,8 @@ alpha_list_selected = alpha_list[1: end]
 
 sfa_buffer = sfa_buffer_t(N_alpha, alpha_list_selected,
     eigen_states, kappa_grid_p, kappa_grid_theta, N_kappa, kappa_delta_p, kappa_delta_theta,
-    Δp, Δtheta, Et_data, eta_data, eta_1_data, eta_2_data, coarse_dipole_z_cb, dipole_z_bb, p_curves_p, p_curves_theta,
+    Δp, Δtheta, Et_data, eta_data, eta_1_data, eta_2_data, dipole_z_cb, dipole_z_bb, p_curves_p, p_curves_theta,
     chi_curves, chunk_buffer, chunk_sum_buffer)
-
-# # RK4 propagation
-# mainloop_ts = 1: 2: (length(ts) - 2)
-# D_BB = zeros(Float64, length(mainloop_ts))
-# D_BC = zeros(Float64, length(mainloop_ts))
-# D_CC = zeros(Float64, length(mainloop_ts))
-# for (i, it) in enumerate(mainloop_ts)
-#     t = ts[it]
-
-#     rk4_one_step(Δt, u, u_buffer[1], u_buffer[2], u_buffer[3], u_buffer[4], u_buffer[5], t, it, sfa_buffer);
-    
-#     if it % 100 == 1
-#         println("it = $it")
-        
-#         # get population
-#         P_bound_sum = sum(norm.(u[1: N_alpha]) .^ 2)
-#         P_1s = norm.(u[1]) .^ 2
-#         P_2s = norm.(u[2]) .^ 2
-#         P_2p = norm.(u[3]) .^ 2
-#         P_free_sum = sum(norm.(u[N_alpha + 1: end]) .^ 2)
-#         P_total = P_bound_sum + P_free_sum
-
-#         @printf "Total = %0.4f, 1s = %0.4f, 2s = %0.4f, 2p = %0.4f, Free = %0.4f\n"  P_total  P_1s  P_2s  P_2p  P_free_sum
-#     end
-# end
 
 
 # RK4 propagation
@@ -777,15 +1005,13 @@ for (i, it) in enumerate(mainloop_ts)
     # absorption of bound states (only for test)
     for α in bf.alpha_list
         l = eigen_states[α].l
-        if l == 3
-            u[α] *= 0.95
-        elseif l == 4
-            u[α] *= 0.8
-        elseif l == 5
-            u[α] *= 0.5
-        elseif l == 6
-            u[α] *= 0.1
-        end
+        # if l == 2
+        #     u[α] *= 0.95
+        # elseif l == 3
+        #     u[α] *= 0.8
+        # elseif l == 4
+        #     u[α] *= 0.2
+        # end
     end
 
     # D_BB
@@ -876,23 +1102,22 @@ for (i, it) in enumerate(mainloop_ts)
     if it % 100 == 1
         println("it = $it")
 
-        @printf "Total = %0.4f, 1s = %0.4f, 2s = %0.4f, 2p = %0.4f, Free = %0.4f\n"  P_total  P_1s  P_2s  P_2p  P_free_sum
+        @printf "Total = %0.4f, 1s = %0.4f, 2s = %0.4f, 2p = %0.4f, Free = %0.4f\n"  P_total[i] P_1s[i] P_2s[i]  P_2p[i]  P_free_sum[i]
         @printf "D_BB = %+0.6e, D_BC = %+0.6e, D_CC = %+0.6e, D_total = %+0.6e\n" D_BB[i] D_BC[i] D_CC[i] D_total[i]
     end
 end
 
+# save everything
+# example_name = "2026_6_2_$(E_fs)_$(ω_fs)_$(nc)_short_range"
+example_name = "2026_6_2_$(E_fs)_$(ω_fs)_$(nc)"
+h5open("./data/$example_name.h5", "w") do h
+    write(h, "D_total", D_total)
+    write(h, "D_CC", D_CC)
+    write(h, "D_BB", D_BB)
+    write(h, "D_BC", D_BC)
+end
 
-
-# # save everything
-# example_name = "2026_5_19_$(E_fs)_$(ω_fs)_$(nc)_short_range"
-# h5open("./data/$example_name.h5", "w") do h
-#     write(h, "D_total", D_total)
-#     write(h, "D_CC", D_CC)
-#     write(h, "D_BB", D_BB)
-#     write(h, "D_BC", D_BC)
-# end
-
-# example_name = "2026_5_19_$(E_fs)_$(ω_fs)_$(nc)_short_range"
+# example_name = "2026_6_2_$(E_fs)_$(ω_fs)_$(nc)"
 # D_total = retrieve_mat(example_name, "D_total")
 # D_CC = retrieve_mat(example_name, "D_CC")
 # D_BB = retrieve_mat(example_name, "D_BB")
@@ -900,7 +1125,6 @@ end
 
 
 plot(ts[mainloop_ts], [D_total, D_BB, D_BC, D_CC], label=["D_total" "D_BB" "D_BC" "D_CC"])
-
 
 # get harmonic spectrum, including data, and k axis (frequency axis)
 # n_cut_off_estim = floor((-en + 3.17 * (E_fs ^ 2.0 / (4.0 * (ω_fs ^ 2.0)))) / ω_fs) * 1
@@ -917,12 +1141,6 @@ p3 = plot(ks ./ ω_fs, [(ks .^ 3) .* hg1, (ks .^ 3) .* hg1_free, (ks .^ 3) .* hg
     label=["Total" "Free" "Bound" "Cross"], xlabel="Harmonic Order", ylabel="HG Intensity", title="HHG Spectrum (E0=$E_fs, ω=$ω_fs)")
 
 
-#####################
-
-# u = h5open("./data/2025_5_19.h5", "r") do h
-#     _read_complex(h, "u")
-# end
-
 # get a 2D slice of u_free in x-z plane (ϕ = 0) (Spherical)
 u_free_xz = zeros(ComplexF64, length(kappa_p_subgrid), length(kappa_theta_subgrid))
 for i in 1: length(kappa_p_subgrid), j in 1: length(kappa_theta_subgrid)
@@ -936,11 +1154,9 @@ end
 colormap = cgrad([:white, palette(:jet1, 6)...], rev = true)
 display_data = clamp.(abs.(log10.(norm.(u_free_xz) ./ maximum(norm.(u_free_xz)))), 0, 3.0)
 # display_data = (display_data ./ 5.0) .^ 0.5 * 5.0
-heatmap([kappa_theta_subgrid; π .+ kappa_theta_subgrid], kappa_p_subgrid, [display_data display_data[:, end:-1:1]], projection=:polar, color=colormap)
+p2_heat = heatmap([kappa_theta_subgrid; π .+ kappa_theta_subgrid], kappa_p_subgrid, [display_data display_data[:, end:-1:1]], projection=:polar, color=colormap)
 
 colormap_2 = cgrad(["#710000", "#C60001", "#FB0001", "#FE3A01", "#FF7A00", "#FEAB01", "#FEAB01", "#FEAB01", "#D5FF17", "#91FF60", "#4AFFAE", "#02FFFC", "#00A3FE", "#003DFF", "#2120FF", "#8C8CFE", :white], rev=true)
 p2 = heatmap([kappa_theta_subgrid .+ π/2; kappa_theta_subgrid .+ 3π/2], kappa_p_subgrid[1: end ÷ 2], [norm.(u_free_xz) norm.(u_free_xz)[:, end:-1:1]][1: end ÷ 2, :], projection=:polar, color=colormap_2)
 
 
-
-# plot(p_grid, [abs.(RL_right[1]) abs.(RL_right[2]) abs.(RL_right[3])], xlabel="p")

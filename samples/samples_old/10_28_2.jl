@@ -22,8 +22,8 @@ rcd_shg = []
 wt_datas = []
 et_figs = []
 
-
-for tau_id in 1: 5
+tau_id = 1
+# for tau_id in 1: 5
 
 ω = 0.05693
 ω_thz = ω / 5
@@ -39,18 +39,18 @@ tau_lst = [-2pi/ω_thz, nc*pi/ω - 1.5pi/ω_thz,
 tau = tau_lst[tau_id]
 println("tau = $tau")
 
-E_thz(t) = (E0_thz) * sin(ω_thz*(t-tau)) * (t-tau > 0 && t-tau <(2*pi/ω_thz))
-E_fs(t) = E0 * sin(ω*t/2/nc)^2 * cos(ω*t + pi) * (t < 2*nc*pi/ω)
-E(t) = E_fs(t) + (E_thz(t) + E_c) * flap_top_windows_f(t, 0, 2*nc*pi/ω, 1/8)
+Et_thz(t) = (E0_thz) * sin(ω_thz*(t-tau)) * (t-tau > 0 && t-tau <(2*pi/ω_thz))
+Et_fs(t) = E0 * sin(ω*t/2/nc)^2 * cos(ω*t + pi) * (t < 2*nc*pi/ω)
+Et(t) = Et_fs(t) + (Et_thz(t) + E_c) * flap_top_windows_f(t, 0, 2*nc*pi/ω, 1/8)
 t_linspace = 0: Δt: 2*nc*pi/ω
-e_fig = plot(t_linspace, [E_thz.(t_linspace) * 200 E_fs.(t_linspace)])
+e_fig = plot(t_linspace, [Et_thz.(t_linspace) * 200 Et_fs.(t_linspace)])
 push!(et_figs, e_fig)
 
 Wk(gamma, Ip, omega) = exp(-(2*Ip/omega) * ((1 + 0.5/gamma^2) * asinh(gamma) - sqrt(1 + gamma^2) / 2 / gamma))
 Wk2(F, Ip, omega) = Wk(omega * sqrt(2*Ip) / F, Ip, omega)
 ADK_f(F) = 4 / F * exp(-2 / (3 * F))
 # W(t) = ADK_f(abs(E(t)) + 1e-10)
-W(t) = Wk2(abs(E(t)) + 1e-10, 0.5, ω)
+W(t) = Wk2(abs(Et(t)) + 1e-10, 0.5, ω)
 Wt_data = W.(t_linspace)
 Wt_int_data = get_integral(Wt_data, Δt)
 Wt_data_saturn = @. Wt_data * exp(-Wt_int_data)
@@ -77,14 +77,14 @@ println("shg_place = $shg_place")
 
 
 # method 2 (Directly)
-Eyield = E.(t_linspace) .* get_integral(Wt_data_saturn, Δt)
+Eyield = Et.(t_linspace) .* get_integral(Wt_data_saturn, Δt)
 Gyield = fft(Eyield .* hhg_window_f.(t_linspace, last(t_linspace)))
 plot!(p2, ω_linspace[1:200], norm.(Gyield)[1:200], yscale=:log10)
 #plot(ω_linspace[1:100], [norm.(res)[1:100] * 1e-5 norm.(Gyield)[1:100]], yscale=:log10)
 
 push!(rcd_shg, norm.(Gyield)[shg_place])
 
-end
+# end
 
 p2
 plot(rcd_shg)

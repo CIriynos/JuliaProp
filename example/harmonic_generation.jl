@@ -8,18 +8,17 @@ using LinearAlgebra
 using HDF5
 using FFTW
 
-# 
-
 
 # Basic Parameters
-Nr =            5000           # number of radial grid points
-Δr =            0.2             # radial grid step size
+Nr =            10000           # number of radial grid points
+Δr =            0.2 / 2         # radial grid step size
 l_num =         50              # number of angular momentum components
-Δt =            0.05            # time step size
+Δt =            0.05 / 1            # time step size
 Z =             1.0             # nuclear charge
 po_func(r) =    -1 / r          # potential function
 rmax =          Nr * Δr     
 absorb_func     = absorb_boundary_r(rmax, rmax * 0.8)  # create absorbing boundary function
+Ri_tsurf =      0.8 * rmax
 
 
 # Create Physical World & Runtime
@@ -33,12 +32,12 @@ crt_shwave = deepcopy(init_wave_list[1]);               # set the current wavefu
 en = get_energy_sh(init_wave_list[1], rt, pw.shgrid)    # get energy of the initial wavefunction (For H atom, should be -0.5 a.u.)
 
 # Define the Laser pulse
-E_fs =          0.1                 # peak electric field of the fs pulse
+E_fs =          0.05 / 1                 # peak electric field of the fs pulse
 E_thz =         0.00005 * 0         # peak electric field of the THz pulse
 E_dc =          0.00005 * 0         # static electric field
 ω_fs =          0.057               # angular frequency of the fs pulse
 ω_thz =         ω_fs / 30           # angular frequency of the THz pulse
-nc =            6                   # number of optical cycles in the fs pulse
+nc =            15                   # number of optical cycles in the fs pulse
 tau_fs =        0                   # delay of the fs pulse
 tau_list = get_1c_thz_delay_list_ok(ω_fs, tau_fs, nc, ω_thz)
                                     # A helper function to get the delays of the THz pulse, 
@@ -46,7 +45,7 @@ tau_list = get_1c_thz_delay_list_ok(ω_fs, tau_fs, nc, ω_thz)
 tau_thz = tau_list[1]               # select one delay from the delay list
 
 # create the Laser pulse data
-Ex_fs, Ey_fs, Ez_fs, tmax = light_pulse(ω_fs, E_fs, nc, tau_fs, ellipticity=0.0, phase1=0.0)        # create the light pulse from the given parameters (+ ellipticity)
+Ex_fs, Ey_fs, Ez_fs, tmax = light_pulse(ω_fs, E_fs, nc, tau_fs, ellipticity=0.0, phase1=-0.5pi)        # create the light pulse from the given parameters (+ ellipticity)
 Ex_thz, = light_pulse(ω_thz, E_thz, 1, tau_thz, pulse_shape="sin2", phase1=0.5pi)       # create the THz pulse from the given parameters
 E_applied(t) = (Ex_thz(t) + E_dc) * flap_top_windows_f(t, 0, tmax, 1/2)                 # define the applied electric field (THz + DC) with a flattop window
 At_datas, Et_datas, ts, steps = create_tdata(tmax, 0, Δt, t -> Ex_fs(t) + E_applied(t), Ey_fs, no_light, appendix_steps=1)
@@ -55,16 +54,16 @@ plot_fs_thz_figure(Ex_fs, Ey_fs, E_applied, ts, thz_ratio=100)                  
 
 ###########################
 
-# # Main Propagation Loop of TDSE with HHG Recording
-# hhg_integral_t, phi_record, dphi_record = tdseln_sh_mainloop_record_optimized_hhg(crt_shwave, pw, rt, At_datas[1], steps, Ri_tsurf);
+# Main Propagation Loop of TDSE with HHG Recording
+hhg_integral_t, phi_record, dphi_record = tdseln_sh_mainloop_record_optimized_hhg(crt_shwave, pw, rt, At_datas[1], steps, Ri_tsurf);
 
 
-# # Store Data Manually
-# example_name = "harmonic_generation"
-# h5open("./data/$example_name.h5", "w") do file
-#     write(file, "crt_shwave", hcat(crt_shwave...))
-#     write(file, "hhg_integral_t", hhg_integral_t)
-# end
+# Store Data Manually
+example_name = "harmonic_generation"
+h5open("./data/$example_name.h5", "w") do file
+    write(file, "crt_shwave", hcat(crt_shwave...))
+    write(file, "hhg_integral_t", hhg_integral_t)
+end
 
 ###########################
 
@@ -73,8 +72,16 @@ example_name = "harmonic_generation"
 hhg_integral_t = retrieve_mat(example_name, "hhg_integral_t")
 
 # get harmonic spectrum, including data, and k axis (frequency axis)
-hg1, ks = get_hg_spectrum(ts, -hhg_integral_t - Et_datas[1], ω_fs * 65)
+hg1, ks = get_hg_spectrum(ts, -hhg_integral_t - Et_datas[1], ω_fs * 30)
 
-plot(ks ./ ω_fs, hg1 .* ks .* 3e3, yscale=:log10, yaxis=[1e-4, 1e-2, 1e0, 1e2, 1e4], ylimit=(1e-4, 1e4))
+plot(ks ./ ω_fs, hg1 ./ maximum(hg1[2:end]), yscale=:log10, ylimit=(1e-8, 1e0), xaxis=range(1, 30))
+
+# plot(ks ./ ω_fs, hg1 .* ks .* 3e3, yscale=:log10, yaxis=[1e-4, 1e-2, 1e0, 1e2, 1e4], ylimit=(1e-4, 1e4))
 
 # The figure should be as the same as P74 Fig.9 (a)
+
+
+using DelimitedFiles
+hg1_casted = (hg1 ./ (1)) ./ maximum((hg1 ./ 1)[2:end])
+writedlm("hg1_casted.txt", hg1_casted)
+writedlm("hg1_xaxis.txt", ks ./ ω_fs)

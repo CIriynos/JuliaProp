@@ -8,8 +8,6 @@ using LinearAlgebra
 using HDF5
 using FFTW
 
-# 
-
 
 # Basic Parameters
 Nr =            20000 * 1            # number of radial grid points
