@@ -60,7 +60,7 @@ for k_ = 1: max_k
 
     init_wave = nothing 
     GC.gc(true)
-    ccall(:malloc_trim, Cint, (Csize_t,), 0)
+    # ccall(:malloc_trim, Cint, (Csize_t,), 0)
 end
 # ek_list = [ -0.4964336949923912, -0.1133886677324868, -0.034607349557600184, -0.00314449576064707]  # ek_list for -1 / r * exp(- r * r / (20.0 ^ 2))
 eigen_max_n = length(ek_list)

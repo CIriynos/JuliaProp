@@ -37,6 +37,7 @@ export get_energy_1d, get_energy_1d_laser
 export itp_fd1d
 export itp_fdsh_special
 export itp_fdsh_single
+export get_bound_states_1d
 export tdse_fd1d_mainloop
 export tdse_fd1d_mainloop_penta
 export tdse_laser_fd1d_mainloop_penta

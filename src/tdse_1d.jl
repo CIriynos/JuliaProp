@@ -28,6 +28,11 @@ function create_physics_world_1d(Nx, delta_x, delta_t, po_func, imb_func; delta_
     return pw1d
 end
 
+function create_physics_world_1d(pw::physics_world_1d_t, delta_t_im)
+    pw1d = physics_world_1d_t(pw.Nx, pw.delta_x, pw.xgrid, pw.delta_t, -im * delta_t_im, pw.po_data, pw.po_data_im)
+    return pw1d
+end
+
 
 
 # ================= tdse 1d ===================
@@ -152,6 +157,22 @@ function itp_fd1d(seed_wave::wave_t, rt::tdse_rt_1d_t; min_error::Float64 = 1e-8
     return crt_wave
 end
 
+function get_bound_states_1d(pw::physics_world_1d_t, ek_list::Vector{Float64}, max_steps=5000)
+    E = Float64[]
+    V = Vector{wave_t}()
+    x_linspace = get_linspace(pw.xgrid)
+    for ek in ek_list
+        pw1d = create_physics_world_1d(pw, 2 / -ek)
+        rt1d = create_tdse_rt_1d(pw1d)
+        seed_wave = gauss_package_1d(x_linspace, 1.0, 1.0, 0.0)
+        init_wave = itp_fd1d(seed_wave, rt1d, min_error = 1e-8, max_steps=max_steps)
+
+        normalize!(init_wave)
+        push!(V, init_wave)
+        push!(E, get_energy_1d(init_wave, rt1d))
+    end
+    return E, V
+end
 
 function tdse_laser_fd1d_mainloop_penta(crt_wave::wave_t, rt::tdse_rt_1d_t, pw::physics_world_1d_t, Ats, steps, X; record_steps::Int64 = 2000)
     println("[TDSE_1d]: tdse process starts. 1d with laser in dipole approximation.")
@@ -328,3 +349,11 @@ function gauge_transform_V2L(wave_V, Ats, delta_t, x_linspace)
     wave_L = wave_V .* exp.(im * last(Ats) .* x_linspace .- 0.5im * last(tmp))
     return wave_L
 end
+
+
+#########################################
+
+# function get_imag_delta_t_from_ek(ek)
+#     return 2 / -ek
+# end
+
