@@ -132,6 +132,7 @@ export generate_start_point_uniform_xy_plane_m
 export update_start_point
 export ctmc_mainloop, ctmc_perturb_mainloop
 export ctmc_adaptive_mainloop, CTMCAdaptiveStats
+export ctmc_hybrid_mainloop, CTMCHybridStats
 export calculate_asymptotic_momentum
 export add_to_pmd
 export add_to_hhg
@@ -162,6 +163,7 @@ include("prefabricated.jl")
 # ctmc.jl
 include("ctmc.jl")
 include("ctmc_adaptive.jl")
+include("ctmc_hybrid.jl")
 
 
 end # module JuliaProp

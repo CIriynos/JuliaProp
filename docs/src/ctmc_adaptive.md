@@ -1,5 +1,7 @@
 # CTMC 变步长积分
 
+若只有少量近核区间需要提高精度，可使用[远核固定步、近核自适应混合积分](ctmc_hybrid.md)，接口为 `ctmc_hybrid_mainloop`。
+
 新增 `src/ctmc_adaptive.jl`，沿用原有 `ctmc_rt`。`src/ctmc.jl`、旧函数接口、结构体、旧 samples 均未修改；`src/JuliaProp.jl` 只增加新文件的 include 和新接口的 export。没有新增包依赖。
 
 正常 `using JuliaProp` 即可使用新接口。若原来直接 `include("src/ctmc.jl")`，则在其后另加 `include("src/ctmc_adaptive.jl")`。
@@ -35,6 +37,8 @@ println(stats[1].min_dt, " ", stats[1].max_dt)
 ```
 
 容差排列为 `[px, py, pz, x, y, z]`，也可全部使用标量。`abstol` 每项须为正数，`reltol` 每项可为零。诊断结构 `CTMCAdaptiveStats` 还包含 `min_radius`（初值及接受的半步/端点中最小半径）与 `max_error_ratio`（接受步骤的最大归一化误差估计）。`min_radius` 不是精确近心点距离。若出生时刻就是最后一个输出点，步数与 `min_dt/max_dt` 均为零。
+
+`min_dt/max_dt` 记录一次接受步骤推进的总时长 `h`；接受解实际由两个 `h/2` 的 RK4 子步构成。因此 `min_dt=Δt` 仍然包含步长加倍误差估计的计算量。
 
 可运行 `samples/ctmc_adaptive_example.jl` 查看两条轨线分别采用不同内部步长的示例。
 
