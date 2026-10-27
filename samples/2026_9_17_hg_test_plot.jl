@@ -95,14 +95,14 @@ p2
 
 
 # d1 = shg_yields
-# d2 = shg_yields
-# d3 = reverse(d1)
+d2 = shg_yields
 
-plot([d1, d2, d1 .- d2], labels=["E_dc +" "E_dc -" "diff"])
+d3 = ((d1 .- d1[1]) .- (d2 .- d2[1])) ./ 4
+plot([d1, d2, d3], labels=["E_dc +" "E_dc -" "diff"])
 
-# unify(data) = (data .- minimum(data)) ./ (maximum(data) - minimum(data))
-# p2 = plot(unify(tau_list), unify(d1 .- d2))
-# plot!(p2, unify(thz_data[2]), unify(-thz_data[1]))
+unify(data) = (data .- minimum(data)) ./ (maximum(data) - minimum(data))
+p2 = plot(unify(tau_list), unify(d3))
+plot!(p2, unify(thz_data[2]), unify(-thz_data[1]))
 
 
 # f = open("saoyanchi_data.txt", "w+")

@@ -37,7 +37,7 @@ absorb_func = absorb_boundary_r(rmax, Ri_tsurf)
 
 
 # 1 2 3
-task_id = 2
+task_id = 3
 
 # # Create Physical World & Runtime
 # pw = create_physics_world_sh(Nr, l_num, Δr, Δt, po_func_r, Z, absorb_func)
@@ -48,17 +48,16 @@ task_id = 2
 # crt_shwave = deepcopy(init_wave_list[1]);
 # en = get_energy_sh(init_wave_list[1], rt, pw.shgrid) # He:-0.944  H:-0.5
 # println("Energy of ground state: ", en)
-
 # Define the Laser. 
 E_fs = 0.0533 * 0.5
-E_thz = 0.0005
-E_dc = 0.0005
+E_thz = 0.0005 * 0
+E_dc = 0.0005 * 5
 ω_fs = 0.05693
 ω_thz = ω_fs / 30
-nc = 12
+nc = 15
 tau_fs = 0
 tau_list = get_1c_thz_delay_list_ok(ω_fs, tau_fs, nc, ω_thz)
-tau_thz = tau_list[task_id]
+tau_thz = tau_list[1]
 
 Ex_fs, Ey_fs, Ez_fs, tmax = light_pulse(ω_fs, E_fs, nc, tau_fs, ellipticity=0.0)
 Ex_thz, = light_pulse(ω_thz, E_thz, 1, tau_thz, pulse_shape="sin2", phase1=0.5pi)
@@ -159,14 +158,14 @@ plot!(p1, x2, 2.8 * ones(length(x2)), color=:white, lw=0.8, linestyle=:dash,
 mask = flap_top_windows_f.(x2, 0, 1500, 1/4, left_flag=false)
 p1
 
-# d3 = exp.(z2[24, :])
-p2 = heatmap(x2, [0.00015, 0.00035], [angle.(exp.(im*(2*ω_fs)*x2)) angle.(exp.(im*(2*ω_fs)*x2))],
-    colormap=cgrad([:white, :grey, :white]), colorbar=false, alpha=0.4)
-plot!(p2, x2, [d1 d1 .+ (d2 .- d1) * 6 (exp.(z2[22, :])) .* mask],
-    xlims = (ts__[1], ts__[end]), ylims=[0.00015, 0.00035], color=[:red :orange1 :green1],
-    yticks=[0.0002, 0.0003],
-    label=["χ=2 (τ1)" "χ=2 (τ2)" "χ=3"], legend=:topright,
-    size=(600, 150), tickfontsize=10, legendfontsize=10)
+# # d3 = exp.(z2[24, :])
+# p2 = heatmap(x2, [0.00015, 0.00035], [angle.(exp.(im*(2*ω_fs)*x2)) angle.(exp.(im*(2*ω_fs)*x2))],
+#     colormap=cgrad([:white, :grey, :white]), colorbar=false, alpha=0.4)
+# plot!(p2, x2, [d1 d1 .+ (d2 .- d1) * 6 (exp.(z2[22, :])) .* mask],
+#     xlims = (ts__[1], ts__[end]), ylims=[0.00015, 0.00035], color=[:red :orange1 :green1],
+#     yticks=[0.0002, 0.0003],
+#     label=["χ=2 (τ1)" "χ=2 (τ2)" "χ=3"], legend=:topright,
+#     size=(600, 150), tickfontsize=10, legendfontsize=10)
 
 
 

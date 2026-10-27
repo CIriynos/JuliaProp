@@ -42,7 +42,7 @@ E_thz = 0.00005 * 1 * 10
 E_dc =  0.00005 * E_dc_sign * 10
 ω_fs = 0.05693
 ω_thz = ω_fs / 30
-nc = 15
+nc = 12
 tau_fs = 0
 tau_list = get_1c_thz_delay_list_ok(ω_fs, tau_fs, nc, ω_thz, samples_num=samples_num)
 tau_thz = tau_list[task_id]

@@ -120,16 +120,18 @@ f = hhg_integral_t_data[1] .* hanning(length(hhg_integral_t_data[1]))
 # f = [zeros(5000); f; zeros(5000)]
 p0 = plot(ts__, real.(f), yticks=[-0.002, 0, 0.002], lw=1.5,
     xlimits = (ts__[1], ts__[end]), legend=false, ylabel="d(t)")
-c = wavelet(Morlet(π*1.4), β=0.95)
+c = wavelet(Morlet(π*1.5*1), β=0.95)
+# c = wavelet(Morlet(3π), Q=24, β=1)
 res = cwt(f, c)
 freqs = getMeanFreq(computeWavelets(length(f), c)[1])
 f0 = ω_fs / 2pi / Δt
 cd = size(res)[2] - 40
 
-p = heatmap(ts__, freqs[2:cd] ./ f0, log10.(norm.(res')[5:cd, :]), yscale=:log10)
+rrrrg = 20: cd
+p = heatmap(ts__, freqs[:] ./ f0, log10.(norm.(res')[:, :]), yscale=:log10)
 plot!(p, ts__, 2 * ones(length(ts__)), color=:white, lw=0.7, linestyle=:dash,
     legend=false, xlims = (ts__[1], ts__[end]))
-p_angle = heatmap(ts__, freqs[5:cd] ./ f0, (angle.(res')[5:cd, :]),colormap=cgrad([:white, :grey, :white]))
+p_angle = heatmap(ts__, freqs[rrrrg] ./ f0, (angle.(res')[rrrrg, :]),colormap=cgrad([:white, :grey, :white]))
 
 
 ffffid = 10
@@ -148,7 +150,7 @@ delta_clim = -0.45
 p1 = heatmap(x2, yy2, z2, yscale=:log10,
     yticks=([1, 2, 3, 5, 10, 20], ["1", "2", "3", "5", "10", "20"]),
     colorbar=false, c=cgrad(:jet, scale=:log10, rev=false),
-    clim=(-12 + delta_clim, -5 + delta_clim),
+    clim=(-13 + delta_clim, -2 + delta_clim),
     size=(600, 150), tickfontsize=10)
 plot!(p1, x2, 2.1 * ones(length(x2)), color=:yellow, lw=0.8, linestyle=:dash,
     legend=false, xlims = (ts__[1], ts__[end]), ylims = (yy2[1], yy2[end]))

@@ -13,6 +13,7 @@ using FFTW
 using Statistics
 using DSP
 
+# util.jl
 export Grid1D, GridSH
 export xyz_to_sphere, sphere_to_xyz, CG_coefficient, spherical_bessel_func
 export get_SH_integral
@@ -29,6 +30,7 @@ export numerical_integral
 export store_mat, store_obj, retrieve_mat, retrieve_obj, retrieve_compact_bound_state, retrieve_compact_bound_states
 export get_smoothness_1, get_smoothness_2
 export get_task_id_from_cmd_args
+export nearest_index
 
 export create_physics_world_1d
 export create_tdse_rt_1d
@@ -125,8 +127,10 @@ export @expo
 # ctmc.jl
 export create_ctmc_rt
 export generate_start_point_random, generate_start_point_uniform_special
+export generate_start_point_random_xy_plane, generate_start_point_uniform_xy_plane
+export generate_start_point_uniform_xy_plane_m
 export update_start_point
-export ctmc_mainloop
+export ctmc_mainloop, ctmc_perturb_mainloop
 export calculate_asymptotic_momentum
 export add_to_pmd
 export add_to_hhg

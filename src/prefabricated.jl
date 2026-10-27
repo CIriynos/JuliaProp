@@ -229,8 +229,8 @@ function plot_fs_thz_figure(Ex_fs, Ey_fs, E_thz, ts; thz_ratio = 500)
     tickfont=Plots.font(14),
     titlefont=Plots.font(18),
     legendfont=Plots.font(10),
-    margin = 5 * Plots.mm,
-    size=(800, 200))
+    margin = 10 * Plots.mm,
+    size=(800, 400))
     return etp
 end
 

@@ -601,3 +601,8 @@ end
 function get_task_id_from_cmd_args()
     return parse(Int64, ARGS[1])
 end
+
+function nearest_index(r::AbstractRange, x::Real)
+    i = round(Int, (x - first(r)) / step(r)) + 1
+    return clamp(i, firstindex(r), lastindex(r))
+end

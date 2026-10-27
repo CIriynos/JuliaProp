@@ -8,14 +8,16 @@ using LinearAlgebra
 using HDF5
 using Printf
 using FFTW
-using SparseArrays
-using Arpack
+# using SparseArrays
+# using Arpack
 println("Number of Threads: $(Threads.nthreads())")
+BLAS.set_num_threads(1)
 
 task_id = get_task_id_from_cmd_args()
+# task_id = 1
 
 E0_list = 0.01: 0.0025: 0.12
-omega_ratio_list = 0.1: 0.05: 2.0
+omega_ratio_list = 0.1: 0.025: 1.8
 omega_ratio = omega_ratio_list[task_id]
 
 for k in eachindex(E0_list)
