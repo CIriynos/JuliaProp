@@ -6,9 +6,10 @@ module CTMCCore
 using LinearAlgebra
 include("../src/ctmc.jl")
 include("../src/ctmc_adaptive.jl")
+include("../src/ctmc_hybrid.jl")
 end
 using .CTMCCore: create_ctmc_rt, ctmc_mainloop, ctmc_adaptive_mainloop,
-    add_to_pmd, calculate_asymptotic_momentum, clear_ctmc_rt
+    ctmc_hybrid_mainloop, add_to_pmd, calculate_asymptotic_momentum, clear_ctmc_rt
 
 new_rt(n, nt) = create_ctmc_rt(n, nt, -5.0, 5.0, 0.1)
 state(rt, i, k) = [rt.traj_data[j][i][k] for j = 1:6]
@@ -191,3 +192,5 @@ end
     @test ctmc_adaptive_mainloop(electric_only, rt, 1, 1, [1], 0.1, E, [Float64[] for _=1:3], 0.0) == [false]
     @test isempty(ctmc_adaptive_mainloop(electric_only, rt, 3, 0, Int[], 0.1, E, Eh, 0.0))
 end
+
+include("ctmc_hybrid.jl")

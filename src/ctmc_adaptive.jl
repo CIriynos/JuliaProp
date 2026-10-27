@@ -73,6 +73,56 @@ function _ctmc_adaptive_failure(i, k, h, ratio, reason)
           "a point-Coulomb collision at r=0 requires regularization.")
 end
 
+# Shared interval integrator. Each call lands exactly on the next output point.
+function _ctmc_adaptive_interval!(y, full, half, fine, tmp, ks, F1::F,
+    i, k, Δt, E, Eh, Z, atol, rtol, dtmin, dtmax, proposed_h,
+    max_steps, field::G, t0, stats) where {F,G}
+    τ = 0.0
+    while τ < Δt
+        stats.accepted_steps + stats.rejected_steps < max_steps ||
+            _ctmc_adaptive_failure(i, k, proposed_h, NaN, "max_steps exceeded")
+        remaining = Δt - τ
+        h = min(proposed_h, remaining)
+        τ + h/2 > τ ||
+            _ctmc_adaptive_failure(i, k, h, NaN, "time step cannot advance in Float64")
+
+        # One full RK4 step and two half steps; the fine result is order 4.
+        ok = _ctmc_adaptive_step!(full, y, τ, h, F1, field, E, Eh, k, Δt, t0, Z, ks, tmp) &&
+             _ctmc_adaptive_step!(half, y, τ, h/2, F1, field, E, Eh, k, Δt, t0, Z, ks, tmp) &&
+             _ctmc_adaptive_step!(fine, half, τ+h/2, h/2, F1, field, E, Eh, k, Δt, t0, Z, ks, tmp)
+        ratio = Inf
+        if ok
+            ratio = 0.0
+            for j = 1:6
+                scale = atol[j] + rtol[j]*max(abs(y[j]), abs(fine[j]))
+                ratio = max(ratio, abs((fine[j]-full[j])/15)/scale)
+            end
+            isfinite(ratio) || (ratio = Inf)
+        end
+
+        if ratio <= 1.0
+            stats.accepted_steps += 1
+            stats.min_dt = min(stats.min_dt, h)
+            stats.max_dt = max(stats.max_dt, h)
+            stats.max_error_ratio = max(stats.max_error_ratio, ratio)
+            stats.min_radius = min(stats.min_radius,
+                _ctmc_adaptive_radius(half), _ctmc_adaptive_radius(fine))
+            copyto!(y, fine)
+            # Land exactly on each output boundary, without accumulated drift.
+            τ = h == remaining ? Δt : τ + h
+            factor = ratio == 0.0 ? 5.0 : clamp(0.9*ratio^(-0.2), 0.2, 5.0)
+            proposed_h = clamp(h*factor, dtmin, dtmax)
+        else
+            stats.rejected_steps += 1
+            h > dtmin ||
+                _ctmc_adaptive_failure(i, k, h, ratio, "cannot satisfy tolerance at dtmin")
+            factor = isfinite(ratio) ? clamp(0.9*ratio^(-0.2), 0.1, 0.5) : 0.1
+            proposed_h = max(dtmin, h*factor)
+        end
+    end
+    return proposed_h
+end
+
 # Parameters and dimensions are validated once by the public mainloop.
 function _ctmc_adaptive_procedure!(F1::F, i, rt, tid, t_num, Δt, E, Eh, Z,
     threshold, atol, rtol, dtmin, dtmax, initial_dt, max_steps, field::G, t0) where {F,G}
@@ -89,56 +139,59 @@ function _ctmc_adaptive_procedure!(F1::F, i, rt, tid, t_num, Δt, E, Eh, Z,
     filter_flag = radius < threshold
     proposed_h = min(initial_dt, dtmax, Δt)
     for k = tid:(t_num-1)
-        τ = 0.0
-        while τ < Δt
-            stats.accepted_steps + stats.rejected_steps < max_steps ||
-                _ctmc_adaptive_failure(i, k, proposed_h, NaN, "max_steps exceeded")
-            remaining = Δt - τ
-            h = min(proposed_h, remaining)
-            τ + h/2 > τ ||
-                _ctmc_adaptive_failure(i, k, h, NaN, "time step cannot advance in Float64")
-
-            # One full RK4 step and two half steps; the fine result is order 4.
-            ok = _ctmc_adaptive_step!(full, y, τ, h, F1, field, E, Eh, k, Δt, t0, Z, ks, tmp) &&
-                 _ctmc_adaptive_step!(half, y, τ, h/2, F1, field, E, Eh, k, Δt, t0, Z, ks, tmp) &&
-                 _ctmc_adaptive_step!(fine, half, τ+h/2, h/2, F1, field, E, Eh, k, Δt, t0, Z, ks, tmp)
-            ratio = Inf
-            if ok
-                ratio = 0.0
-                for j = 1:6
-                    scale = atol[j] + rtol[j]*max(abs(y[j]), abs(fine[j]))
-                    ratio = max(ratio, abs((fine[j]-full[j])/15)/scale)
-                end
-                isfinite(ratio) || (ratio = Inf)
-            end
-
-            if ratio <= 1.0
-                stats.accepted_steps += 1
-                stats.min_dt = min(stats.min_dt, h)
-                stats.max_dt = max(stats.max_dt, h)
-                stats.max_error_ratio = max(stats.max_error_ratio, ratio)
-                stats.min_radius = min(stats.min_radius,
-                    _ctmc_adaptive_radius(half), _ctmc_adaptive_radius(fine))
-                filter_flag |= stats.min_radius < threshold
-                copyto!(y, fine)
-                # Land exactly on each output boundary, without accumulated drift.
-                τ = h == remaining ? Δt : τ + h
-                factor = ratio == 0.0 ? 5.0 : clamp(0.9*ratio^(-0.2), 0.2, 5.0)
-                proposed_h = clamp(h*factor, dtmin, dtmax)
-            else
-                stats.rejected_steps += 1
-                h > dtmin ||
-                    _ctmc_adaptive_failure(i, k, h, ratio, "cannot satisfy tolerance at dtmin")
-                factor = isfinite(ratio) ? clamp(0.9*ratio^(-0.2), 0.1, 0.5) : 0.1
-                proposed_h = max(dtmin, h*factor)
-            end
-        end
+        proposed_h = _ctmc_adaptive_interval!(y, full, half, fine, tmp, ks, F1,
+            i, k, Δt, E, Eh, Z, atol, rtol, dtmin, dtmax, proposed_h,
+            max_steps, field, t0, stats)
+        filter_flag |= stats.min_radius < threshold
         for j = 1:6
             rt.traj_data[j][i][k+1] = y[j]
         end
     end
     stats.accepted_steps == 0 && (stats.min_dt = 0.0)
     return filter_flag, stats
+end
+
+# Shared validation for the adaptive and hybrid public interfaces.
+function _ctmc_validate_adaptive_inputs(rt, t_num, trajs_num, tid_cc, Δt,
+    E_data, E_hf_data, Z, filter_threshold, abstol, reltol,
+    dtmin, dtmax, initial_dt, max_steps, field, t0)
+    t_num isa Integer && 1 <= t_num <= rt.t_num ||
+        throw(ArgumentError("t_num must be in 1:rt.t_num"))
+    trajs_num isa Integer && 0 <= trajs_num <= rt.trajs_num ||
+        throw(ArgumentError("trajs_num must be in 0:rt.trajs_num"))
+    isfinite(Δt) && Δt > 0 || throw(ArgumentError("Δt must be finite and positive"))
+    isfinite(Z) || throw(ArgumentError("Z must be finite"))
+    isfinite(t0) && isfinite(t0+(t_num-1)*Δt) || throw(ArgumentError("time range must be finite"))
+    isfinite(filter_threshold) && filter_threshold >= 0 ||
+        throw(ArgumentError("filter_threshold must be finite and nonnegative"))
+    all(v -> isfinite(v) && v > 0, (dtmin, dtmax, initial_dt)) ||
+        throw(ArgumentError("dtmin, dtmax and initial_dt must be finite and positive"))
+    dtmin <= min(dtmax, Δt) || throw(ArgumentError("dtmin must not exceed min(dtmax, Δt)"))
+    max_steps isa Integer && max_steps > 0 || throw(ArgumentError("max_steps must be a positive integer"))
+    atol = _ctmc_adaptive_tolerance(abstol, "abstol"; positive=true)
+    rtol = _ctmc_adaptive_tolerance(reltol, "reltol"; positive=false)
+    length(tid_cc) >= trajs_num || throw(DimensionMismatch("tid_cc is too short"))
+    all(i -> tid_cc[i] isa Integer && 1 <= tid_cc[i] <= t_num, 1:trajs_num) ||
+        throw(ArgumentError("tid_cc must contain integer indices in 1:t_num"))
+    length(rt.traj_data) == length(rt.start_point_cc) == 6 ||
+        throw(DimensionMismatch("runtime must contain six state components"))
+    for j = 1:6
+        length(rt.traj_data[j]) >= trajs_num && length(rt.start_point_cc[j]) >= trajs_num ||
+            throw(DimensionMismatch("runtime has too few trajectories"))
+        for i = 1:trajs_num
+            length(rt.traj_data[j][i]) >= t_num || throw(DimensionMismatch("runtime time buffer is too short"))
+            isfinite(rt.start_point_cc[j][i]) || throw(ArgumentError("initial state must be finite"))
+        end
+    end
+    if field === nothing
+        for (data, n) in ((E_data, t_num), (E_hf_data, t_num-1))
+            length(data) == 3 && all(v -> length(v) >= n, data) ||
+                throw(DimensionMismatch("fields must have three components and enough time samples"))
+            all(v -> all(isfinite, @view(v[1:n])), data) ||
+                throw(ArgumentError("field samples must be finite"))
+        end
+    end
+    return atol, rtol
 end
 
 """
@@ -177,42 +230,9 @@ function ctmc_adaptive_mainloop(F1, rt::ctmc_rt, t_num, trajs_num, tid_cc, Δt,
     abstol=1e-9, reltol=1e-7, dtmin=Δt*1e-12, dtmax=Δt,
     initial_dt=dtmax, max_steps=1_000_000, field=nothing, t0=0.0,
     return_stats=false)
-    t_num isa Integer && 1 <= t_num <= rt.t_num ||
-        throw(ArgumentError("t_num must be in 1:rt.t_num"))
-    trajs_num isa Integer && 0 <= trajs_num <= rt.trajs_num ||
-        throw(ArgumentError("trajs_num must be in 0:rt.trajs_num"))
-    isfinite(Δt) && Δt > 0 || throw(ArgumentError("Δt must be finite and positive"))
-    isfinite(Z) || throw(ArgumentError("Z must be finite"))
-    isfinite(t0) && isfinite(t0+(t_num-1)*Δt) || throw(ArgumentError("time range must be finite"))
-    isfinite(filter_threshold) && filter_threshold >= 0 ||
-        throw(ArgumentError("filter_threshold must be finite and nonnegative"))
-    all(v -> isfinite(v) && v > 0, (dtmin, dtmax, initial_dt)) ||
-        throw(ArgumentError("dtmin, dtmax and initial_dt must be finite and positive"))
-    dtmin <= min(dtmax, Δt) || throw(ArgumentError("dtmin must not exceed min(dtmax, Δt)"))
-    max_steps isa Integer && max_steps > 0 || throw(ArgumentError("max_steps must be a positive integer"))
-    atol = _ctmc_adaptive_tolerance(abstol, "abstol"; positive=true)
-    rtol = _ctmc_adaptive_tolerance(reltol, "reltol"; positive=false)
-    length(tid_cc) >= trajs_num || throw(DimensionMismatch("tid_cc is too short"))
-    all(i -> tid_cc[i] isa Integer && 1 <= tid_cc[i] <= t_num, 1:trajs_num) ||
-        throw(ArgumentError("tid_cc must contain integer indices in 1:t_num"))
-    length(rt.traj_data) == length(rt.start_point_cc) == 6 ||
-        throw(DimensionMismatch("runtime must contain six state components"))
-    for j = 1:6
-        length(rt.traj_data[j]) >= trajs_num && length(rt.start_point_cc[j]) >= trajs_num ||
-            throw(DimensionMismatch("runtime has too few trajectories"))
-        for i = 1:trajs_num
-            length(rt.traj_data[j][i]) >= t_num || throw(DimensionMismatch("runtime time buffer is too short"))
-            isfinite(rt.start_point_cc[j][i]) || throw(ArgumentError("initial state must be finite"))
-        end
-    end
-    if field === nothing
-        for (data, n) in ((E_data, t_num), (E_hf_data, t_num-1))
-            length(data) == 3 && all(v -> length(v) >= n, data) ||
-                throw(DimensionMismatch("fields must have three components and enough time samples"))
-            all(v -> all(isfinite, @view(v[1:n])), data) ||
-                throw(ArgumentError("field samples must be finite"))
-        end
-    end
+    atol, rtol = _ctmc_validate_adaptive_inputs(rt, t_num, trajs_num, tid_cc, Δt,
+        E_data, E_hf_data, Z, filter_threshold, abstol, reltol,
+        dtmin, dtmax, initial_dt, max_steps, field, t0)
 
     flags = zeros(Bool, trajs_num)  # Vector, not packed BitVector: thread-safe writes.
     stats = Vector{CTMCAdaptiveStats}(undef, trajs_num)
