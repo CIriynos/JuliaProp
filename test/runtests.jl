@@ -194,3 +194,5 @@ end
 end
 
 include("ctmc_hybrid.jl")
+
+include("light_pulse_stable.jl")

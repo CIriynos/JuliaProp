@@ -136,3 +136,31 @@ workspace 不能用于另一个 rt，也不能用于同时写同一 rt 的多个
 不同设备、线程及出生分布会影响耗时，不能保证每次计时严格相同。
 
 本次优化后的单线程与四线程核心测试均通过 420 项断言。
+
+## 连续激光场的分配优化
+
+`light_pulse` 内部捕获的变量可能以 `Core.Box` 保存。即使在外层用 `let` 捕获其返回函数，也可能在每次连续场调用时产生大量分配。新增 `light_pulse_stable`，保留相同的位置参数、关键字和返回值；原 `light_pulse` 保持不变。
+
+例如，按原脚本的定义替换两处生成函数，并在外层捕获实际的场函数：
+
+```julia
+Ex_fs, Ey_fs, Ez_fs, _ = light_pulse_stable(ω_fs, E_fs, nc, tau_fs;
+    ellipticity=0.0, phase1=0.5pi+cep, phase2=cep)
+E_thz_1, E_thz_2, E_thz_3, tmax_thz = light_pulse_stable(
+    ω_thz, E_thz, nc_thz, tau_thz; pulse_shape="sin2", phase1=0.5pi)
+
+field_thz = let ex=Ex_fs, ey=Ey_fs, ethz=E_thz_1
+    t -> (ex(t), ey(t)+ethz(t), 0.0)
+end
+field_zero = let ex=Ex_fs, ey=Ey_fs
+    t -> (ex(t), ey(t), 0.0)
+end
+
+result = ctmc_hybrid_mainloop(F1, rt, t_num, trajs_num, tid_cc, Δt,
+    Et_data, Et_data_hf, Z, 0.0; field=field_thz, switch_radius=1.5,
+    return_stats=true, workspace=workspace)
+```
+
+场数组及初值应使用同一组场函数重新生成。若函数在全局作用域中定义，组合场时也要使用 `let`；不要在闭包中继续调用访问非 `const` 全局变量的 `E_applied`。闭包若调用其他类型不稳定的函数，仍可能分配内存；可使用 `@code_warntype field_thz(1.0)` 检查。
+
+在 Julia 1.10.10、单线程、预热后的 3496 个远核固定步测试中，原 `light_pulse` 连续场约 12 ms、8.2 MiB；新接口约 1.43 ms、3.8 KiB。实际耗时随激光函数、线程和轨线而变化。两者在支持的七种包络和 `E`/`A` 模式下进行了数值对照；近核区间和远核区间的轨线对照也通过。全程自适应仍有计算开销，输入容差和切换半径应做收敛检查。
