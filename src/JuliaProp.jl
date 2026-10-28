@@ -108,6 +108,7 @@ export create_linspace
 export get_hhg_spectrum_xy
 export flap_top_windows_f
 export light_pulse
+export light_pulse_stable
 export dc_bias
 export no_light
 export get_1c_thz_delay_list
@@ -160,6 +161,7 @@ include("wom_sh.jl")
 
 # prefabricated.jl
 include("prefabricated.jl")
+include("light_pulse_stable.jl")
 
 # ctmc.jl
 include("ctmc.jl")
