@@ -154,7 +154,7 @@ end
 # Shared validation for the adaptive and hybrid public interfaces.
 function _ctmc_validate_adaptive_inputs(rt, t_num, trajs_num, tid_cc, Δt,
     E_data, E_hf_data, Z, filter_threshold, abstol, reltol,
-    dtmin, dtmax, initial_dt, max_steps, field, t0)
+    dtmin, dtmax, initial_dt, max_steps, field, t0; active_fields_only=false)
     t_num isa Integer && 1 <= t_num <= rt.t_num ||
         throw(ArgumentError("t_num must be in 1:rt.t_num"))
     trajs_num isa Integer && 0 <= trajs_num <= rt.trajs_num ||
@@ -184,11 +184,19 @@ function _ctmc_validate_adaptive_inputs(rt, t_num, trajs_num, tid_cc, Δt,
         end
     end
     if field === nothing
+        first_field = 1
+        if active_fields_only
+            first_field = trajs_num == 0 ? t_num+1 : minimum(@view tid_cc[1:trajs_num])
+            # A trajectory born at the last output point performs no integration.
+            first_field == t_num && (first_field = t_num+1)
+        end
         for (data, n) in ((E_data, t_num), (E_hf_data, t_num-1))
             length(data) == 3 && all(v -> length(v) >= n, data) ||
                 throw(DimensionMismatch("fields must have three components and enough time samples"))
-            all(v -> all(isfinite, @view(v[1:n])), data) ||
-                throw(ArgumentError("field samples must be finite"))
+            if first_field <= n
+                all(v -> all(isfinite, @view(v[first_field:n])), data) ||
+                    throw(ArgumentError("field samples must be finite in the active time range"))
+            end
         end
     end
     return atol, rtol

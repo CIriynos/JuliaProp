@@ -97,3 +97,42 @@ julia --startup-file=no --threads=4 samples/ctmc_hybrid_benchmark.jl
 速度取决于力函数、电场实现、近核区间比例及线程调度。这里的原固定 RK4 仅作耗时参考，不能作为硬回碰的精确解。数值测试还检查远核结果与原 RK4 完全一致、全近核结果与全程自适应完全一致，以及穿越检测、回退重算、时间对齐和切换半径收敛。
 
 `julia --startup-file=no --threads=1 test/runtests.jl` 与四线程运行均通过 373 项断言，包含原有 279 项测试和新增混合积分测试。未运行全部历史 samples 或依赖完整绘图环境的测试。
+
+
+## 减少重复清理（性能优化）
+
+这里的轨线缓冲区是原有 `rt.traj_data`，不是 RK4 额外要求保存的一份历史。
+默认现在只清零出生前区域；出生点到 `t_num` 会被传播覆盖，不再提前清零，
+`t_num` 以后的数据保持不变。场的有限值检查也只扫描本批实际使用的时段。
+几何检查新增同侧坐标排除，远核时可免去线段投影除法；穿越保护未关闭。
+
+对于新建的全零 runtime，推荐创建一次可复用的清理记录：
+
+```julia
+rt = create_ctmc_rt(trajs_num, t_num, p_min, p_max, p_delta)
+workspace = CTMCHybridWorkspace(rt; precleared=true)
+# 后续批次复用同一 rt 和 workspace；update_start_point 不影响该记录。
+flags = ctmc_hybrid_mainloop(F1, rt, t_num, trajs_num, tid_cc, Δt,
+    Et_data, Et_data_hf, Z, 0.0; switch_radius=1.0, workspace=workspace)
+```
+
+这个 workspace 不复制轨线，只保存对原数据的引用和每条轨线上次的写入起点。
+出生索引改变时，仅清理上次轨线新落入出生前的部分。它不用于 RK4 计算，
+也不改变积分精度。`precleared=true` 只可用于确实全零的数据；若无法保证，
+使用默认的 `CTMCHybridWorkspace(rt)`，首次调用会保守清理，之后仍可复用记录。
+
+若其他积分器或调用者直接改写了轨线，须先
+`reset_ctmc_hybrid_workspace!(workspace)`，使下一次调用保守清理。
+workspace 不能用于另一个 rt，也不能用于同时写同一 rt 的多个主循环。
+失败传播会保守记录可能已写入的范围，避免下一次遗漏清理。
+
+还可设 `clear_prebirth=false` 完全跳过清理，行为接近原固定步程序。
+这适用于调用者自行保证出生前数据正确的情形；复用旧数据时不能盲目关闭。
+只要默认清理仍必须处理一大段未知旧数据，就不应承诺与从不清理的旧函数等时。
+对新建/已清零数据使用上述 workspace，则没有这部分多余成本。
+
+基准脚本现在覆盖有库仑力、无库仑力，以及网格 60001 点但出生后仅传播
+100 步的情况。均预热后比较；`use_workspace=false` 可查看保守清理的成本。
+不同设备、线程及出生分布会影响耗时，不能保证每次计时严格相同。
+
+本次优化后的单线程与四线程核心测试均通过 420 项断言。
