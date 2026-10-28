@@ -146,3 +146,57 @@ end
     add_to_pmd(rt, 1, 3, 0.0, flags)
     @test rt.pmd_total_w == 1.0
 end
+
+@testset "hybrid cleanup workspace and active fields" begin
+    C=CTMCCore
+    rt=new_rt(2,20)
+    for i=1:2
+        setstate!(rt,i,[0,0.1,0,1000,0,0])
+        for j=1:6
+            rt.traj_data[j][i].=123.0
+        end
+    end
+    E,Eh=fields(zero_field,20,0.1)
+    ws=C.CTMCHybridWorkspace(rt)
+    for tids in ([5,8],[9,3],[2,10])
+        C.ctmc_hybrid_mainloop(electric_only,rt,20,2,tids,0.1,E,Eh,0.0;
+            switch_radius=0.01,workspace=ws)
+        for i=1:2,j=1:6
+            @test all(iszero,rt.traj_data[j][i][1:tids[i]-1])
+        end
+        @test ws.first_written==tids
+    end
+    # Other writers invalidate the record; reset restores conservative cleanup.
+    rt.traj_data[1][1][1]=99.0
+    C.reset_ctmc_hybrid_workspace!(ws)
+    C.ctmc_hybrid_mainloop(electric_only,rt,20,2,[8,8],0.1,E,Eh,0.0;
+        switch_radius=0.01,workspace=ws)
+    @test all(iszero,rt.traj_data[1][1][1:7])
+    other=new_rt(2,20)
+    @test_throws ArgumentError C.ctmc_hybrid_mainloop(electric_only,other,20,2,[8,8],0.1,E,Eh,0.0;
+        switch_radius=0.01,workspace=ws)
+    # Only actually accessed fields must be finite.
+    E[1][1:7].=NaN
+    Eh[1][1:7].=NaN
+    @test C.ctmc_hybrid_mainloop(electric_only,rt,20,2,[8,8],0.1,E,Eh,0.0;
+        switch_radius=0.01,workspace=ws)==[false,false]
+    E[1][8]=NaN
+    @test_throws ArgumentError C.ctmc_hybrid_mainloop(electric_only,rt,20,2,[8,8],0.1,E,Eh,0.0;
+        switch_radius=0.01,workspace=ws)
+    E,Eh=fields(zero_field,20,0.1)
+    # A failed call must not conceal writes earlier than the previous birth.
+    @test_throws CompositeException C.ctmc_hybrid_mainloop(electric_only,rt,20,2,[1,1],0.1,E,Eh,0.0;
+        switch_radius=0.01,workspace=ws,max_steps=1)
+    C.ctmc_hybrid_mainloop(electric_only,rt,20,2,[10,10],0.1,E,Eh,0.0;
+        switch_radius=0.01,workspace=ws)
+    @test all(iszero,rt.traj_data[4][1][1:9])
+    fresh=new_rt(1,20)
+    setstate!(fresh,1,[0,0.1,0,1000,0,0])
+    ready=C.CTMCHybridWorkspace(fresh;precleared=true)
+    @test C.ctmc_hybrid_mainloop(electric_only,fresh,20,1,[19],0.1,E,Eh,0.0;
+        switch_radius=0.01,workspace=ready)==[false]
+    fresh.traj_data[1][1][1]=7.0
+    C.ctmc_hybrid_mainloop(electric_only,fresh,20,1,[19],0.1,E,Eh,0.0;
+        switch_radius=0.01,clear_prebirth=false)
+    @test fresh.traj_data[1][1][1]==7.0
+end

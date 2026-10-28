@@ -133,6 +133,7 @@ export update_start_point
 export ctmc_mainloop, ctmc_perturb_mainloop
 export ctmc_adaptive_mainloop, CTMCAdaptiveStats
 export ctmc_hybrid_mainloop, CTMCHybridStats
+export CTMCHybridWorkspace, reset_ctmc_hybrid_workspace!
 export calculate_asymptotic_momentum
 export add_to_pmd
 export add_to_hhg

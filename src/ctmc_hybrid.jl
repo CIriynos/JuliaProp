@@ -14,9 +14,52 @@ mutable struct CTMCHybridStats
     adaptive::CTMCAdaptiveStats
 end
 
+"""
+    CTMCHybridWorkspace(rt; precleared=false)
+
+可复用的出生前清理记录，绑定到 rt.traj_data，不修改 ctmc_rt。
+默认保守地认为任意缓冲区可能有旧数据；首次使用清理完整出生前区域，
+之后只清理上次传播新变成出生前的部分。若 rt 刚由 create_ctmc_rt 创建，
+或整个 traj_data 已清零，可设 precleared=true，首次调用也不重复清理。
+
+绑定的轨线数据若被其他积分器或调用者改写，下一次使用前须调用
+reset_ctmc_hybrid_workspace!，或新建 workspace。不能并发运行使用同一 rt
+的多个主循环。改变初值/权重不会使记录失效。
+"""
+struct CTMCHybridWorkspace
+    traj_data::Vector{Vector{Vector{Float64}}}
+    first_written::Vector{Int}
+end
+
+function CTMCHybridWorkspace(rt::ctmc_rt; precleared=false)
+    precleared isa Bool || throw(ArgumentError("precleared must be true or false"))
+    return CTMCHybridWorkspace(rt.traj_data,
+        fill(precleared ? rt.t_num+1 : 1, rt.trajs_num))
+end
+
+"""Invalidate cached birth ranges after other code writes to the bound trajectories.
+This does not modify trajectory data; the next hybrid call cleans conservatively.
+"""
+function reset_ctmc_hybrid_workspace!(workspace::CTMCHybridWorkspace)
+    fill!(workspace.first_written, 1)
+    return workspace
+end
+
 # Closest point on a straight segment to the origin. Used only as a switch guard,
 # not as a dense trajectory representation or a continuous event locator.
 @inline function _ctmc_hybrid_segment_near(ax, ay, az, bx, by, bz, radius2)
+    # A segment whose endpoints share an outside coordinate half-space cannot
+    # intersect the sphere. This exact broad-phase test avoids the projection
+    # and division for the common far-field case; it does not weaken the guard.
+    if ((ax > 0 && bx > 0) || (ax < 0 && bx < 0)) && min(abs(ax), abs(bx))^2 > radius2
+        return false
+    end
+    if ((ay > 0 && by > 0) || (ay < 0 && by < 0)) && min(abs(ay), abs(by))^2 > radius2
+        return false
+    end
+    if ((az > 0 && bz > 0) || (az < 0 && bz < 0)) && min(abs(az), abs(bz))^2 > radius2
+        return false
+    end
     dx, dy, dz = bx-ax, by-ay, bz-az
     d2 = dx*dx + dy*dy + dz*dz
     u = d2 == 0.0 ? 0.0 : clamp(-(ax*dx+ay*dy+az*dz)/d2, 0.0, 1.0)
@@ -71,14 +114,18 @@ end
 
 function _ctmc_hybrid_procedure!(F1::F, i, rt, tid, t_num, Δt, E, Eh, Z,
     threshold, radius2, atol, rtol, dtmin, dtmax, initial_dt, max_steps,
-    field::G, t0) where {F,G}
+    field::G, t0, clear_prebirth, clear_from) where {F,G}
     y = [rt.start_point_cc[j][i] for j = 1:6]
     candidate, tmp = similar(y), similar(y)
     ks = [similar(y) for _ = 1:4]
     # Allocate the additional adaptive buffers only if this trajectory needs them.
     adaptive_buffers = nothing
     for j = 1:6
-        fill!(rt.traj_data[j][i], 0.0)
+        # The birth point and subsequent outputs are overwritten by propagation.
+        # Preserve the old safe pre-birth semantics without clearing that suffix.
+        if clear_prebirth && tid > clear_from
+            fill!(@view(rt.traj_data[j][i][clear_from:tid-1]), 0.0)
+        end
         rt.traj_data[j][i][tid] = y[j]
     end
     radius = _ctmc_adaptive_radius(y)
@@ -134,7 +181,8 @@ end
         E_data, E_hf_data, Z, filter_threshold=0.0;
         switch_radius, abstol=1e-9, reltol=1e-7,
         dtmin=Δt*1e-12, dtmax=Δt, initial_dt=dtmax,
-        max_steps=1_000_000, field=nothing, t0=0.0, return_stats=false)
+        max_steps=1_000_000, field=nothing, t0=0.0, return_stats=false,
+        clear_prebirth=true, workspace=nothing)
 
 远核固定 Δt RK4，近核使用误差控制 RK4。switch_radius 为正的切换半径，
 与 filter_threshold（可选的轨线筛选半径）独立，后者默认为 0 保留近核轨线。
@@ -156,25 +204,54 @@ adaptive.max_error_ratio 仅反映自适应部分，不能证明远核固定步�
 无自适应步骤时其 accepted_steps/rejected_steps/min_dt/max_dt/max_error_ratio
 均为 0；此时 min_radius 仅是初值半径，不是整条轨线的最小半径。
 其他电场、容差、失败语义与 ctmc_adaptive_mainloop 一致。
+
+clear_prebirth=true（默认）仅将出生前区域清零；出生点至 t_num 被积分覆盖，
+t_num 以后的缓冲区保持不变。clear_prebirth=false 完全跳过清理，适用于
+新建/已清零的 rt，或调用者自行管理出生前数据的情况。若复用旧轨线且出生
+索引后移，应使用默认清理或自行清理新增的出生前区域，否则旧数据会污染统计。
+采样场只检查本批轨线实际使用时段的有限性，数组形状仍在传播前验证。
+workspace=CTMCHybridWorkspace(rt) 可记录上次写入范围，复用时避免重复清理
+已知为零的前缀。新建且全零的 rt 可使用 precleared=true 构造 workspace。
+其他代码改写轨线后须重置 workspace，不能通过缓存推断外部写入。
 """
 function ctmc_hybrid_mainloop(F1, rt::ctmc_rt, t_num, trajs_num, tid_cc, Δt,
     E_data, E_hf_data, Z, filter_threshold=0.0;
     switch_radius, abstol=1e-9, reltol=1e-7,
     dtmin=Δt*1e-12, dtmax=Δt, initial_dt=dtmax,
-    max_steps=1_000_000, field=nothing, t0=0.0, return_stats=false)
+    max_steps=1_000_000, field=nothing, t0=0.0, return_stats=false,
+    clear_prebirth=true, workspace=nothing)
+    clear_prebirth isa Bool || throw(ArgumentError("clear_prebirth must be true or false"))
     radius2 = Float64(switch_radius)^2
     isfinite(switch_radius) && switch_radius > 0 && isfinite(radius2) && radius2 > 0 ||
         throw(ArgumentError("switch_radius and its square must be finite and positive"))
     atol, rtol = _ctmc_validate_adaptive_inputs(rt, t_num, trajs_num, tid_cc, Δt,
         E_data, E_hf_data, Z, filter_threshold, abstol, reltol,
-        dtmin, dtmax, initial_dt, max_steps, field, t0)
+        dtmin, dtmax, initial_dt, max_steps, field, t0; active_fields_only=true)
+    if workspace !== nothing
+        workspace isa CTMCHybridWorkspace ||
+            throw(ArgumentError("workspace must be a CTMCHybridWorkspace or nothing"))
+        workspace.traj_data === rt.traj_data ||
+            throw(ArgumentError("workspace is bound to a different trajectory buffer"))
+        length(workspace.first_written) >= trajs_num &&
+            all(x -> x >= 1, @view workspace.first_written[1:trajs_num]) ||
+            throw(ArgumentError("workspace has invalid trajectory ranges"))
+    end
     flags = zeros(Bool, trajs_num)
     stats = Vector{CTMCHybridStats}(undef, trajs_num)
     Threads.@threads for i = 1:trajs_num
+        clear_from = workspace === nothing ? 1 : workspace.first_written[i]
+        if workspace !== nothing
+            # Record possible writes before propagation, so an exception cannot
+            # leave the cache overlooking an earlier partially written trajectory.
+            workspace.first_written[i] = min(clear_from, tid_cc[i])
+        end
         flags[i], stats[i] = _ctmc_hybrid_procedure!(F1, i, rt, tid_cc[i], t_num,
             Float64(Δt), E_data, E_hf_data, Z, filter_threshold, radius2,
             atol, rtol, Float64(dtmin), Float64(min(dtmax, Δt)),
-            Float64(max(initial_dt, dtmin)), max_steps, field, t0)
+            Float64(max(initial_dt, dtmin)), max_steps, field, t0, clear_prebirth, clear_from)
+        if workspace !== nothing && clear_prebirth
+            workspace.first_written[i] = tid_cc[i]
+        end
     end
     return return_stats ? (traj_filter_flag=flags, stats=stats) : flags
 end
